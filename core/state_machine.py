@@ -165,6 +165,7 @@ class WorkflowStateMachine(ModernLogger):
             WorkflowState.STEP_COMPLETED: self._effect_step_completed,
             WorkflowState.STAGE_COMPLETED: self._effect_stage_completed,
             WorkflowState.WORKFLOW_COMPLETED: self._effect_workflow_completed,
+            WorkflowState.WORKFLOW_UPDATE_PENDING: self._effect_workflow_update_pending,
         }
 
     # ==============================================
@@ -413,6 +414,12 @@ class WorkflowStateMachine(ModernLogger):
             return
 
         try:
+            # Generate behavior_id and increment iteration
+            if not ctx.current_behavior_id:
+                ctx.behavior_iteration += 1
+                ctx.current_behavior_id = f"behavior_{ctx.behavior_iteration:03d}"
+                self.info(f"[FSM Effect] Starting behavior: {ctx.current_behavior_id} (iteration {ctx.behavior_iteration})")
+
             # Fetch actions from API
             from utils.api_client import workflow_api_client
 
@@ -420,6 +427,10 @@ class WorkflowStateMachine(ModernLogger):
 
             # Get current state
             current_state = self.ai_context_store.get_context().to_dict()
+
+            # Add behavior tracking to state
+            current_state['behavior_id'] = ctx.current_behavior_id
+            current_state['behavior_iteration'] = ctx.behavior_iteration
 
             # 添加 notebook 数据到 state
             if self.script_store and hasattr(self.script_store, 'notebook_store') and self.script_store.notebook_store:
@@ -470,21 +481,16 @@ class WorkflowStateMachine(ModernLogger):
         # Execute the action via script store
         if self.script_store:
             try:
-                self.script_store.exec_action(current_action)
+                result = self.script_store.exec_action(current_action)
 
                 # Check if there's a pending workflow update
-                if self.script_store.pending_workflow_update:
-                    self.info("[FSM Effect] Detected pending workflow update")
+                if isinstance(result, dict) and result.get('workflow_update_pending'):
+                    self.info("[FSM Effect] Detected pending workflow update, transitioning to WORKFLOW_UPDATE_PENDING")
                     workflow_update = self.script_store.pending_workflow_update
-                    self.script_store.pending_workflow_update = None  # Clear it
-
-                    # Auto-confirm workflow update (can be made configurable later)
-                    if self.pipeline_store:
-                        from models.workflow import WorkflowTemplate
-                        # Convert dict to WorkflowTemplate
-                        updated_template = WorkflowTemplate.from_dict(workflow_update)
-                        self.pipeline_store.set_workflow_template(updated_template)
-                        self.info(f"[FSM Effect] Workflow updated to: {updated_template.name}")
+                    if workflow_update:
+                        # Trigger workflow update transition with payload
+                        self.transition(WorkflowEvent.UPDATE_WORKFLOW, {'workflowTemplate': workflow_update})
+                        return  # Don't complete action yet, will complete after update confirmed
 
             except Exception as e:
                 self.error(f"[FSM Effect] Action execution failed: {e}", exc_info=True)
@@ -534,27 +540,55 @@ class WorkflowStateMachine(ModernLogger):
             # Get current state
             current_state = self.ai_context_store.get_context().to_dict()
 
+            # Add behavior tracking to state
+            current_state['behavior_id'] = ctx.current_behavior_id
+            current_state['behavior_iteration'] = ctx.behavior_iteration
+
             # 添加 notebook 数据到 state
             if self.script_store and hasattr(self.script_store, 'notebook_store') and self.script_store.notebook_store:
                 current_state['notebook'] = self.script_store.notebook_store.to_dict()
 
-            # Send feedback (synchronous wrapper)
+            # Build behavior feedback
+            behavior_feedback = self._build_behavior_feedback()
+
+            # Send feedback (synchronous wrapper) with behavior feedback
             feedback_response = workflow_api_client.send_feedback_sync(
                 stage_id=ctx.current_stage_id,
                 step_index=ctx.current_step_id,
-                state=current_state
+                state=current_state,
+                behavior_feedback=behavior_feedback
             )
 
             self.info(f"[FSM Effect] Feedback response: {feedback_response}")
 
-            # Check if target is achieved
-            target_achieved = feedback_response.get('targetAchieved', False)
+            # Apply context updates from server
+            if 'context_update' in feedback_response:
+                self._apply_context_update(feedback_response['context_update'])
 
-            if target_achieved:
+            # Check server directives for behavior control
+            transition = feedback_response.get('transition', {})
+            continue_behaviors = transition.get('continue_behaviors', False)
+            target_achieved = transition.get('target_achieved', feedback_response.get('targetAchieved', False))
+
+            # Server controls behavior loop, client controls stage/step navigation
+            if continue_behaviors:
+                self.info("[FSM Effect] Server requests more behaviors, clearing behavior state and starting next")
+                # Clear behavior state for next iteration
+                ctx.current_behavior_id = None
+                ctx.current_behavior_actions = []
+                ctx.current_action_index = 0
+                self.transition(WorkflowEvent.NEXT_BEHAVIOR)
+
+            elif target_achieved:
                 self.info("[FSM Effect] Target achieved, completing step")
                 self.transition(WorkflowEvent.COMPLETE_STEP)
+
             else:
-                self.info("[FSM Effect] Target not achieved, starting next behavior")
+                # Fallback: if neither flag is set, default to continuing behaviors
+                self.info("[FSM Effect] No clear directive, defaulting to next behavior")
+                ctx.current_behavior_id = None
+                ctx.current_behavior_actions = []
+                ctx.current_action_index = 0
                 self.transition(WorkflowEvent.NEXT_BEHAVIOR)
 
         except Exception as e:
@@ -564,7 +598,7 @@ class WorkflowStateMachine(ModernLogger):
             self.transition(WorkflowEvent.COMPLETE_STEP)
 
     def _effect_step_completed(self, payload: Any = None):
-        """Effect for STEP_COMPLETED state."""
+        """Effect for STEP_COMPLETED state - CLIENT-CONTROLLED navigation."""
         self.info(f"[FSM Effect] STEP_COMPLETED")
 
         if not self.pipeline_store:
@@ -578,7 +612,7 @@ class WorkflowStateMachine(ModernLogger):
             self.error("[FSM Effect] Invalid context in STEP_COMPLETED")
             return
 
-        # Check if last step in stage
+        # Client-side navigation based on workflow template
         is_last = workflow.is_last_step_in_stage(ctx.current_stage_id, ctx.current_step_id)
 
         if is_last:
@@ -595,7 +629,7 @@ class WorkflowStateMachine(ModernLogger):
                 self.transition(WorkflowEvent.COMPLETE_STAGE)
 
     def _effect_stage_completed(self, payload: Any = None):
-        """Effect for STAGE_COMPLETED state."""
+        """Effect for STAGE_COMPLETED state - CLIENT-CONTROLLED navigation."""
         self.info(f"[FSM Effect] STAGE_COMPLETED")
 
         if not self.pipeline_store:
@@ -609,7 +643,7 @@ class WorkflowStateMachine(ModernLogger):
             self.error("[FSM Effect] Invalid context in STAGE_COMPLETED")
             return
 
-        # Check if last stage
+        # Client-side navigation based on workflow template
         is_last = workflow.is_last_stage(ctx.current_stage_id)
 
         if is_last:
@@ -620,11 +654,19 @@ class WorkflowStateMachine(ModernLogger):
             if next_stage:
                 ctx.current_stage_id = next_stage.id
                 ctx.current_step_id = next_stage.steps[0].id if next_stage.steps else None
-                ctx.reset_for_new_behavior()
+                ctx.reset_for_new_step()
                 self.transition(WorkflowEvent.NEXT_STAGE)
             else:
                 self.error("[FSM Effect] No next stage found")
                 self.transition(WorkflowEvent.COMPLETE_WORKFLOW)
+
+    def _effect_workflow_update_pending(self, payload: Any = None):
+        """Effect for WORKFLOW_UPDATE_PENDING state."""
+        self.info(f"[FSM Effect] WORKFLOW_UPDATE_PENDING - auto-confirming workflow update")
+
+        # Auto-confirm the workflow update (can be made interactive later)
+        # For now, we automatically accept all workflow updates from the API
+        self.transition(WorkflowEvent.UPDATE_WORKFLOW_CONFIRMED)
 
     def _effect_workflow_completed(self, payload: Any = None):
         """Effect for WORKFLOW_COMPLETED state - cleanup resources."""
@@ -660,17 +702,24 @@ class WorkflowStateMachine(ModernLogger):
 
         pending_data = self.execution_context.pending_workflow_data
         if pending_data and self.pipeline_store:
-            workflow_template = pending_data.get('workflowTemplate')
-            if workflow_template:
-                self.pipeline_store.set_workflow_template(workflow_template)
-                self.info("[FSM] Workflow template updated")
+            workflow_template_dict = pending_data.get('workflowTemplate')
+            if workflow_template_dict:
+                from models.workflow import WorkflowTemplate
+                # Convert dict to WorkflowTemplate
+                updated_template = WorkflowTemplate.from_dict(workflow_template_dict)
+                self.pipeline_store.set_workflow_template(updated_template)
+                self.info(f"[FSM] Workflow template updated to: {updated_template.name}")
 
             next_stage_id = pending_data.get('nextStageId')
             if next_stage_id:
                 self.execution_context.workflow_context.current_stage_id = next_stage_id
                 self.execution_context.workflow_context.current_step_id = None
+                self.info(f"[FSM] Stage changed to: {next_stage_id}")
 
+        # Clear pending data and script store's pending update
         self.execution_context.pending_workflow_data = None
+        if self.script_store:
+            self.script_store.pending_workflow_update = None
 
     def _handle_workflow_update_rejected(self):
         """Handle workflow update rejection."""
@@ -726,6 +775,89 @@ class WorkflowStateMachine(ModernLogger):
         """Reject a pending workflow update."""
         self.info("[FSM] Rejecting workflow update")
         self.transition(WorkflowEvent.UPDATE_WORKFLOW_REJECTED)
+
+    # ==============================================
+    # Behavior Helpers (NEW)
+    # ==============================================
+
+    def _build_behavior_feedback(self) -> Dict[str, Any]:
+        """
+        Build behavior feedback to send to the server.
+
+        Returns:
+            Dictionary with behavior execution statistics
+        """
+        ctx = self.execution_context.workflow_context
+
+        # Count sections added
+        sections_added = 0
+        if ctx.current_behavior_actions:
+            for action in ctx.current_behavior_actions:
+                if isinstance(action, dict):
+                    metadata = action.get('metadata', {})
+                    if metadata.get('is_section'):
+                        sections_added += 1
+
+        # Get last action result
+        last_action_result = "success"  # Default to success
+        # Could be enhanced to track actual execution results
+
+        feedback = {
+            'behavior_id': ctx.current_behavior_id,
+            'actions_executed': len(ctx.current_behavior_actions),
+            'actions_succeeded': len(ctx.current_behavior_actions),  # Assuming all succeeded if we reached completion
+            'sections_added': sections_added,
+            'last_action_result': last_action_result
+        }
+
+        self.info(f"[FSM] Built behavior feedback: {feedback}")
+        return feedback
+
+    def _apply_context_update(self, context_update: Dict[str, Any]):
+        """
+        Apply context updates from the server response.
+
+        Args:
+            context_update: Dictionary containing context updates
+        """
+        if not self.ai_context_store:
+            self.warning("[FSM] Cannot apply context update: AI context store not available")
+            return
+
+        self.info(f"[FSM] Applying context update: {list(context_update.keys())}")
+
+        # Update variables
+        if 'variables' in context_update:
+            for key, value in context_update['variables'].items():
+                self.ai_context_store.add_variable(key, value)
+                self.info(f"[FSM] Updated variable: {key} = {value}")
+
+        # Handle todo_list updates
+        if 'todo_list_update' in context_update and context_update['todo_list_update'] is not None:
+            todo_update = context_update['todo_list_update']
+            operation = todo_update.get('operation')
+            items = todo_update.get('items', [])
+
+            if operation == 'remove':
+                for item in items:
+                    self.ai_context_store.remove_from_to_do_list(item)
+                    self.info(f"[FSM] Removed TODO: {item}")
+            elif operation == 'add':
+                for item in items:
+                    self.ai_context_store.add_to_do_list(item)
+                    self.info(f"[FSM] Added TODO: {item}")
+            elif operation == 'replace':
+                self.ai_context_store.clear_to_do_list()
+                for item in items:
+                    self.ai_context_store.add_to_do_list(item)
+                self.info(f"[FSM] Replaced TODO list with {len(items)} items")
+
+        # Update section progress
+        if 'section_progress' in context_update and context_update['section_progress'] is not None:
+            self.ai_context_store.set_section_progress(context_update['section_progress'])
+            self.info(f"[FSM] Updated section progress: {context_update['section_progress']}")
+
+        self.info("[FSM] Context update applied successfully")
 
     # ==============================================
     # Getters

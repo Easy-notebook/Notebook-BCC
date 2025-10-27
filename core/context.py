@@ -8,6 +8,27 @@ from typing import List, Any, Optional
 
 
 @dataclass
+class SectionProgress:
+    """
+    Tracks section completion progress within a notebook.
+    Helps organize content structure and track what has been completed.
+    """
+    current_section_id: Optional[str] = None
+    current_section_number: Optional[int] = None
+    completed_sections: List[str] = field(default_factory=list)
+    all: List[str] = field(default_factory=list)  # All planned sections (set by workflow update)
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary."""
+        return {
+            'current_section_id': self.current_section_id,
+            'current_section_number': self.current_section_number,
+            'completed_sections': self.completed_sections,
+            'all': self.all
+        }
+
+
+@dataclass
 class WorkflowContext:
     """
     Context maintained by the state machine during execution.
@@ -16,12 +37,14 @@ class WorkflowContext:
     current_stage_id: Optional[str] = None
     current_step_id: Optional[str] = None
     current_behavior_id: Optional[str] = None
+    behavior_iteration: int = 0  # Added: tracks which behavior iteration we're on
     current_behavior_actions: List[Any] = field(default_factory=list)
     current_action_index: int = 0
 
     def reset_for_new_step(self):
         """Reset context for a new step."""
         self.current_behavior_id = None
+        self.behavior_iteration = 0  # Reset behavior counter for new step
         self.current_behavior_actions = []
         self.current_action_index = 0
 

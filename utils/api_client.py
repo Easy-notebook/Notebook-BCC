@@ -60,16 +60,18 @@ class WorkflowAPIClient(ModernLogger):
         stage_id: str,
         step_index: str,
         state: Dict[str, Any],
-        notebook_id: Optional[str] = None
+        notebook_id: Optional[str] = None,
+        behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
     ) -> Dict[str, Any]:
         """
         Send feedback to get next workflow command.
 
         Args:
             stage_id: Current stage ID
-            step_index: Current step ID/index
+            step_index: Current step ID/index (will be renamed to step_id in future)
             state: Current workflow state/context
             notebook_id: Optional notebook ID
+            behavior_feedback: Optional behavior execution feedback
 
         Returns:
             Feedback response containing next command
@@ -78,12 +80,47 @@ class WorkflowAPIClient(ModernLogger):
             # Compress state
             compressed_state = self.compressor.compress_context(state)
 
-            # Prepare request
-            payload = {
-                'stage_id': stage_id,
-                'step_index': step_index,
-                'state': compressed_state,
+            # Extract behavior information from state
+            behavior_id = state.get('behavior_id')
+            behavior_iteration = state.get('behavior_iteration', 0)
+
+            # Build clean context (new format only) - exclude behavior_id/iteration
+            clean_context = {
+                'variables': compressed_state.get('variables', {}),
+                'toDoList': compressed_state.get('toDoList', []),
+                'effects': compressed_state.get('effects', {'current': [], 'history': []}),
+                'notebook': compressed_state.get('notebook', {})
             }
+
+            # Add section_progress only if it exists (avoid sending empty/null values)
+            if compressed_state.get('section_progress'):
+                clean_context['section_progress'] = compressed_state.get('section_progress')
+
+            # Add workflow_progress only if it exists
+            if compressed_state.get('workflow_progress'):
+                clean_context['workflow_progress'] = compressed_state.get('workflow_progress')
+
+            # Note: behavior_id and behavior_iteration are excluded (they go in location)
+
+            # Build new payload structure according to FINAL_DESIGN.md
+            payload = {
+                'observation': {
+                    'location': {
+                        'current_stage_id': stage_id,
+                        'current_step_id': step_index,  # Using step_index for now (backward compat)
+                        'behavior_id': behavior_id,
+                        'behavior_iteration': behavior_iteration
+                    },
+                    'context': clean_context  # Clean context with new field names only
+                },
+                'options': {
+                    'stream': False
+                }
+            }
+
+            # Add behavior_feedback if provided
+            if behavior_feedback:
+                payload['behavior_feedback'] = behavior_feedback
 
             if notebook_id:
                 payload['notebook_id'] = notebook_id
@@ -132,7 +169,8 @@ class WorkflowAPIClient(ModernLogger):
         stage_id: str,
         step_index: str,
         state: Dict[str, Any],
-        stream: bool = True
+        stream: bool = True,
+        behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Fetch actions for a behavior (streaming).
@@ -142,6 +180,7 @@ class WorkflowAPIClient(ModernLogger):
             step_index: Current step ID/index
             state: Current workflow state/context
             stream: Whether to use streaming
+            behavior_feedback: Optional behavior execution feedback
 
         Yields:
             Action dictionaries
@@ -150,13 +189,47 @@ class WorkflowAPIClient(ModernLogger):
             # Compress state
             compressed_state = self.compressor.compress_context(state)
 
-            # Prepare request
-            payload = {
-                'stage_id': stage_id,
-                'step_index': step_index,
-                'state': compressed_state,
-                'stream': stream,
+            # Extract behavior information from state
+            behavior_id = state.get('behavior_id')
+            behavior_iteration = state.get('behavior_iteration', 0)
+
+            # Build clean context (new format only) - exclude behavior_id/iteration
+            clean_context = {
+                'variables': compressed_state.get('variables', {}),
+                'toDoList': compressed_state.get('toDoList', []),
+                'effects': compressed_state.get('effects', {'current': [], 'history': []}),
+                'notebook': compressed_state.get('notebook', {})
             }
+
+            # Add section_progress only if it exists (avoid sending empty/null values)
+            if compressed_state.get('section_progress'):
+                clean_context['section_progress'] = compressed_state.get('section_progress')
+
+            # Add workflow_progress only if it exists
+            if compressed_state.get('workflow_progress'):
+                clean_context['workflow_progress'] = compressed_state.get('workflow_progress')
+
+            # Note: behavior_id and behavior_iteration are excluded (they go in location)
+
+            # Build new payload structure according to FINAL_DESIGN.md
+            payload = {
+                'observation': {
+                    'location': {
+                        'current_stage_id': stage_id,
+                        'current_step_id': step_index,  # Using step_index for now (backward compat)
+                        'behavior_id': behavior_id,
+                        'behavior_iteration': behavior_iteration
+                    },
+                    'context': clean_context  # Clean context with new field names only
+                },
+                'options': {
+                    'stream': stream
+                }
+            }
+
+            # Add behavior_feedback if provided
+            if behavior_feedback:
+                payload['behavior_feedback'] = behavior_feedback
 
             # 📝 记录 API 调用详情到独立日志文件
             log_file = self.api_logger.log_api_call(
@@ -222,19 +295,20 @@ class WorkflowAPIClient(ModernLogger):
         stage_id: str,
         step_index: str,
         state: Dict[str, Any],
-        notebook_id: Optional[str] = None
+        notebook_id: Optional[str] = None,
+        behavior_feedback: Optional[Dict[str, Any]] = None  # Added
     ) -> Dict[str, Any]:
         """Synchronous wrapper for send_feedback."""
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If event loop is already running, we need to use run_in_executor
             future = asyncio.ensure_future(
-                self.send_feedback(stage_id, step_index, state, notebook_id)
+                self.send_feedback(stage_id, step_index, state, notebook_id, behavior_feedback)
             )
             return asyncio.get_event_loop().run_until_complete(future)
         else:
             return loop.run_until_complete(
-                self.send_feedback(stage_id, step_index, state, notebook_id)
+                self.send_feedback(stage_id, step_index, state, notebook_id, behavior_feedback)
             )
 
     def fetch_behavior_actions_sync(
@@ -242,12 +316,13 @@ class WorkflowAPIClient(ModernLogger):
         stage_id: str,
         step_index: str,
         state: Dict[str, Any],
-        stream: bool = True
+        stream: bool = True,
+        behavior_feedback: Optional[Dict[str, Any]] = None  # Added
     ) -> List[Dict[str, Any]]:
         """Synchronous wrapper for fetch_behavior_actions."""
         async def collect_actions():
             actions = []
-            async for action in self.fetch_behavior_actions(stage_id, step_index, state, stream):
+            async for action in self.fetch_behavior_actions(stage_id, step_index, state, stream, behavior_feedback):
                 actions.append(action)
             return actions
 

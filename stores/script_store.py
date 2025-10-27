@@ -75,6 +75,52 @@ class ScriptStore(ModernLogger):
     # Helper Functions
     # ==============================================
 
+    @staticmethod
+    def clean_content(content: str, cell_type: str = 'text') -> str:
+        """
+        Clean content by removing meta-instruction prefixes.
+
+        Args:
+            content: Raw content from API
+            cell_type: Type of cell ('text' or 'code')
+
+        Returns:
+            Cleaned content without meta-instruction prefixes
+        """
+        if not content:
+            return content
+
+        # Remove common meta-instruction prefixes
+        prefixes_to_remove = [
+            'Add text to the notebook:',
+            'Add text to the notebook: ',
+            'Add code to the notebook:',
+            'Add code to the notebook: ',
+            'Add code to the notebook and run it:',
+            'Add code to the notebook and run it: ',
+            'Update the title of the notebook:',
+            'Update the title of the notebook: ',
+        ]
+
+        for prefix in prefixes_to_remove:
+            if content.startswith(prefix):
+                content = content[len(prefix):]
+                break
+
+        # For code cells, remove markdown code block markers if present
+        if cell_type == 'code':
+            content = content.strip()
+            if content.startswith('```python\n'):
+                content = content[10:]  # Remove ```python\n
+            elif content.startswith('```\n'):
+                content = content[4:]   # Remove ```\n
+            if content.endswith('\n```'):
+                content = content[:-4]  # Remove \n```
+            elif content.endswith('```'):
+                content = content[:-3]  # Remove ```
+
+        return content.strip()
+
     def get_default_content(self, content_type: str = 'text') -> str:
         """Get default content for a content type."""
         defaults = {
@@ -441,18 +487,20 @@ class ScriptStore(ModernLogger):
             if step.state and self.ai_context_store:
                 self.info(f"[ScriptStore] Syncing state from action")
                 context = self.ai_context_store.get_context()
-                # Preserve effect state
-                merged_state = {**step.state, 'effect': context.effect}
+                # Preserve effect state (use 'effects' to match server field name)
+                merged_state = {**step.state, 'effects': context.effect}
                 self.ai_context_store.set_context(merged_state)
 
             # Handle different action types
             if action_type == ACTION_TYPES['ADD_ACTION']:
                 action_id = step.store_id or str(uuid.uuid4())
                 cell_type = 'code' if step.shot_type == 'action' else 'text'
+                # Clean content to remove meta-instruction prefixes
+                cleaned_content = self.clean_content(step.content or '', cell_type)
                 self.add_action(ScriptAction(
                     id=action_id,
                     type=cell_type,
-                    content=step.content or '',
+                    content=cleaned_content,
                     metadata=step.metadata or ActionMetadata()
                 ))
 
@@ -503,7 +551,9 @@ class ScriptStore(ModernLogger):
 
             elif action_type == ACTION_TYPES['UPDATE_TITLE']:
                 if step.title:
-                    self.update_title(step.title)
+                    # Clean title to remove meta-instruction prefixes
+                    cleaned_title = self.clean_content(step.title, 'text')
+                    self.update_title(cleaned_title)
 
             elif action_type == ACTION_TYPES['COMPLETE_STEP']:
                 self.info("[ScriptStore] Received command to complete step")
@@ -517,6 +567,14 @@ class ScriptStore(ModernLogger):
                     self.pending_workflow_update = step.updated_workflow
                     self.info(f"[ScriptStore] Stored pending workflow update: {step.updated_workflow.get('name', 'Unknown')}")
 
+                    # Initialize workflow_progress in AI context
+                    if self.ai_context_store:
+                        self.ai_context_store.initialize_workflow_progress(step.updated_workflow)
+                        self.info("[ScriptStore] Initialized workflow_progress in AI context")
+
+                    # Return a special marker to indicate workflow update is pending
+                    return {'workflow_update_pending': True}
+
             elif action_type == ACTION_TYPES['UPDATE_STEP_LIST']:
                 self.info(f"[ScriptStore] Updating steps for stage: {step.stage_id}")
                 # Update pipeline store
@@ -525,8 +583,36 @@ class ScriptStore(ModernLogger):
             else:
                 self.warning(f"[ScriptStore] Unknown action type: {action_type}")
 
+            # Check if this action marks a section (NEW)
+            if step.metadata and step.metadata.is_section:
+                self._handle_section(step)
+
         except Exception as e:
             self.error(f"[ScriptStore] Error executing action {action_type}: {e}", exc_info=True)
             raise
 
         return None
+
+    def _handle_section(self, step):
+        """
+        Handle section markers by updating section progress in AI context.
+
+        Args:
+            step: ExecutionStep with section metadata
+        """
+        if not self.ai_context_store:
+            return
+
+        section_id = step.metadata.section_id
+        section_number = step.metadata.section_number
+
+        if not section_id:
+            return
+
+        self.info(f"[ScriptStore] Handling section: {section_id} (#{section_number})")
+
+        # Update current section
+        self.ai_context_store.update_current_section(section_id, section_number)
+
+        # Mark section as completed
+        self.ai_context_store.complete_section(section_id)
