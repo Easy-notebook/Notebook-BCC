@@ -1,0 +1,15 @@
+# Core dependencies for Notebook-BCC
+# Required for API communication with backend services
+
+# HTTP client libraries
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# Configuration management
+python-dotenv>=1.0.0
+
+# Optional: Data science libraries
+# Uncomment if you need data analysis capabilities
+# numpy>=1.24.0
+# pandas>=2.0.0
+# matplotlib>=3.7.0

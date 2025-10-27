@@ -1,0 +1,199 @@
+"""
+Notebook Store
+Manages notebook cells and their lifecycle.
+"""
+
+from silantui import ModernLogger
+from typing import List, Optional, Dict, Any
+from models.cell import Cell, CellType, CellOutput
+
+
+
+class NotebookStore(ModernLogger):
+    """
+    Notebook Store for managing cells.
+    Replicates the frontend's notebook store functionality.
+    """
+
+    def __init__(self):
+        super().__init__("NotebookStore")
+        self.cells: List[Cell] = []
+        self.current_cell_id: Optional[str] = None
+        self.title: str = "Untitled Notebook"
+        self.execution_count: int = 0
+
+    # ==============================================
+    # Cell Management
+    # ==============================================
+
+    def add_cell(self, cell_data: Dict[str, Any]) -> Cell:
+        """
+        Add a new cell to the notebook.
+
+        Args:
+            cell_data: Dictionary containing cell configuration
+
+        Returns:
+            The created Cell instance
+        """
+        cell_id = cell_data.get('id')
+        cell_type = CellType(cell_data.get('type', 'markdown'))
+
+        cell = Cell(
+            id=cell_id,
+            type=cell_type,
+            content=cell_data.get('content', ''),
+            outputs=cell_data.get('outputs', []),
+            enable_edit=cell_data.get('enableEdit', cell_type != CellType.THINKING),
+            phase_id=cell_data.get('phaseId'),
+            description=cell_data.get('description', ''),
+            metadata=cell_data.get('metadata', {}),
+            language=cell_data.get('language', 'python'),
+            agent_name=cell_data.get('agentName', 'AI'),
+            custom_text=cell_data.get('customText'),
+            text_array=cell_data.get('textArray', []),
+            use_workflow_thinking=cell_data.get('useWorkflowThinking', False),
+            could_visible_in_writing_mode=cell_data.get('couldVisibleInWritingMode', True),
+        )
+
+        self.cells.append(cell)
+        self.info(f"[NotebookStore] Added cell: {cell_id} (type: {cell_type.value})")
+
+        return cell
+
+    def get_cell(self, cell_id: str) -> Optional[Cell]:
+        """Get a cell by ID."""
+        for cell in self.cells:
+            if cell.id == cell_id:
+                return cell
+        return None
+
+    def update_cell(self, cell_id: str, content: str) -> bool:
+        """Update a cell's content."""
+        cell = self.get_cell(cell_id)
+        if cell:
+            cell.content = content
+            self.info(f"[NotebookStore] Updated cell content: {cell_id}")
+            return True
+        return False
+
+    def update_cell_metadata(self, cell_id: str, metadata: Dict[str, Any]) -> bool:
+        """Update a cell's metadata."""
+        cell = self.get_cell(cell_id)
+        if cell:
+            cell.metadata.update(metadata)
+            self.info(f"[NotebookStore] Updated cell metadata: {cell_id}")
+            return True
+        return False
+
+    def delete_cell(self, cell_id: str) -> bool:
+        """Delete a cell."""
+        for i, cell in enumerate(self.cells):
+            if cell.id == cell_id:
+                self.cells.pop(i)
+                self.info(f"[NotebookStore] Deleted cell: {cell_id}")
+                return True
+        return False
+
+    def clear_cells(self):
+        """Clear all cells."""
+        self.cells = []
+        self.info("[NotebookStore] Cleared all cells")
+
+    # ==============================================
+    # Cell Output Management
+    # ==============================================
+
+    def add_cell_output(self, cell_id: str, output: CellOutput) -> bool:
+        """Add an output to a cell."""
+        cell = self.get_cell(cell_id)
+        if cell:
+            cell.add_output(output)
+            self.info(f"[NotebookStore] Added output to cell: {cell_id}")
+            return True
+        return False
+
+    def clear_cell_outputs(self, cell_id: str) -> bool:
+        """Clear all outputs from a cell."""
+        cell = self.get_cell(cell_id)
+        if cell:
+            cell.clear_outputs()
+            self.info(f"[NotebookStore] Cleared outputs for cell: {cell_id}")
+            return True
+        return False
+
+    # ==============================================
+    # Current Cell Management
+    # ==============================================
+
+    def set_current_cell(self, cell_id: str):
+        """Set the current active cell."""
+        self.current_cell_id = cell_id
+        self.info(f"[NotebookStore] Set current cell: {cell_id}")
+
+    def get_current_cell(self) -> Optional[Cell]:
+        """Get the current active cell."""
+        if self.current_cell_id:
+            return self.get_cell(self.current_cell_id)
+        return None
+
+    # ==============================================
+    # Title Management
+    # ==============================================
+
+    def update_title(self, title: str):
+        """Update the notebook title."""
+        self.title = title
+        self.info(f"[NotebookStore] Updated title: {title}")
+
+    def get_title(self) -> str:
+        """Get the notebook title."""
+        return self.title
+
+    # ==============================================
+    # Execution Count
+    # ==============================================
+
+    def increment_execution_count(self) -> int:
+        """Increment and return the execution count."""
+        self.execution_count += 1
+        return self.execution_count
+
+    # ==============================================
+    # Query Methods
+    # ==============================================
+
+    def get_cells_by_type(self, cell_type: CellType) -> List[Cell]:
+        """Get all cells of a specific type."""
+        return [cell for cell in self.cells if cell.type == cell_type]
+
+    def get_cells_by_phase(self, phase_id: str) -> List[Cell]:
+        """Get all cells associated with a phase/step."""
+        return [cell for cell in self.cells if cell.phase_id == phase_id]
+
+    def get_last_cell(self) -> Optional[Cell]:
+        """Get the last cell in the notebook."""
+        return self.cells[-1] if self.cells else None
+
+    def get_cell_count(self) -> int:
+        """Get the total number of cells."""
+        return len(self.cells)
+
+    # ==============================================
+    # Serialization
+    # ==============================================
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert notebook to dictionary for serialization."""
+        return {
+            'title': self.title,
+            'cells': [cell.to_dict() for cell in self.cells],
+            'execution_count': self.execution_count,
+        }
+
+    def from_dict(self, data: Dict[str, Any]):
+        """Load notebook from dictionary."""
+        self.title = data.get('title', 'Untitled Notebook')
+        self.execution_count = data.get('execution_count', 0)
+        self.cells = [Cell.from_dict(cell_data) for cell_data in data.get('cells', [])]
+        self.info(f"[NotebookStore] Loaded {len(self.cells)} cells from dict")
