@@ -16,7 +16,7 @@ class ContextCompressor(ModernLogger):
     Replicates TypeScript WorkflowAPIClient compression logic.
     """
 
-    def __init__(self, max_context_length: int = 8000, max_history_items: int = 50):
+    def __init__(self, max_context_length: int = 18600, max_history_items: int = 50):
         """
         Initialize the compressor.
 

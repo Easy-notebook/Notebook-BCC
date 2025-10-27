@@ -195,8 +195,8 @@ python main.py \
 
 ```bash
 python main.py \
-  --backend-url http://prod-kernel:8000 \
-  --dslc-url http://prod-dslc:8001 \
+  --backend-url http://prod-kernel:18600 \
+  --dslc-url http://prod-dslc:28600 \
   --notebook-id prod-session-123 \
   --custom-context production_context.json \
   start --problem "生产环境数据处理"
@@ -349,7 +349,7 @@ cat context.json | python -m json.tool
 ### 问题 4: Reflection 模式不工作
 ```bash
 # 确认 DSLC API 可访问
-curl http://localhost:8001/reflection -X POST -H "Content-Type: application/json" -d '{}'
+curl http://localhost:28600/reflection -X POST -H "Content-Type: application/json" -d '{}'
 
 # 检查日志
 tail -f workflow.log | grep "reflection"

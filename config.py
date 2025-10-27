@@ -25,10 +25,10 @@ class Config:
     # ==============================================
 
     # Backend base URL (from environment or default)
-    BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', 'http://localhost:8000')
+    BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', 'http://localhost:18600')
 
     # DSLC (Data Science Lifecycle) base URL
-    DSLC_BASE_URL = os.getenv('DSLC_BASE_URL', 'http://localhost:8001')
+    DSLC_BASE_URL = os.getenv('DSLC_BASE_URL', 'http://localhost:28600')
 
     # Initial notebook ID (can be overridden)
     NOTEBOOK_ID = os.getenv('NOTEBOOK_ID', None)
@@ -81,7 +81,7 @@ class Config:
     # Context Compression Settings
     # ==============================================
 
-    MAX_CONTEXT_LENGTH = 8000  # Maximum context length for API calls
+    MAX_CONTEXT_LENGTH = 18600  # Maximum context length for API calls
     MAX_HISTORY_ITEMS = 50     # Maximum history items to keep
 
     # ==============================================

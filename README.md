@@ -69,8 +69,9 @@ pip install numpy pandas matplotlib  # Optional, for data science features
 ### Configuration
 
 Notebook-BCC communicates with two backend services:
-1. **Backend Jupyter Kernel** (default: `http://localhost:8000`) - Executes Python code
-2. **DSLC Workflow API** (default: `http://localhost:8001`) - Manages workflow logic
+
+1. **Backend Jupyter Kernel** (default: `http://localhost:18600`) - Executes Python code
+2. **DSLC Workflow API** (default: `http://localhost:28600`) - Manages workflow logic
 
 #### Option 1: Environment Variables
 
@@ -82,9 +83,10 @@ cp .env.example .env
 ```
 
 Example `.env`:
+
 ```bash
-BACKEND_BASE_URL=http://localhost:8000
-DSLC_BASE_URL=http://localhost:8001
+BACKEND_BASE_URL=http://localhost:18600
+DSLC_BASE_URL=http://localhost:28600
 NOTEBOOK_ID=  # Optional: existing notebook session ID
 ```
 
@@ -141,6 +143,7 @@ python main.py --start-mode reflection start
 ```
 
 **Reflection vs Generation:**
+
 - **Generation**: Calls `/actions` API → executes actions immediately
 - **Reflection**: Calls `/reflection` API first → skips actions if goal achieved
 
@@ -299,6 +302,7 @@ variables = code_executor.get_all_variables()
 ### Markdown Rendering
 
 Supports:
+
 - Headers (# ## ###)
 - Bold (**text**)
 - Italic (*text*)
@@ -480,16 +484,16 @@ elif action_type == ACTION_TYPES['MY_ACTION']:
 
 ## 📖 Comparison with Frontend
 
-| Feature | Frontend (TS) | Backend (Python) |
-|---------|--------------|------------------|
-| State Machine | ✅ Zustand | ✅ Class-based |
-| Stores | ✅ Zustand | ✅ Class-based |
-| Events | ✅ Enum | ✅ Enum |
-| States | ✅ Enum | ✅ Enum |
-| Actions | ✅ TypeScript | ✅ Python |
-| Cells | ✅ React | ✅ Terminal |
-| Persistence | ✅ Browser | ✅ File System |
-| Rendering | ✅ HTML/CSS | ✅ ANSI/Terminal |
+| Feature       | Frontend (TS) | Backend (Python) |
+| ------------- | ------------- | ---------------- |
+| State Machine | ✅ Zustand    | ✅ Class-based   |
+| Stores        | ✅ Zustand    | ✅ Class-based   |
+| Events        | ✅ Enum       | ✅ Enum          |
+| States        | ✅ Enum       | ✅ Enum          |
+| Actions       | ✅ TypeScript | ✅ Python        |
+| Cells         | ✅ React      | ✅ Terminal      |
+| Persistence   | ✅ Browser    | ✅ File System   |
+| Rendering     | ✅ HTML/CSS   | ✅ ANSI/Terminal |
 
 ## 🤝 Contributing
 
@@ -502,7 +506,7 @@ This is a faithful Python recreation of the TypeScript workflow system. Contribu
 ## 👥 Authors
 
 - **Original Frontend**: Hu Silan
-- **Python Implementation**: [Your Name]
+- **Python Implementation**: Hu Silan
 
 ## 🙏 Acknowledgments
 

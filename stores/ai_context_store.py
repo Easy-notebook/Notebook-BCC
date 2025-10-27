@@ -11,27 +11,26 @@ Manages:
 - Stage Status: completion tracking
 """
 
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field
+from typing import Dict, List, Any
+from dataclasses import dataclass
 import copy
 from silantui import ModernLogger
 
-@dataclass
 class AIContext(ModernLogger):
     """
     Core AI context data structure.
     Maps to TypeScript's AIContext interface.
     """
-    checklist: Dict[str, List[str]] = field(default_factory=lambda: {'current': [], 'completed': []})
-    thinking: List[str] = field(default_factory=list)
-    variables: Dict[str, Any] = field(default_factory=dict)
-    to_do_list: List[str] = field(default_factory=list)
-    stage_status: Dict[str, bool] = field(default_factory=dict)
-    effect: Dict[str, List[str]] = field(default_factory=lambda: {'current': [], 'history': []})
-    custom_context: Dict[str, Any] = field(default_factory=dict)  # User-defined custom context
 
     def __init__(self):
         super().__init__("AIContext")
+        self.checklist: Dict[str, List[str]] = {'current': [], 'completed': []}
+        self.thinking: List[str] = []
+        self.variables: Dict[str, Any] = {}
+        self.to_do_list: List[str] = []
+        self.stage_status: Dict[str, bool] = {}
+        self.effect: Dict[str, List[str]] = {'current': [], 'history': []}
+        self.custom_context: Dict[str, Any] = {}  # User-defined custom context
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary, merging custom context."""
@@ -52,14 +51,15 @@ class AIContext(ModernLogger):
 
     def copy(self) -> 'AIContext':
         """Create a deep copy."""
-        return AIContext(
-            checklist=copy.deepcopy(self.checklist),
-            thinking=self.thinking.copy(),
-            variables=copy.deepcopy(self.variables),
-            to_do_list=self.to_do_list.copy(),
-            stage_status=self.stage_status.copy(),
-            effect=copy.deepcopy(self.effect),
-        )
+        new_context = AIContext()
+        new_context.checklist = copy.deepcopy(self.checklist)
+        new_context.thinking = self.thinking.copy()
+        new_context.variables = copy.deepcopy(self.variables)
+        new_context.to_do_list = self.to_do_list.copy()
+        new_context.stage_status = self.stage_status.copy()
+        new_context.effect = copy.deepcopy(self.effect)
+        new_context.custom_context = copy.deepcopy(self.custom_context)
+        return new_context
 
 
 @dataclass

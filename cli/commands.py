@@ -83,8 +83,8 @@ class WorkflowCLI(ModernLogger):
         )
 
         # Global configuration options
-        parser.add_argument('--backend-url', type=str, help='Backend Jupyter kernel URL (default: http://localhost:8000)')
-        parser.add_argument('--dslc-url', type=str, help='DSLC workflow API URL (default: http://localhost:8001)')
+        parser.add_argument('--backend-url', type=str, help='Backend Jupyter kernel URL (default: http://localhost:18600)')
+        parser.add_argument('--dslc-url', type=str, help='DSLC workflow API URL (default: http://localhost:28600)')
         parser.add_argument('--notebook-id', type=str, help='Initial notebook ID')
 
         # Execution control options

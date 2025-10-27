@@ -20,8 +20,8 @@ python main.py repl
 ### 配置选项
 ```bash
 # 后端服务配置
---backend-url http://localhost:8000  # Jupyter kernel URL
---dslc-url http://localhost:8001     # Workflow API URL
+--backend-url http://localhost:18600  # Jupyter kernel URL
+--dslc-url http://localhost:28600     # Workflow API URL
 --notebook-id abc123                 # 已存在的 notebook ID
 
 # 执行控制
@@ -113,8 +113,8 @@ cli.ai_context_store.clear_custom_context()
 ### .env 文件
 ```bash
 # API 端点
-BACKEND_BASE_URL=http://localhost:8000
-DSLC_BASE_URL=http://localhost:8001
+BACKEND_BASE_URL=http://localhost:18600
+DSLC_BASE_URL=http://localhost:28600
 NOTEBOOK_ID=
 
 # 执行控制
@@ -207,7 +207,7 @@ python main.py \
 ### 场景 3: 生产执行
 ```bash
 python main.py \
-  --backend-url http://prod:8000 \
+  --backend-url http://prod:18600 \
   --notebook-id prod-123 \
   --custom-context prod_context.json \
   start --problem "数据处理"
@@ -236,13 +236,13 @@ python main.py status
 ### API 连接失败
 ```bash
 # 测试 backend
-curl http://localhost:8000/initialize
+curl http://localhost:18600/initialize
 
 # 测试 DSLC
-curl http://localhost:8001/reflection -X POST
+curl http://localhost:28600/reflection -X POST
 
 # 更改 URL
-python main.py --backend-url http://other:8000 start
+python main.py --backend-url http://other:18600 start
 ```
 
 ### 步骤不增加
@@ -313,6 +313,6 @@ cat .env
 tail -f workflow.log
 
 # 检查 API
-curl http://localhost:8000/initialize
-curl http://localhost:8001/reflection -X POST -d '{}'
+curl http://localhost:18600/initialize
+curl http://localhost:28600/reflection -X POST -d '{}'
 ```
