@@ -115,6 +115,7 @@ class WorkflowStateMachine(ModernLogger):
         pipeline_store=None,
         script_store=None,
         ai_context_store=None,
+        notebook_manager=None,
         max_steps: int = 0,
         start_mode: str = 'generation',
         interactive: bool = False
@@ -126,6 +127,7 @@ class WorkflowStateMachine(ModernLogger):
             pipeline_store: Reference to the pipeline store
             script_store: Reference to the script store
             ai_context_store: Reference to the AI context store
+            notebook_manager: Reference to the notebook manager
             max_steps: Maximum steps to execute (0 = unlimited)
             start_mode: Start mode ('reflection' or 'generation')
             interactive: Enable interactive mode (pause at breakpoints)
@@ -138,6 +140,7 @@ class WorkflowStateMachine(ModernLogger):
         self.pipeline_store = pipeline_store
         self.script_store = script_store
         self.ai_context_store = ai_context_store
+        self.notebook_manager = notebook_manager
 
         # Execution control
         self.step_counter = 0
@@ -161,6 +164,7 @@ class WorkflowStateMachine(ModernLogger):
             WorkflowState.BEHAVIOR_COMPLETED: self._effect_behavior_completed,
             WorkflowState.STEP_COMPLETED: self._effect_step_completed,
             WorkflowState.STAGE_COMPLETED: self._effect_stage_completed,
+            WorkflowState.WORKFLOW_COMPLETED: self._effect_workflow_completed,
         }
 
     # ==============================================
@@ -359,6 +363,10 @@ class WorkflowStateMachine(ModernLogger):
             from utils.api_client import workflow_api_client
             current_state = self.ai_context_store.get_context().to_dict()
 
+            # 添加 notebook 数据到 state
+            if self.script_store and hasattr(self.script_store, 'notebook_store') and self.script_store.notebook_store:
+                current_state['notebook'] = self.script_store.notebook_store.to_dict()
+
             self.info(f"[FSM Effect] Calling reflection API for stage={ctx.current_stage_id}, step={ctx.current_step_id}")
 
             # Call feedback API
@@ -413,6 +421,10 @@ class WorkflowStateMachine(ModernLogger):
             # Get current state
             current_state = self.ai_context_store.get_context().to_dict()
 
+            # 添加 notebook 数据到 state
+            if self.script_store and hasattr(self.script_store, 'notebook_store') and self.script_store.notebook_store:
+                current_state['notebook'] = self.script_store.notebook_store.to_dict()
+
             # Fetch actions (synchronous wrapper)
             actions = workflow_api_client.fetch_behavior_actions_sync(
                 stage_id=ctx.current_stage_id,
@@ -459,6 +471,21 @@ class WorkflowStateMachine(ModernLogger):
         if self.script_store:
             try:
                 self.script_store.exec_action(current_action)
+
+                # Check if there's a pending workflow update
+                if self.script_store.pending_workflow_update:
+                    self.info("[FSM Effect] Detected pending workflow update")
+                    workflow_update = self.script_store.pending_workflow_update
+                    self.script_store.pending_workflow_update = None  # Clear it
+
+                    # Auto-confirm workflow update (can be made configurable later)
+                    if self.pipeline_store:
+                        from models.workflow import WorkflowTemplate
+                        # Convert dict to WorkflowTemplate
+                        updated_template = WorkflowTemplate.from_dict(workflow_update)
+                        self.pipeline_store.set_workflow_template(updated_template)
+                        self.info(f"[FSM Effect] Workflow updated to: {updated_template.name}")
+
             except Exception as e:
                 self.error(f"[FSM Effect] Action execution failed: {e}", exc_info=True)
                 self.transition(WorkflowEvent.FAIL, {'error': str(e)})
@@ -506,6 +533,10 @@ class WorkflowStateMachine(ModernLogger):
 
             # Get current state
             current_state = self.ai_context_store.get_context().to_dict()
+
+            # 添加 notebook 数据到 state
+            if self.script_store and hasattr(self.script_store, 'notebook_store') and self.script_store.notebook_store:
+                current_state['notebook'] = self.script_store.notebook_store.to_dict()
 
             # Send feedback (synchronous wrapper)
             feedback_response = workflow_api_client.send_feedback_sync(
@@ -594,6 +625,30 @@ class WorkflowStateMachine(ModernLogger):
             else:
                 self.error("[FSM Effect] No next stage found")
                 self.transition(WorkflowEvent.COMPLETE_WORKFLOW)
+
+    def _effect_workflow_completed(self, payload: Any = None):
+        """Effect for WORKFLOW_COMPLETED state - cleanup resources."""
+        self.info(f"[FSM Effect] WORKFLOW_COMPLETED - cleaning up resources")
+
+        # Save notebook to file
+        if self.notebook_manager and self.script_store and hasattr(self.script_store, 'notebook_store'):
+            try:
+                notebook_data = self.script_store.notebook_store.to_dict()
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"workflow_{timestamp}.json"
+                saved_path = self.notebook_manager.save_notebook(notebook_data, filename=filename)
+                self.info(f"[FSM Effect] Notebook saved to: {saved_path}")
+            except Exception as e:
+                self.error(f"[FSM Effect] Failed to save notebook: {e}", exc_info=True)
+
+        # Close aiohttp session
+        try:
+            from utils.api_client import workflow_api_client
+            workflow_api_client.close_sync()
+            self.info("[FSM Effect] API client session closed successfully")
+        except Exception as e:
+            self.warning(f"[FSM Effect] Error during session cleanup: {e}")
 
     # ==============================================
     # Special Handlers

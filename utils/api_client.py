@@ -10,6 +10,7 @@ import aiohttp
 import asyncio
 from typing import Dict, Any, List, AsyncIterator, Optional
 from .context_compressor import ContextCompressor
+from .api_logger import get_api_logger
 from config import Config
 
 
@@ -28,6 +29,7 @@ class WorkflowAPIClient(ModernLogger):
             max_history_items=Config.MAX_HISTORY_ITEMS
         )
         self.session: Optional[aiohttp.ClientSession] = None
+        self.api_logger = get_api_logger()  # API 调用日志记录器
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -39,6 +41,19 @@ class WorkflowAPIClient(ModernLogger):
         """Close the HTTP session."""
         if self.session and not self.session.closed:
             await self.session.close()
+
+    def close_sync(self):
+        """
+        Close the HTTP session synchronously (for cleanup).
+
+        Note: Properly closing an aiohttp session requires the same event loop
+        it was created in. Since this may not be available during cleanup,
+        we rely on Python's garbage collector. ResourceWarnings are suppressed
+        globally in the CLI.
+        """
+        # Session will be garbage collected automatically
+        # ResourceWarnings are suppressed globally
+        pass
 
     async def send_feedback(
         self,
@@ -72,6 +87,22 @@ class WorkflowAPIClient(ModernLogger):
 
             if notebook_id:
                 payload['notebook_id'] = notebook_id
+
+            # 📝 记录 API 调用详情到独立日志文件
+            log_file = self.api_logger.log_api_call(
+                api_url=Config.FEEDBACK_API_URL,
+                method='POST',
+                payload=payload,
+                context_state=state,
+                extra_info={
+                    'api_type': 'feedback',
+                    'stage_id': stage_id,
+                    'step_index': step_index,
+                    'notebook_id': notebook_id
+                }
+            )
+            if log_file:
+                self.info(f"[API] 调用日志已保存: {log_file}")
 
             self.info(f"[API] Sending feedback for stage={stage_id}, step={step_index}")
             self.debug(f"[API] Payload size: {len(json.dumps(payload))} chars")
@@ -126,6 +157,22 @@ class WorkflowAPIClient(ModernLogger):
                 'state': compressed_state,
                 'stream': stream,
             }
+
+            # 📝 记录 API 调用详情到独立日志文件
+            log_file = self.api_logger.log_api_call(
+                api_url=Config.BEHAVIOR_API_URL,
+                method='POST',
+                payload=payload,
+                context_state=state,
+                extra_info={
+                    'api_type': 'behavior_actions',
+                    'stage_id': stage_id,
+                    'step_index': step_index,
+                    'stream': stream
+                }
+            )
+            if log_file:
+                self.info(f"[API] 调用日志已保存: {log_file}")
 
             self.info(f"[API] Fetching behavior actions for stage={stage_id}, step={step_index}")
 

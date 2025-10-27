@@ -64,6 +64,9 @@ class ScriptStore(ModernLogger):
         self.ai_context_store = ai_context_store
         self.code_executor = code_executor
 
+        # Workflow update tracking
+        self.pending_workflow_update: Optional[Dict[str, Any]] = None
+
         # Counters
         self.chapter_counter = 0
         self.section_counter = 0
@@ -370,16 +373,62 @@ class ScriptStore(ModernLogger):
     # Main Execution Engine
     # ==============================================
 
-    def exec_action(self, step: ExecutionStep) -> Any:
+    @staticmethod
+    def _dict_to_execution_step(data: Dict[str, Any]) -> ExecutionStep:
+        """
+        Convert a dictionary (from API) to an ExecutionStep object.
+        Handles camelCase to snake_case conversion.
+
+        Args:
+            data: Dictionary from API response
+
+        Returns:
+            ExecutionStep object
+        """
+        # Map camelCase keys to snake_case
+        key_mapping = {
+            'shotType': 'shot_type',
+            'storeId': 'store_id',
+            'contentType': 'content_type',
+            'agentName': 'agent_name',
+            'customText': 'custom_text',
+            'textArray': 'text_array',
+            'thinkingText': 'thinking_text',
+            'actionIdRef': 'action_id_ref',
+            'stepId': 'step_id',
+            'phaseId': 'phase_id',
+            'keepDebugButtonVisible': 'keep_debug_button_visible',
+            'codecellId': 'codecell_id',
+            'needOutput': 'need_output',
+            'autoDebug': 'auto_debug',
+            'updatedWorkflow': 'updated_workflow',
+            'updatedSteps': 'updated_steps',
+            'stageId': 'stage_id',
+        }
+
+        # Convert keys
+        converted = {}
+        for key, value in data.items():
+            new_key = key_mapping.get(key, key)
+            converted[new_key] = value
+
+        # Create ExecutionStep with converted data
+        return ExecutionStep(**{k: v for k, v in converted.items() if k in ExecutionStep.__dataclass_fields__})
+
+    def exec_action(self, step) -> Any:
         """
         Execute an action step.
 
         Args:
-            step: The execution step to process
+            step: The execution step to process (can be dict or ExecutionStep)
 
         Returns:
             Execution result
         """
+        # Convert dict to ExecutionStep if needed
+        if isinstance(step, dict):
+            step = self._dict_to_execution_step(step)
+
         if not step or not step.action:
             self.error("[ScriptStore] Invalid execution step")
             return None
@@ -463,8 +512,10 @@ class ScriptStore(ModernLogger):
 
             elif action_type == ACTION_TYPES['UPDATE_WORKFLOW']:
                 self.info("[ScriptStore] Workflow update requested")
-                # This would trigger state machine workflow update
-                # Handled externally
+                # Store the updated workflow for state machine to process
+                if step.updated_workflow:
+                    self.pending_workflow_update = step.updated_workflow
+                    self.info(f"[ScriptStore] Stored pending workflow update: {step.updated_workflow.get('name', 'Unknown')}")
 
             elif action_type == ACTION_TYPES['UPDATE_STEP_LIST']:
                 self.info(f"[ScriptStore] Updating steps for stage: {step.stage_id}")

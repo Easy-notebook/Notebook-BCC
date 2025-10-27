@@ -1,0 +1,24 @@
+{
+  "title": "Workflow Planning for Predicting House Prices",
+  "cells": [
+    {
+      "id": "cd27d94d-1d3d-4ca2-9bfe-516bcc576fb9",
+      "type": "markdown",
+      "content": "To train a model for predicting house prices, we first need to define the problem clearly. This includes identifying the relevant data sources and understanding the data quality requirements. Once the problem is well - defined, we can move on to exploring the data, which involves cleaning, preprocessing, and performing exploratory data analysis. After that, we can focus on feature engineering and model selection, followed by model evaluation and interpretation. Finally, we communicate the results effectively. The stages we will start with are \"Problem Definition\" and \"Data Existence Establishment\" to ensure we have a clear understanding of the task and the necessary data.",
+      "outputs": [],
+      "enable_edit": true,
+      "description": "",
+      "metadata": {
+        "is_step": false,
+        "is_chapter": false,
+        "is_section": false,
+        "finished_thinking": false
+      },
+      "language": "python",
+      "could_visible_in_writing_mode": true
+    }
+  ],
+  "execution_count": 0,
+  "saved_at": "2025-10-27T22:03:21.673959",
+  "notebook_id": "workflow_20251027_220321"
+}

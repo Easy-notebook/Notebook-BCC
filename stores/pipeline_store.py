@@ -114,7 +114,8 @@ class PipelineStore(ModernLogger):
                             description="Design customized workflow based on requirements"
                         )
                     ]
-                )
+                ),
+                
             ]
         )
 

@@ -19,11 +19,28 @@ class WorkflowStep:
     title: Optional[str] = None
     description: Optional[str] = None
     index: Optional[int] = None
+    name: Optional[str] = None  # Backend may use 'name' instead of 'title'
 
     def __post_init__(self):
         # Ensure id is set to step_id if not provided
         if self.id is None:
             self.id = self.step_id
+        # Use name as title if title is not provided
+        if self.title is None and self.name:
+            self.title = self.name
+
+    @staticmethod
+    def from_dict(data: dict) -> 'WorkflowStep':
+        """Create a WorkflowStep from a dictionary."""
+        return WorkflowStep(
+            step_id=data.get('step_id') or data.get('id', ''),
+            id=data.get('id'),
+            status=data.get('status'),
+            title=data.get('title') or data.get('name'),
+            description=data.get('description'),
+            index=data.get('index'),
+            name=data.get('name')
+        )
 
 
 @dataclass
@@ -36,6 +53,24 @@ class WorkflowStage:
     steps: List[WorkflowStep] = field(default_factory=list)
     title: Optional[str] = None
     description: Optional[str] = None
+    name: Optional[str] = None  # Backend may use 'name' instead of 'title'
+
+    def __post_init__(self):
+        # Use name as title if title is not provided
+        if self.title is None and self.name:
+            self.title = self.name
+
+    @staticmethod
+    def from_dict(data: dict) -> 'WorkflowStage':
+        """Create a WorkflowStage from a dictionary."""
+        steps = [WorkflowStep.from_dict(s) for s in data.get('steps', [])]
+        return WorkflowStage(
+            id=data.get('id', ''),
+            steps=steps,
+            title=data.get('title') or data.get('name'),
+            description=data.get('description'),
+            name=data.get('name')
+        )
 
 
 @dataclass
@@ -48,6 +83,17 @@ class WorkflowTemplate:
     stages: List[WorkflowStage] = field(default_factory=list)
     id: Optional[str] = None
     description: Optional[str] = None
+
+    @staticmethod
+    def from_dict(data: dict) -> 'WorkflowTemplate':
+        """Create a WorkflowTemplate from a dictionary."""
+        stages = [WorkflowStage.from_dict(s) for s in data.get('stages', [])]
+        return WorkflowTemplate(
+            name=data.get('name', 'Unnamed Workflow'),
+            stages=stages,
+            id=data.get('id'),
+            description=data.get('description')
+        )
 
     def find_stage(self, stage_id: str) -> Optional[WorkflowStage]:
         """Find a stage by its ID."""

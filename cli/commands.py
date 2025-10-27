@@ -7,6 +7,10 @@ import logging
 from silantui import ModernLogger
 import sys
 from pathlib import Path
+import warnings
+
+# Suppress ResourceWarning for aiohttp sessions (they're cleaned up by GC)
+warnings.filterwarnings('ignore', category=ResourceWarning)
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -39,6 +43,10 @@ class WorkflowCLI(ModernLogger):
         super().__init__("WorkflowCLI")
         self.setup_logging()
 
+        # Initialize managers first
+        self.notebook_manager = NotebookManager()
+        self.cell_renderer = CellRenderer()
+
         # Initialize stores
         self.pipeline_store = PipelineStore()
         self.notebook_store = NotebookStore()
@@ -55,25 +63,25 @@ class WorkflowCLI(ModernLogger):
             pipeline_store=self.pipeline_store,
             script_store=self.script_store,
             ai_context_store=self.ai_context_store,
+            notebook_manager=self.notebook_manager,
             max_steps=max_steps,
             start_mode=start_mode,
             interactive=interactive
         )
 
-        # Initialize managers
-        self.notebook_manager = NotebookManager()
-        self.cell_renderer = CellRenderer()
-
     def setup_logging(self, level=logging.INFO):
         """Setup logging configuration."""
-        logging.basicConfig(
-            level=level,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler('workflow.log'),
-                logging.StreamHandler()
-            ]
-        )
+        # Only configure file handler, ModernLogger already handles console output
+        root_logger = logging.getLogger()
+        root_logger.setLevel(level)
+
+        # Add file handler only if not already present
+        if not any(isinstance(h, logging.FileHandler) for h in root_logger.handlers):
+            file_handler = logging.FileHandler('workflow.log')
+            file_handler.setFormatter(
+                logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            )
+            root_logger.addHandler(file_handler)
 
     def create_parser(self) -> argparse.ArgumentParser:
         """Create argument parser."""
@@ -127,12 +135,16 @@ class WorkflowCLI(ModernLogger):
         """Start a new workflow."""
         print("🚀 Starting new workflow...")
 
-        problem_description = args.problem or "Data Analysis Task"
-        context_description = args.context or "Interactive workflow"
+        # Get existing custom context (if set via --custom-context)
+        existing_vars = self.ai_context_store.get_context().variables
 
-        # Initialize workflow
+        # Build default planning request - use existing variables from custom context if available
+        problem_description = args.problem or existing_vars.get('problem_description') or existing_vars.get('user_goal') or "Data Analysis Task"
+        context_description = args.context or existing_vars.get('context_description') or "Interactive workflow"
+        problem_name = existing_vars.get('problem_name') or 'Analysis'
+
         planning_request = {
-            'problem_name': 'Analysis',
+            'problem_name': problem_name,
             'user_goal': problem_description,
             'problem_description': problem_description,
             'context_description': context_description,
@@ -143,14 +155,22 @@ class WorkflowCLI(ModernLogger):
         print(f"✓ Workflow initialized: {workflow.name}")
         print(f"  Stages: {len(workflow.stages)}")
 
+        # Only add planning variables if they're not already set
+        # This prevents overwriting custom context variables
+        for key, value in planning_request.items():
+            if key not in existing_vars:
+                self.ai_context_store.add_variable(key, value)
+
         # Start execution
         self.pipeline_store.start_workflow_execution(self.state_machine)
 
         print(f"✓ Workflow started")
         print(f"  Current state: {self.state_machine.state.value}")
+        print(f"📝 Notebook will be saved to: {self.notebook_manager.notebooks_dir}/")
 
-    def cmd_status(self, args):
+    def cmd_status(self, args=None):
         """Show workflow status."""
+        _ = args  # Unused
         print("\n📊 Workflow Status")
         print("=" * 60)
 
@@ -212,8 +232,9 @@ class WorkflowCLI(ModernLogger):
         else:
             print("No cells to display.")
 
-    def cmd_list(self, args):
+    def cmd_list(self, args=None):
         """List all notebooks."""
+        _ = args  # Unused
         notebooks = self.notebook_manager.list_notebooks()
 
         print(f"\n📚 Notebooks ({len(notebooks)})")
@@ -242,8 +263,9 @@ class WorkflowCLI(ModernLogger):
 
         print(f"✓ Exported to: {output_path}")
 
-    def cmd_repl(self, args):
+    def cmd_repl(self, args=None):
         """Start interactive REPL."""
+        _ = args  # Unused
         from .repl import WorkflowREPL
         repl = WorkflowREPL(self)
         repl.run()
@@ -292,6 +314,9 @@ class WorkflowCLI(ModernLogger):
                 custom_ctx = json.loads(args.custom_context)
                 print(f"⚙️  Custom context loaded: {list(custom_ctx.keys())}")
                 self.ai_context_store.set_custom_context(custom_ctx)
+                # Also add all custom context variables to the variables dict
+                for key, value in custom_ctx.items():
+                    self.ai_context_store.add_variable(key, value)
             except json.JSONDecodeError:
                 # Try to read as file path
                 try:
@@ -299,6 +324,9 @@ class WorkflowCLI(ModernLogger):
                         custom_ctx = json.load(f)
                     print(f"⚙️  Custom context loaded from file: {list(custom_ctx.keys())}")
                     self.ai_context_store.set_custom_context(custom_ctx)
+                    # Also add all custom context variables to the variables dict
+                    for key, value in custom_ctx.items():
+                        self.ai_context_store.add_variable(key, value)
                 except Exception as e:
                     print(f"⚠️  Failed to load custom context: {e}")
 

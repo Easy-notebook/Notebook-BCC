@@ -349,9 +349,32 @@ class AIPlanningContextStore(ModernLogger):
         """Get the current context."""
         return self._context
 
-    def set_context(self, context: AIContext):
-        """Set the entire context."""
-        self._context = context
+    def set_context(self, context):
+        """
+        Set the entire context.
+
+        Args:
+            context: Can be either an AIContext object or a dict
+        """
+        if isinstance(context, dict):
+            # Convert dict to AIContext
+            new_context = AIContext()
+            new_context.checklist = context.get('checklist', {'current': [], 'completed': []})
+            new_context.thinking = context.get('thinking', [])
+            new_context.variables = context.get('variables', {})
+            new_context.to_do_list = context.get('toDoList', context.get('to_do_list', []))
+            new_context.stage_status = context.get('stageStatus', context.get('stage_status', {}))
+            new_context.effect = context.get('effect', {'current': [], 'history': []})
+            # Handle custom context if present
+            custom_context = context.copy()
+            for key in ['checklist', 'thinking', 'variables', 'toDoList', 'to_do_list',
+                       'stageStatus', 'stage_status', 'effect']:
+                custom_context.pop(key, None)
+            if custom_context:
+                new_context.custom_context = custom_context
+            self._context = new_context
+        else:
+            self._context = context
         self.info("[AI Context] Context updated")
 
     def reset_ai_planning_context(self):
