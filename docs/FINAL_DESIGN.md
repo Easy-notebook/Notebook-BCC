@@ -16,12 +16,22 @@ Workflow (工作流)
 - 每个Behavior = 从API获取的一组Actions
 - 循环执行Behaviors直到`targetAchieved = true`
 
-## 2. Behavior循环机制
+## 2. Behavior循环机制 (v2.0 统一协议)
+
+**重要更新：所有执行现在都先调用 planning API**
 
 ```
 Step开始
   │
-  ├─→ [API调用] GET /v1/actions
+  ├─→ [API调用] POST /v1/planning (新增：Step开始时检查)
+  │   传入: stage_id, step_id, context
+  │   返回: {targetAchieved: bool, ...}
+  │
+  ├─→ [判断] targetAchieved?
+  │   true  → Step完成（跳过所有behaviors）
+  │   false → 继续执行
+  │
+  ├─→ [API调用] GET /v1/generating
   │   传入: stage_id, step_id, context, behavior_iteration
   │   返回: {behavior: {...}, actions: [...], transition: {...}}
   │
@@ -30,13 +40,13 @@ Step开始
   │   - add_content: 添加内容
   │   - execute_code: 执行代码
   │
-  ├─→ [API调用] POST /v1/reflection
-  │   传入: 执行结果 + 更新后的context
-  │   返回: {targetAchieved: bool, ...}
+  ├─→ [API调用] POST /v1/planning
+  │   传入: 执行结果 + 更新后的context + behavior_feedback
+  │   返回: {targetAchieved: bool, continue_behaviors: bool, ...}
   │
-  ├─→ [判断] targetAchieved?
-  │   false → 回到第一步（下一个behavior）
+  ├─→ [判断] targetAchieved 或 !continue_behaviors?
   │   true  → Step完成
+  │   false → 回到第二步（下一个behavior）
   │
   └─ Step结束
 ```

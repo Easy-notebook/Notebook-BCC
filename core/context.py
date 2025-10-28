@@ -40,6 +40,7 @@ class WorkflowContext:
     behavior_iteration: int = 0  # Added: tracks which behavior iteration we're on
     current_behavior_actions: List[Any] = field(default_factory=list)
     current_action_index: int = 0
+    completed_behaviors: List[str] = field(default_factory=list)  # Track completed behavior IDs
 
     def reset_for_new_step(self):
         """Reset context for a new step."""
@@ -47,6 +48,7 @@ class WorkflowContext:
         self.behavior_iteration = 0  # Reset behavior counter for new step
         self.current_behavior_actions = []
         self.current_action_index = 0
+        self.completed_behaviors = []  # Clear completed behaviors for new step
 
     def reset_for_new_behavior(self):
         """Reset context for a new behavior."""

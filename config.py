@@ -54,8 +54,8 @@ class Config:
     def _rebuild_api_urls(cls):
         """Rebuild API URLs after base URL changes."""
         # Workflow API endpoints
-        cls.FEEDBACK_API_URL = f"{cls.DSLC_BASE_URL}/reflection"
-        cls.BEHAVIOR_API_URL = f"{cls.DSLC_BASE_URL}/actions"
+        cls.FEEDBACK_API_URL = f"{cls.DSLC_BASE_URL}/planning"
+        cls.BEHAVIOR_API_URL = f"{cls.DSLC_BASE_URL}/generating"
         cls.GENERATE_API_URL = f"{cls.DSLC_BASE_URL}/generate"
 
         # Code execution API endpoints
@@ -66,8 +66,8 @@ class Config:
         cls.NOTEBOOK_RESTART_URL = f"{cls.BACKEND_BASE_URL}/restart_kernel"
 
     # Workflow API endpoints
-    FEEDBACK_API_URL = f"{DSLC_BASE_URL}/reflection"
-    BEHAVIOR_API_URL = f"{DSLC_BASE_URL}/actions"
+    FEEDBACK_API_URL = f"{DSLC_BASE_URL}/planning"
+    BEHAVIOR_API_URL = f"{DSLC_BASE_URL}/generating"
     GENERATE_API_URL = f"{DSLC_BASE_URL}/generate"
 
     # Code execution API endpoints
@@ -117,11 +117,6 @@ class Config:
 
     # Maximum steps to execute (0 = unlimited)
     MAX_EXECUTION_STEPS = int(os.getenv('MAX_EXECUTION_STEPS', '0'))
-
-    # Workflow start mode: 'reflection' or 'generation'
-    # - 'reflection': Start with feedback API (/reflection) to get next command
-    # - 'generation': Start with behavior API (/actions) to generate actions
-    WORKFLOW_START_MODE = os.getenv('WORKFLOW_START_MODE', 'generation')
 
     # Enable interactive mode (pause at breakpoints)
     INTERACTIVE_MODE = os.getenv('INTERACTIVE_MODE', 'false').lower() == 'true'

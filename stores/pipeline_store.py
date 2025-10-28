@@ -1,8 +1,6 @@
 """
 Pipeline Store
-Replicates the TypeScript usePipelineStore.ts
-
-Manages workflow template structure and pre-stage UI state.
+Manages workflow template structure and execution state.
 """
 
 from silantui import ModernLogger
@@ -10,20 +8,16 @@ from typing import Optional, List
 from models.workflow import WorkflowTemplate, WorkflowStage, WorkflowStep
 
 
-
 class PipelineStore(ModernLogger):
     """
-    Pipeline Store for managing workflow template and UI state.
-    Replicates TypeScript's usePipelineStore.
+    Pipeline Store for managing workflow template.
+    Handles workflow structure and execution lifecycle.
     """
 
     def __init__(self):
         """Initialize the store."""
         super().__init__("PipelineStore")
         self.workflow_template: Optional[WorkflowTemplate] = None
-        self.current_pre_stage: str = 'EMPTY'  # 'EMPTY', 'PROBLEM_DEFINE'
-        self.is_animating: bool = False
-        self.animation_direction: str = 'forward'  # 'forward' or 'backward'
         self.is_workflow_active: bool = False
 
     # ==============================================
@@ -52,20 +46,6 @@ class PipelineStore(ModernLogger):
                 return
 
         self.warning(f"[PipelineStore] Stage not found: {stage_id}")
-
-    # ==============================================
-    # Pre-Stage Management
-    # ==============================================
-
-    def set_pre_stage(self, stage: str):
-        """Set the current pre-stage."""
-        self.current_pre_stage = stage
-        self.info(f"[PipelineStore] Pre-stage set to: {stage}")
-
-    def set_animation(self, is_animating: bool, direction: str = 'forward'):
-        """Set animation state."""
-        self.is_animating = is_animating
-        self.animation_direction = direction
 
     # ==============================================
     # Workflow Activation
@@ -115,13 +95,11 @@ class PipelineStore(ModernLogger):
                         )
                     ]
                 ),
-                
             ]
         )
 
         self.workflow_template = workflow_template
         self.is_workflow_active = False
-        self.current_pre_stage = 'EMPTY'
 
         self.info("[PipelineStore] Workflow template initialized successfully")
         return workflow_template
@@ -166,7 +144,4 @@ class PipelineStore(ModernLogger):
         """Reset the store to initial state."""
         self.info("[PipelineStore] Resetting store")
         self.workflow_template = None
-        self.current_pre_stage = 'EMPTY'
-        self.is_animating = False
-        self.animation_direction = 'forward'
         self.is_workflow_active = False

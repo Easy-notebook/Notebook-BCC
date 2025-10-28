@@ -31,13 +31,12 @@ class WorkflowCLI(ModernLogger):
     Command-line interface for the workflow system.
     """
 
-    def __init__(self, max_steps=0, start_mode='generation', interactive=False):
+    def __init__(self, max_steps=0, interactive=False):
         """
         Initialize the CLI.
 
         Args:
             max_steps: Maximum steps to execute (0 = unlimited)
-            start_mode: Workflow start mode ('reflection' or 'generation')
             interactive: Enable interactive mode
         """
         super().__init__("WorkflowCLI")
@@ -65,7 +64,6 @@ class WorkflowCLI(ModernLogger):
             ai_context_store=self.ai_context_store,
             notebook_manager=self.notebook_manager,
             max_steps=max_steps,
-            start_mode=start_mode,
             interactive=interactive
         )
 
@@ -97,8 +95,6 @@ class WorkflowCLI(ModernLogger):
 
         # Execution control options
         parser.add_argument('--max-steps', type=int, default=0, help='Maximum steps to execute (0 = unlimited)')
-        parser.add_argument('--start-mode', type=str, choices=['reflection', 'generation'], default='generation',
-                          help='Workflow start mode: reflection (feedback-driven) or generation (action-driven)')
         parser.add_argument('--interactive', action='store_true', help='Enable interactive mode (pause at breakpoints)')
 
         # Custom context option
@@ -185,7 +181,7 @@ class WorkflowCLI(ModernLogger):
         exec_status = self.state_machine.get_execution_status()
         print(f"\n🎮 Execution Control")
         print(f"Steps: {exec_status['current_step']}" + (f"/{exec_status['max_steps']}" if exec_status['max_steps'] > 0 else " (unlimited)"))
-        print(f"Start Mode: {exec_status['start_mode']}")
+        print(f"Protocol: Planning First (always checks /planning API before execution)")
         print(f"Interactive: {'Yes' if exec_status['interactive'] else 'No'}")
         print(f"Paused: {'Yes' if exec_status['paused'] else 'No'}")
 
@@ -299,10 +295,6 @@ class WorkflowCLI(ModernLogger):
             print(f"⚙️  Max steps: {args.max_steps}")
             self.state_machine.set_max_steps(args.max_steps)
 
-        if args.start_mode:
-            print(f"⚙️  Start mode: {args.start_mode}")
-            self.state_machine.start_mode = args.start_mode
-
         if args.interactive:
             print("⚙️  Interactive mode: enabled")
             self.state_machine.interactive = True
@@ -364,7 +356,6 @@ def main():
 
     cli = WorkflowCLI(
         max_steps=Config.MAX_EXECUTION_STEPS,
-        start_mode=Config.WORKFLOW_START_MODE,
         interactive=Config.INTERACTIVE_MODE
     )
     cli.run()

@@ -8,19 +8,21 @@ from typing import List, Optional, Dict, Any
 from models.cell import Cell, CellType, CellOutput
 
 
-
 class NotebookStore(ModernLogger):
     """
     Notebook Store for managing cells.
-    Replicates the frontend's notebook store functionality.
+    Handles cell creation, updates, and lifecycle management.
     """
 
     def __init__(self):
         super().__init__("NotebookStore")
         self.cells: List[Cell] = []
-        self.current_cell_id: Optional[str] = None
         self.title: str = "Untitled Notebook"
         self.execution_count: int = 0
+
+        # Track cell updates for context
+        self._cell_snapshots: Dict[str, Dict[str, Any]] = {}  # cell_id -> snapshot
+        self._updated_cells: set = set()  # Track which cells were updated
 
     # ==============================================
     # Cell Management
@@ -57,6 +59,13 @@ class NotebookStore(ModernLogger):
         )
 
         self.cells.append(cell)
+
+        # Create snapshot for the newly added cell
+        self._create_snapshot(cell)
+
+        # Mark as updated (new cell is considered updated)
+        self._updated_cells.add(cell_id)
+
         self.info(f"[NotebookStore] Added cell: {cell_id} (type: {cell_type.value})")
 
         return cell
@@ -72,8 +81,11 @@ class NotebookStore(ModernLogger):
         """Update a cell's content."""
         cell = self.get_cell(cell_id)
         if cell:
-            cell.content = content
-            self.info(f"[NotebookStore] Updated cell content: {cell_id}")
+            # Check if content actually changed
+            if cell.content != content:
+                cell.content = content
+                self._mark_as_updated(cell_id)
+                self.info(f"[NotebookStore] Updated cell content: {cell_id}")
             return True
         return False
 
@@ -82,6 +94,7 @@ class NotebookStore(ModernLogger):
         cell = self.get_cell(cell_id)
         if cell:
             cell.metadata.update(metadata)
+            self._mark_as_updated(cell_id)
             self.info(f"[NotebookStore] Updated cell metadata: {cell_id}")
             return True
         return False
@@ -109,6 +122,7 @@ class NotebookStore(ModernLogger):
         cell = self.get_cell(cell_id)
         if cell:
             cell.add_output(output)
+            self._mark_as_updated(cell_id)
             self.info(f"[NotebookStore] Added output to cell: {cell_id}")
             return True
         return False
@@ -117,25 +131,14 @@ class NotebookStore(ModernLogger):
         """Clear all outputs from a cell."""
         cell = self.get_cell(cell_id)
         if cell:
+            # Only mark as updated if there were outputs to clear
+            had_outputs = len(cell.outputs) > 0
             cell.clear_outputs()
+            if had_outputs:
+                self._mark_as_updated(cell_id)
             self.info(f"[NotebookStore] Cleared outputs for cell: {cell_id}")
             return True
         return False
-
-    # ==============================================
-    # Current Cell Management
-    # ==============================================
-
-    def set_current_cell(self, cell_id: str):
-        """Set the current active cell."""
-        self.current_cell_id = cell_id
-        self.info(f"[NotebookStore] Set current cell: {cell_id}")
-
-    def get_current_cell(self) -> Optional[Cell]:
-        """Get the current active cell."""
-        if self.current_cell_id:
-            return self.get_cell(self.current_cell_id)
-        return None
 
     # ==============================================
     # Title Management
@@ -180,14 +183,66 @@ class NotebookStore(ModernLogger):
         return len(self.cells)
 
     # ==============================================
+    # Update Tracking (for Context)
+    # ==============================================
+
+    def _create_snapshot(self, cell: Cell):
+        """Create a snapshot of the cell's current state."""
+        self._cell_snapshots[cell.id] = {
+            'content': cell.content,
+            'outputs_count': len(cell.outputs),
+            'metadata': dict(cell.metadata)
+        }
+
+    def _mark_as_updated(self, cell_id: str):
+        """Mark a cell as updated."""
+        self._updated_cells.add(cell_id)
+        self.info(f"[NotebookStore] Marked cell as updated: {cell_id}")
+
+    def clear_update_tracking(self):
+        """
+        Clear update tracking and create new snapshots.
+        Call this after sending state to API to reset tracking.
+        """
+        # Update all snapshots to current state
+        for cell in self.cells:
+            self._create_snapshot(cell)
+
+        # Clear updated cells set
+        self._updated_cells.clear()
+        self.info("[NotebookStore] Cleared update tracking")
+
+    def get_updated_cell_ids(self) -> List[str]:
+        """Get list of cell IDs that have been updated."""
+        return list(self._updated_cells)
+
+    # ==============================================
     # Serialization
     # ==============================================
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert notebook to dictionary for serialization."""
+    def to_dict(self, include_update_status: bool = True) -> Dict[str, Any]:
+        """
+        Convert notebook to dictionary for serialization.
+
+        Args:
+            include_update_status: Whether to include isUpdate flag in cells
+
+        Returns:
+            Dictionary representation of the notebook
+        """
+        cells_data = []
+        for cell in self.cells:
+            cell_dict = cell.to_dict()
+
+            # Add isUpdate flag if requested
+            if include_update_status:
+                cell_dict['isUpdate'] = cell.id in self._updated_cells
+
+            cells_data.append(cell_dict)
+
         return {
             'title': self.title,
-            'cells': [cell.to_dict() for cell in self.cells],
+            'cells': cells_data,
             'execution_count': self.execution_count,
         }
 

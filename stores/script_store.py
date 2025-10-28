@@ -1,17 +1,41 @@
 """
-Script Store
-Replicates the TypeScript useScriptStore.ts
+Script Store - Highly Extensible Action Execution Engine
+Manages actions with decorator-based handler registration for maximum extensibility.
 
-Manages actions and their execution.
+Refactored: Action handlers are now in separate modules under stores/handlers/
 """
 
 from silantui import ModernLogger
 import uuid
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 from models.action import ScriptAction, ActionMetadata, ExecutionStep
 from models.cell import CellType
 
+# Import modularized registry and handlers
+from .action_registry import ActionRegistry, ActionHandler
+from .handlers import (
+    handle_add_action,
+    handle_new_chapter,
+    handle_new_section,
+    handle_exec_code,
+    handle_set_effect_thinking,
+    handle_is_thinking,
+    handle_finish_thinking,
+    handle_update_title,
+    handle_complete_step,
+    handle_update_workflow,
+    handle_update_step_list,
+    handle_update_last_text,
+)
+from .handlers.code_handlers import exec_code_cell, set_effect_as_thinking
+from .handlers.thinking_handlers import finish_thinking
+from .handlers.text_handlers import update_last_text
+from .handlers.workflow_handlers import update_title
 
+
+# =====================================================================
+# Constants and Configuration
+# =====================================================================
 
 # Cell type mapping
 CELL_TYPE_MAPPING = {
@@ -38,25 +62,28 @@ ACTION_TYPES = {
     'NEW_SECTION': 'new_section',
 }
 
+# =====================================================================
+# Main ScriptStore Class
+# =====================================================================
 
 class ScriptStore(ModernLogger):
     """
     Script Store for managing actions and their execution.
-    Replicates TypeScript's useScriptStore.
+
+    Features:
+    - Decorator-based action handler registration
+    - Pre/post execution hooks
+    - Extensible without code modification
+    - Clean separation of concerns
     """
+
+    # Class-level registry for shared handlers
+    _registry = ActionRegistry()
 
     def __init__(self, notebook_store=None, ai_context_store=None, code_executor=None):
         super().__init__("ScriptStore")
-        """
-        Initialize the store.
-
-        Args:
-            notebook_store: Reference to notebook store
-            ai_context_store: Reference to AI context store
-            code_executor: Reference to code executor
-        """
         self.actions: List[ScriptAction] = []
-        self.steps: Dict[str, List[str]] = {}  # step_id -> list of action_ids
+        self.steps: Dict[str, List[str]] = {}
         self.last_added_action_id: Optional[str] = None
 
         # Store references
@@ -71,55 +98,87 @@ class ScriptStore(ModernLogger):
         self.chapter_counter = 0
         self.section_counter = 0
 
-    # ==============================================
-    # Helper Functions
-    # ==============================================
+        # Register default handlers
+        self._register_default_handlers()
 
-    @staticmethod
-    def clean_content(content: str, cell_type: str = 'text') -> str:
+    # =================================================================
+    # Handler Registration Methods
+    # =================================================================
+
+    def _register_default_handlers(self):
+        """Register all default action handlers using modularized handlers."""
+        registry = self.__class__._registry
+
+        # Register handlers from modularized handler modules
+        # Each handler is a lambda that passes self (script_store) to the handler function
+        registry.register_handler(ACTION_TYPES['ADD_ACTION'], lambda step: handle_add_action(self, step))
+        registry.register_handler(ACTION_TYPES['NEW_CHAPTER'], lambda step: handle_new_chapter(self, step))
+        registry.register_handler(ACTION_TYPES['NEW_SECTION'], lambda step: handle_new_section(self, step))
+        registry.register_handler(ACTION_TYPES['IS_THINKING'], lambda step: handle_is_thinking(self, step))
+        registry.register_handler(ACTION_TYPES['FINISH_THINKING'], lambda step: handle_finish_thinking(self, step))
+        registry.register_handler(ACTION_TYPES['EXEC_CODE'], lambda step: handle_exec_code(self, step))
+        registry.register_handler('set_effect_as_thinking', lambda step: handle_set_effect_thinking(self, step))
+        registry.register_handler('update_last_text', lambda step: handle_update_last_text(self, step))
+        registry.register_handler(ACTION_TYPES['UPDATE_TITLE'], lambda step: handle_update_title(self, step))
+        registry.register_handler(ACTION_TYPES['COMPLETE_STEP'], lambda step: handle_complete_step(self, step))
+        registry.register_handler(ACTION_TYPES['UPDATE_WORKFLOW'], lambda step: handle_update_workflow(self, step))
+        registry.register_handler(ACTION_TYPES['UPDATE_STEP_LIST'], lambda step: handle_update_step_list(self, step))
+
+    @classmethod
+    def register_custom_action(cls, action_type: str, handler: ActionHandler) -> None:
         """
-        Clean content by removing meta-instruction prefixes.
+        Register a custom action handler.
+
+        This allows external modules to extend functionality without modifying core code.
 
         Args:
-            content: Raw content from API
-            cell_type: Type of cell ('text' or 'code')
+            action_type: Type identifier for the custom action
+            handler: Handler function implementing ActionHandler protocol
 
-        Returns:
-            Cleaned content without meta-instruction prefixes
+        Raises:
+            ValueError: If action_type is empty or handler is not callable
+
+        Example:
+            def custom_handler(step: ExecutionStep) -> Any:
+                print(f"Custom action: {step.content}")
+                return None
+
+            ScriptStore.register_custom_action('my_custom_action', custom_handler)
         """
-        if not content:
-            return content
+        cls._registry.register_handler(action_type, handler)
 
-        # Remove common meta-instruction prefixes
-        prefixes_to_remove = [
-            'Add text to the notebook:',
-            'Add text to the notebook: ',
-            'Add code to the notebook:',
-            'Add code to the notebook: ',
-            'Add code to the notebook and run it:',
-            'Add code to the notebook and run it: ',
-            'Update the title of the notebook:',
-            'Update the title of the notebook: ',
-        ]
+    @classmethod
+    def add_execution_hook(cls, hook_type: str, hook: Callable) -> None:
+        """
+        Add execution hook.
 
-        for prefix in prefixes_to_remove:
-            if content.startswith(prefix):
-                content = content[len(prefix):]
-                break
+        Args:
+            hook_type: 'pre' or 'post'
+            hook: Callable to execute before/after action execution
 
-        # For code cells, remove markdown code block markers if present
-        if cell_type == 'code':
-            content = content.strip()
-            if content.startswith('```python\n'):
-                content = content[10:]  # Remove ```python\n
-            elif content.startswith('```\n'):
-                content = content[4:]   # Remove ```\n
-            if content.endswith('\n```'):
-                content = content[:-4]  # Remove \n```
-            elif content.endswith('```'):
-                content = content[:-3]  # Remove ```
+        Raises:
+            ValueError: If hook_type is not 'pre' or 'post', or if hook is not callable
 
-        return content.strip()
+        Example:
+            def my_pre_hook(step: ExecutionStep):
+                print(f"About to execute: {step.action}")
+
+            ScriptStore.add_execution_hook('pre', my_pre_hook)
+        """
+        if hook_type not in ('pre', 'post'):
+            raise ValueError(f"Invalid hook_type: {hook_type}. Must be 'pre' or 'post'")
+
+        if not callable(hook):
+            raise ValueError("Hook must be callable")
+
+        if hook_type == 'pre':
+            cls._registry.add_pre_hook(hook)
+        elif hook_type == 'post':
+            cls._registry.add_post_hook(hook)
+
+    # =================================================================
+    # Helper Functions (delegated to handler modules)
+    # =================================================================
 
     def get_default_content(self, content_type: str = 'text') -> str:
         """Get default content for a content type."""
@@ -134,9 +193,7 @@ class ScriptStore(ModernLogger):
 
     def get_current_step_id(self) -> Optional[str]:
         """Get current step ID from state machine."""
-        # This would come from the state machine context
-        # For now, return None - will be injected
-        return None
+        return None  # Injected from state machine
 
     def get_current_step_actions(self) -> List[ScriptAction]:
         """Get actions for the current step."""
@@ -147,202 +204,132 @@ class ScriptStore(ModernLogger):
         action_ids = self.steps.get(current_step_id, [])
         return [action for action in self.actions if action.id in action_ids]
 
-    # ==============================================
+    # =================================================================
     # Action Management
-    # ==============================================
+    # =================================================================
 
     def create_new_action(
         self,
         action_type: str = 'text',
         content: str = '',
+        action_id: Optional[str] = None,
         metadata: Optional[ActionMetadata] = None
-    ) -> Optional[str]:
+    ) -> ScriptAction:
         """Create a new action."""
-        action_id = str(uuid.uuid4())
-        content = content or self.get_default_content(action_type)
-        metadata = metadata or ActionMetadata()
-
-        new_action = ScriptAction(
-            id=action_id,
+        return ScriptAction(
+            id=action_id or str(uuid.uuid4()),
             type=action_type,
             content=content,
-            metadata=metadata
+            metadata=metadata or ActionMetadata()
         )
-
-        return self.add_action(new_action)
 
     def add_action(
         self,
         action: ScriptAction,
-        could_visible_in_writing_mode: bool = True
-    ) -> Optional[str]:
-        """Add an action to the store and create corresponding notebook cell."""
-        current_step_id = self.get_current_step_id()
+        step_id: Optional[str] = None,
+        add_to_notebook: bool = True
+    ) -> str:
+        """
+        Add an action to the store and optionally to the notebook.
 
-        try:
-            # Format content if text
-            if action.type == 'text':
-                content = action.content
-                if action.metadata.is_step and not content.startswith('#'):
-                    content = f"### {content}"
-                action.content = content
+        Args:
+            action: The action to add
+            step_id: Step ID to associate with
+            add_to_notebook: Whether to add to notebook
 
-            # Determine cell type
-            cell_type = CELL_TYPE_MAPPING.get(action.type, 'markdown')
+        Returns:
+            The action ID
+        """
+        self.actions.append(action)
+        self.last_added_action_id = action.id
 
-            # Create cell data
+        # Associate with step
+        if step_id:
+            if step_id not in self.steps:
+                self.steps[step_id] = []
+            self.steps[step_id].append(action.id)
+
+        # Add to notebook if requested
+        if add_to_notebook and self.notebook_store:
+            cell_type_str = CELL_TYPE_MAPPING.get(action.type, action.type)
+
             cell_data = {
                 'id': action.id,
-                'type': cell_type,
+                'type': cell_type_str,
                 'content': action.content,
-                'outputs': [],
-                'enableEdit': cell_type != 'thinking',
-                'phaseId': current_step_id,
+                'enableEdit': True,  # Default to editable
+                'phaseId': step_id,
                 'description': action.description or '',
-                'metadata': action.metadata.to_dict(),
-                'couldVisibleInWritingMode': could_visible_in_writing_mode,
+                'metadata': action.metadata.to_dict() if action.metadata else {},
+                'language': action.language,
+                'agentName': action.agent_name or 'AI',
+                'customText': action.custom_text,
+                'textArray': action.text_array,
+                'useWorkflowThinking': action.use_workflow_thinking,
             }
 
-            # Add type-specific data
-            if cell_type in ['code', 'Hybrid']:
-                cell_data['language'] = action.language
+            self.notebook_store.add_cell(cell_data)
 
-            if cell_type == 'thinking':
-                cell_data['agentName'] = action.agent_name or 'AI'
-                cell_data['customText'] = action.custom_text
-                cell_data['textArray'] = action.text_array or [f"{action.agent_name or 'AI'} is thinking..."]
-                cell_data['useWorkflowThinking'] = action.use_workflow_thinking
-
-            # Add cell to notebook
-            if self.notebook_store:
-                self.notebook_store.add_cell(cell_data)
-
-            # Add to actions list
-            self.actions.append(action)
-
-            # Add to step mapping
-            if current_step_id:
-                if current_step_id not in self.steps:
-                    self.steps[current_step_id] = []
-                self.steps[current_step_id].append(action.id)
-
-            self.last_added_action_id = action.id
-
-            self.info(f"[ScriptStore] Added action: {action.id} (type: {action.type})")
-            return action.id
-
-        except Exception as e:
-            self.error(f"[ScriptStore] Error adding action: {e}", exc_info=True)
-            return None
+        self.info(f"[ScriptStore] Added action: {action.id} (type: {action.type})")
+        return action.id
 
     def update_action(self, action_id: str, updates: Dict[str, Any]) -> bool:
         """Update an existing action."""
-        try:
-            # Find action
-            action = None
-            for a in self.actions:
-                if a.id == action_id:
-                    action = a
-                    break
+        for action in self.actions:
+            if action.id == action_id:
+                for key, value in updates.items():
+                    if hasattr(action, key):
+                        setattr(action, key, value)
 
-            if not action:
-                return False
+                # Update notebook cell if exists
+                if self.notebook_store:
+                    self.notebook_store.update_cell(action_id, action.content)
 
-            # Update action
-            for key, value in updates.items():
-                if hasattr(action, key):
-                    setattr(action, key, value)
+                self.info(f"[ScriptStore] Updated action: {action_id}")
+                return True
 
-            action.is_modified = True
-
-            # Update notebook cell
-            if self.notebook_store:
-                if 'content' in updates:
-                    self.notebook_store.update_cell(action_id, updates['content'])
-                if 'metadata' in updates:
-                    self.notebook_store.update_cell_metadata(action_id, updates['metadata'])
-
-            self.info(f"[ScriptStore] Updated action: {action_id}")
-            return True
-
-        except Exception as e:
-            self.error(f"[ScriptStore] Error updating action: {e}", exc_info=True)
-            return False
+        self.warning(f"[ScriptStore] Action not found: {action_id}")
+        return False
 
     def remove_action(self, action_id: str) -> bool:
         """Remove an action."""
-        try:
-            # Remove from notebook
-            if self.notebook_store:
-                self.notebook_store.delete_cell(action_id)
+        for i, action in enumerate(self.actions):
+            if action.id == action_id:
+                self.actions.pop(i)
 
-            # Remove from actions list
-            self.actions = [a for a in self.actions if a.id != action_id]
+                # Remove from steps
+                for step_id, action_ids in self.steps.items():
+                    if action_id in action_ids:
+                        action_ids.remove(action_id)
 
-            # Remove from step mappings
-            for step_id in self.steps:
-                if action_id in self.steps[step_id]:
-                    self.steps[step_id].remove(action_id)
+                # Remove from notebook
+                if self.notebook_store:
+                    self.notebook_store.delete_cell(action_id)
 
-            self.info(f"[ScriptStore] Removed action: {action_id}")
-            return True
+                self.info(f"[ScriptStore] Removed action: {action_id}")
+                return True
 
-        except Exception as e:
-            self.error(f"[ScriptStore] Error removing action: {e}", exc_info=True)
-            return False
+        return False
 
-    # ==============================================
-    # Specialized Operations
-    # ==============================================
+    # =================================================================
+    # Specialized Operations (delegated to handler modules)
+    # =================================================================
 
     def update_last_text(self, text: str):
-        """Update the last text cell's content."""
-        if not self.notebook_store:
-            return
-
-        last_cell = self.notebook_store.get_last_cell()
-        if last_cell and last_cell.type == CellType.MARKDOWN:
-            self.notebook_store.update_cell(last_cell.id, text)
-            self.info(f"[ScriptStore] Updated last text cell")
+        """Update the last text cell's content (delegated to text_handlers)."""
+        update_last_text(self, text)
 
     def finish_thinking(self):
-        """Remove the last thinking cell."""
-        if not self.notebook_store:
-            return
-
-        thinking_cells = self.notebook_store.get_cells_by_type(CellType.THINKING)
-        if thinking_cells:
-            last_thinking = thinking_cells[-1]
-            self.notebook_store.delete_cell(last_thinking.id)
-            self.actions = [a for a in self.actions if a.id != last_thinking.id]
-            self.info(f"[ScriptStore] Finished thinking, removed cell: {last_thinking.id}")
+        """Remove the last thinking cell (delegated to thinking_handlers)."""
+        finish_thinking(self)
 
     def set_effect_as_thinking(self, thinking_text: str = "finished thinking"):
-        """Mark the last code cell as having finished thinking."""
-        if not self.notebook_store:
-            return
+        """Mark the last code cell as having finished thinking (delegated to code_handlers)."""
+        set_effect_as_thinking(self, thinking_text)
 
-        last_cell = self.notebook_store.get_last_cell()
-        if last_cell and last_cell.type == CellType.CODE:
-            metadata = {
-                **last_cell.metadata,
-                'finished_thinking': True,
-                'thinkingText': thinking_text
-            }
-            self.notebook_store.update_cell_metadata(last_cell.id, metadata)
-
-            # Update action metadata
-            for action in self.actions:
-                if action.id == last_cell.id:
-                    action.metadata.finished_thinking = True
-                    action.metadata.thinking_text = thinking_text
-                    break
-
-            self.info(f"[ScriptStore] Set effect as thinking for cell: {last_cell.id}")
-
-    # ==============================================
-    # Code Execution
-    # ==============================================
+    # =================================================================
+    # Code Execution (delegated to code_handlers)
+    # =================================================================
 
     def exec_code_cell(
         self,
@@ -351,7 +338,7 @@ class ScriptStore(ModernLogger):
         auto_debug: bool = False
     ) -> Any:
         """
-        Execute a code cell.
+        Execute a code cell (delegated to code_handlers).
 
         Args:
             codecell_id: The cell ID to execute
@@ -361,109 +348,64 @@ class ScriptStore(ModernLogger):
         Returns:
             Execution result
         """
-        if not codecell_id:
-            return None
-
-        if not self.code_executor:
-            self.error("[ScriptStore] No code executor available")
-            return None
-
-        try:
-            self.info(f"[ScriptStore] Executing code cell: {codecell_id}")
-
-            # Get cell
-            cell = self.notebook_store.get_cell(codecell_id) if self.notebook_store else None
-            if not cell:
-                self.error(f"[ScriptStore] Cell not found: {codecell_id}")
-                return None
-
-            # Execute code
-            result = self.code_executor.execute(cell.content, cell_id=codecell_id)
-
-            if result.get('success'):
-                # Add outputs to cell
-                if self.notebook_store and result.get('outputs'):
-                    self.notebook_store.clear_cell_outputs(codecell_id)
-                    for output in result['outputs']:
-                        self.notebook_store.add_cell_output(codecell_id, output)
-
-                # Add to effect context
-                if self.ai_context_store and result.get('outputs'):
-                    for output in result['outputs']:
-                        output_text = output.content or output.text or str(output)
-                        self.ai_context_store.add_effect(output_text)
-                        self.info(f"[ScriptStore] Added effect: {output_text[:50]}...")
-
-                return result.get('outputs')
-            else:
-                error = result.get('error', 'Unknown error')
-                self.error(f"[ScriptStore] Code execution failed: {error}")
-
-                if auto_debug:
-                    self.info(f"[ScriptStore] Auto-debug triggered for cell: {codecell_id}")
-                    # Implement auto-debug logic here
-
-                return error
-
-        except Exception as e:
-            self.error(f"[ScriptStore] Error executing cell: {e}", exc_info=True)
-            return None
+        return exec_code_cell(self, codecell_id, need_output, auto_debug)
 
     def update_title(self, title: str):
-        """Update notebook title."""
-        if self.notebook_store:
-            self.notebook_store.update_title(title)
-            self.info(f"[ScriptStore] Updated title: {title}")
+        """Update notebook title (delegated to workflow_handlers)."""
+        update_title(self, title)
 
-    # ==============================================
-    # Main Execution Engine
-    # ==============================================
+    # =================================================================
+    # Action Handlers (Now in separate modules under stores/handlers/)
+    # All handlers have been extracted to modular files for better organization
+    # =================================================================
+
+    # All handler implementations moved to stores/handlers/
+    # See: content_handlers.py, code_handlers.py, thinking_handlers.py,
+    #      workflow_handlers.py, text_handlers.py
+
+    # =================================================================
+    # Main Execution Engine with Hook Support
+    # =================================================================
 
     @staticmethod
     def _dict_to_execution_step(data: Dict[str, Any]) -> ExecutionStep:
-        """
-        Convert a dictionary (from API) to an ExecutionStep object.
-        Handles camelCase to snake_case conversion.
+        """Convert dictionary to ExecutionStep object."""
+        metadata_dict = data.get('metadata', {})
+        metadata = ActionMetadata(
+            enable_edit=metadata_dict.get('enableEdit', True),
+            description=metadata_dict.get('description', ''),
+            use_workflow_thinking=metadata_dict.get('useWorkflowThinking', False),
+            finished_thinking=metadata_dict.get('finishedThinking', False),
+            thinking_text=metadata_dict.get('thinkingText'),
+            is_section=metadata_dict.get('isSection', False),
+            section_id=metadata_dict.get('sectionId'),
+            section_number=metadata_dict.get('sectionNumber')
+        )
 
-        Args:
-            data: Dictionary from API response
-
-        Returns:
-            ExecutionStep object
-        """
-        # Map camelCase keys to snake_case
-        key_mapping = {
-            'shotType': 'shot_type',
-            'storeId': 'store_id',
-            'contentType': 'content_type',
-            'agentName': 'agent_name',
-            'customText': 'custom_text',
-            'textArray': 'text_array',
-            'thinkingText': 'thinking_text',
-            'actionIdRef': 'action_id_ref',
-            'stepId': 'step_id',
-            'phaseId': 'phase_id',
-            'keepDebugButtonVisible': 'keep_debug_button_visible',
-            'codecellId': 'codecell_id',
-            'needOutput': 'need_output',
-            'autoDebug': 'auto_debug',
-            'updatedWorkflow': 'updated_workflow',
-            'updatedSteps': 'updated_steps',
-            'stageId': 'stage_id',
-        }
-
-        # Convert keys
-        converted = {}
-        for key, value in data.items():
-            new_key = key_mapping.get(key, key)
-            converted[new_key] = value
-
-        # Create ExecutionStep with converted data
-        return ExecutionStep(**{k: v for k, v in converted.items() if k in ExecutionStep.__dataclass_fields__})
+        return ExecutionStep(
+            action=data.get('action', ''),
+            shot_type=data.get('shotType'),
+            content=data.get('content', ''),
+            store_id=data.get('storeId'),
+            codecell_id=data.get('codecellId'),
+            need_output=data.get('needOutput', True),
+            auto_debug=data.get('autoDebug', False),
+            text_array=data.get('textArray', []),
+            agent_name=data.get('agentName'),
+            custom_text=data.get('customText'),
+            text=data.get('text'),
+            title=data.get('title'),
+            thinking_text=data.get('thinkingText'),
+            metadata=metadata,
+            updated_workflow=data.get('updatedWorkflow'),
+            new_steps=data.get('newSteps', []),
+            stage_id=data.get('stageId'),
+            state=data.get('state')
+        )
 
     def exec_action(self, step) -> Any:
         """
-        Execute an action step.
+        Execute an action step with full hook support.
 
         Args:
             step: The execution step to process (can be dict or ExecutionStep)
@@ -483,117 +425,38 @@ class ScriptStore(ModernLogger):
         self.info(f"[ScriptStore] Executing action: {action_type}")
 
         try:
+            # Execute pre-hooks
+            self.__class__._registry.execute_pre_hooks(step)
+
             # Sync state if present
             if step.state and self.ai_context_store:
                 self.info(f"[ScriptStore] Syncing state from action")
                 context = self.ai_context_store.get_context()
-                # Preserve effect state (use 'effects' to match server field name)
                 merged_state = {**step.state, 'effects': context.effect}
                 self.ai_context_store.set_context(merged_state)
 
-            # Handle different action types
-            if action_type == ACTION_TYPES['ADD_ACTION']:
-                action_id = step.store_id or str(uuid.uuid4())
-                cell_type = 'code' if step.shot_type == 'action' else 'text'
-                # Clean content to remove meta-instruction prefixes
-                cleaned_content = self.clean_content(step.content or '', cell_type)
-                self.add_action(ScriptAction(
-                    id=action_id,
-                    type=cell_type,
-                    content=cleaned_content,
-                    metadata=step.metadata or ActionMetadata()
-                ))
-
-            elif action_type == ACTION_TYPES['NEW_CHAPTER']:
-                action_id = step.store_id or str(uuid.uuid4())
-                self.add_action(ScriptAction(
-                    id=action_id,
-                    type='text',
-                    content=f"## {step.content}",
-                    metadata=step.metadata or ActionMetadata()
-                ))
-
-            elif action_type == ACTION_TYPES['NEW_SECTION']:
-                action_id = step.store_id or str(uuid.uuid4())
-                self.add_action(ScriptAction(
-                    id=action_id,
-                    type='text',
-                    content=f"### {step.content}",
-                    metadata=step.metadata or ActionMetadata()
-                ))
-
-            elif action_type == ACTION_TYPES['IS_THINKING']:
-                self.add_action(ScriptAction(
-                    id=str(uuid.uuid4()),
-                    type='thinking',
-                    content='',
-                    text_array=step.text_array or [],
-                    agent_name=step.agent_name or 'AI',
-                    custom_text=step.custom_text
-                ))
-
-            elif action_type == ACTION_TYPES['FINISH_THINKING']:
-                self.finish_thinking()
-
-            elif action_type == ACTION_TYPES['EXEC_CODE']:
-                target_id = (self.last_added_action_id if step.codecell_id == "lastAddedCellId"
-                             else step.codecell_id)
-                if target_id:
-                    self.info(f"[ScriptStore] Executing code: {target_id}")
-                    result = self.exec_code_cell(target_id, step.need_output, step.auto_debug)
-                    return result
-
-            elif action_type == 'set_effect_as_thinking':
-                self.set_effect_as_thinking(step.thinking_text or "finished thinking")
-
-            elif action_type == 'update_last_text':
-                self.update_last_text(step.text or '')
-
-            elif action_type == ACTION_TYPES['UPDATE_TITLE']:
-                if step.title:
-                    # Clean title to remove meta-instruction prefixes
-                    cleaned_title = self.clean_content(step.title, 'text')
-                    self.update_title(cleaned_title)
-
-            elif action_type == ACTION_TYPES['COMPLETE_STEP']:
-                self.info("[ScriptStore] Received command to complete step")
-                # This would trigger state machine transition
-                # Handled externally
-
-            elif action_type == ACTION_TYPES['UPDATE_WORKFLOW']:
-                self.info("[ScriptStore] Workflow update requested")
-                # Store the updated workflow for state machine to process
-                if step.updated_workflow:
-                    self.pending_workflow_update = step.updated_workflow
-                    self.info(f"[ScriptStore] Stored pending workflow update: {step.updated_workflow.get('name', 'Unknown')}")
-
-                    # Initialize workflow_progress in AI context
-                    if self.ai_context_store:
-                        self.ai_context_store.initialize_workflow_progress(step.updated_workflow)
-                        self.info("[ScriptStore] Initialized workflow_progress in AI context")
-
-                    # Return a special marker to indicate workflow update is pending
-                    return {'workflow_update_pending': True}
-
-            elif action_type == ACTION_TYPES['UPDATE_STEP_LIST']:
-                self.info(f"[ScriptStore] Updating steps for stage: {step.stage_id}")
-                # Update pipeline store
-                # Handled externally
-
+            # Execute action using registry
+            handler = self.__class__._registry.get_handler(action_type)
+            if handler:
+                result = handler(step)
             else:
                 self.warning(f"[ScriptStore] Unknown action type: {action_type}")
+                result = None
 
-            # Check if this action marks a section (NEW)
+            # Check if this action marks a section
             if step.metadata and step.metadata.is_section:
                 self._handle_section(step)
+
+            # Execute post-hooks
+            self.__class__._registry.execute_post_hooks(step, result)
+
+            return result
 
         except Exception as e:
             self.error(f"[ScriptStore] Error executing action {action_type}: {e}", exc_info=True)
             raise
 
-        return None
-
-    def _handle_section(self, step):
+    def _handle_section(self, step: ExecutionStep):
         """
         Handle section markers by updating section progress in AI context.
 
@@ -616,3 +479,17 @@ class ScriptStore(ModernLogger):
 
         # Mark section as completed
         self.ai_context_store.complete_section(section_id)
+
+    # =================================================================
+    # Utility Methods for Extensibility
+    # =================================================================
+
+    @classmethod
+    def list_registered_actions(cls) -> List[str]:
+        """List all registered action types."""
+        return cls._registry.registered_actions
+
+    @classmethod
+    def has_handler(cls, action_type: str) -> bool:
+        """Check if a handler is registered for an action type."""
+        return cls._registry.get_handler(action_type) is not None

@@ -116,52 +116,60 @@ cli.state_machine.reset_step_counter()
 
 ---
 
-## 启动模式选择 (Start Mode Selection)
+## 执行流程协议 (Unified Execution Protocol v2.0+)
 
-### 1. Generation 模式（默认）
+### ⚠️ 重要更新
 
-直接调用 `/actions` API 生成动作：
+**从 v2.0 开始，所有工作流都采用统一的"Planning First"协议。**
 
-```bash
-python main.py --start-mode generation start --problem "分析数据"
-```
+### 统一执行流程
 
-**流程：**
-```
-STEP_RUNNING → BEHAVIOR_RUNNING → fetch actions → execute actions
-```
-
-### 2. Reflection 模式
-
-先调用 `/reflection` API 判断是否需要继续：
+所有步骤现在都遵循相同的智能执行流程：
 
 ```bash
-python main.py --start-mode reflection start --problem "验证结果"
+python main.py start --problem "分析数据"
 ```
 
-**流程：**
+**执行流程：**
 ```
-STEP_RUNNING → call /reflection API
+STEP_RUNNING
   ↓
-  ├─ targetAchieved = true  → STEP_COMPLETED (跳过行为生成)
-  └─ targetAchieved = false → BEHAVIOR_RUNNING → fetch actions
+  ├─→ [1] 调用 /planning API (检查目标是否已达成)
+  │
+  ├─→ targetAchieved = true?
+  │   ├─ YES → STEP_COMPLETED (跳过执行)
+  │   └─ NO  → 继续执行
+  │
+  ├─→ [2] BEHAVIOR_RUNNING → 调用 /generating API
+  │   获取 actions 列表
+  │
+  ├─→ [3] 执行所有 actions
+  │
+  ├─→ [4] BEHAVIOR_COMPLETED → 再次调用 /planning API
+  │   检查本次 behavior 是否达成目标
+  │
+  └─→ continue_behaviors?
+      ├─ YES → 回到步骤 2 (新的 behavior)
+      └─ NO  → STEP_COMPLETED
 ```
 
-### 3. 对比
+### 新协议优势
 
-| 特性 | Generation 模式 | Reflection 模式 |
-|------|----------------|----------------|
-| API 调用 | `/actions` | `/reflection` → `/actions` (如需要) |
-| 适用场景 | 主动执行任务 | 验证目标是否达成 |
-| 效率 | 更快（直接执行） | 更智能（按需执行） |
-| 使用时机 | 数据生成、分析 | 验证、检查、评估 |
+| 特性 | 说明 |
+|------|------|
+| 🎯 **智能跳过** | 自动检测已完成的任务，避免重复执行 |
+| 🔄 **双重验证** | Step开始和Behavior完成时都进行目标检查 |
+| 📊 **精确控制** | 服务端完全控制是否需要更多behaviors |
+| ⚡ **高效执行** | 按需生成actions，避免不必要的API调用 |
 
-### 4. 环境变量配置
+### 环境变量配置
 
-在 `.env` 文件中设置默认模式：
+`.env` 文件中的相关配置：
 
 ```bash
-WORKFLOW_START_MODE=reflection
+# 执行控制
+MAX_EXECUTION_STEPS=0  # 0 = unlimited
+INTERACTIVE_MODE=false
 ```
 
 ---
@@ -174,22 +182,20 @@ WORKFLOW_START_MODE=reflection
 python main.py \
   --max-steps 10 \
   --interactive \
-  --start-mode generation \
   start --problem "测试新功能"
 ```
 
 执行 10 步后自动暂停，可以检查状态后决定是否继续。
 
-### 示例 2: 验证模式 - Reflection 优先
+### 示例 2: 验证模式 - 带自定义上下文
 
 ```bash
 python main.py \
-  --start-mode reflection \
   --custom-context '{"validation_mode":true}' \
   start --problem "验证数据质量"
 ```
 
-每个 step 先检查目标是否达成，已达成则跳过行为生成。
+每个 step 自动先检查目标是否达成（新协议默认行为），已达成则跳过行为生成。
 
 ### 示例 3: 生产模式 - 完整执行
 
@@ -349,7 +355,7 @@ cat context.json | python -m json.tool
 ### 问题 4: Reflection 模式不工作
 ```bash
 # 确认 DSLC API 可访问
-curl http://localhost:28600/reflection -X POST -H "Content-Type: application/json" -d '{}'
+curl http://localhost:28600/planning -X POST -H "Content-Type: application/json" -d '{}'
 
 # 检查日志
 tail -f workflow.log | grep "reflection"

@@ -80,11 +80,18 @@ class WorkflowAPIClient(ModernLogger):
             # Compress state
             compressed_state = self.compressor.compress_context(state)
 
-            # Extract behavior information from state
-            behavior_id = state.get('behavior_id')
-            behavior_iteration = state.get('behavior_iteration', 0)
+            # Extract progress information from state (new hierarchical format)
+            progress_info = state.get('progress_info')
+            fsm_info = state.get('FSM')
 
-            # Build clean context (new format only) - exclude behavior_id/iteration
+            # Require progress_info (no backward compatibility)
+            if not progress_info:
+                raise ValueError("Missing required 'progress_info' in state. New POMDP protocol requires hierarchical progress information.")
+
+            # Build location with hierarchical progress structure
+            location = progress_info
+
+            # Build clean context (new format only) - exclude behavior_id/iteration/progress/FSM
             clean_context = {
                 'variables': compressed_state.get('variables', {}),
                 'toDoList': compressed_state.get('toDoList', []),
@@ -100,18 +107,15 @@ class WorkflowAPIClient(ModernLogger):
             if compressed_state.get('workflow_progress'):
                 clean_context['workflow_progress'] = compressed_state.get('workflow_progress')
 
-            # Note: behavior_id and behavior_iteration are excluded (they go in location)
+            # Add FSM info to context
+            if fsm_info:
+                clean_context['FSM'] = fsm_info
 
-            # Build new payload structure according to FINAL_DESIGN.md
+            # Build new payload structure (POMDP-compatible)
             payload = {
                 'observation': {
-                    'location': {
-                        'current_stage_id': stage_id,
-                        'current_step_id': step_index,  # Using step_index for now (backward compat)
-                        'behavior_id': behavior_id,
-                        'behavior_iteration': behavior_iteration
-                    },
-                    'context': clean_context  # Clean context with new field names only
+                    'location': location,
+                    'context': clean_context
                 },
                 'options': {
                     'stream': False
@@ -189,11 +193,18 @@ class WorkflowAPIClient(ModernLogger):
             # Compress state
             compressed_state = self.compressor.compress_context(state)
 
-            # Extract behavior information from state
-            behavior_id = state.get('behavior_id')
-            behavior_iteration = state.get('behavior_iteration', 0)
+            # Extract progress information from state (new hierarchical format)
+            progress_info = state.get('progress_info')
+            fsm_info = state.get('FSM')
 
-            # Build clean context (new format only) - exclude behavior_id/iteration
+            # Require progress_info (no backward compatibility)
+            if not progress_info:
+                raise ValueError("Missing required 'progress_info' in state. New POMDP protocol requires hierarchical progress information.")
+
+            # Build location with hierarchical progress structure
+            location = progress_info
+
+            # Build clean context (new format only) - exclude behavior_id/iteration/progress/FSM
             clean_context = {
                 'variables': compressed_state.get('variables', {}),
                 'toDoList': compressed_state.get('toDoList', []),
@@ -209,18 +220,15 @@ class WorkflowAPIClient(ModernLogger):
             if compressed_state.get('workflow_progress'):
                 clean_context['workflow_progress'] = compressed_state.get('workflow_progress')
 
-            # Note: behavior_id and behavior_iteration are excluded (they go in location)
+            # Add FSM info to context
+            if fsm_info:
+                clean_context['FSM'] = fsm_info
 
-            # Build new payload structure according to FINAL_DESIGN.md
+            # Build new payload structure (POMDP-compatible)
             payload = {
                 'observation': {
-                    'location': {
-                        'current_stage_id': stage_id,
-                        'current_step_id': step_index,  # Using step_index for now (backward compat)
-                        'behavior_id': behavior_id,
-                        'behavior_iteration': behavior_iteration
-                    },
-                    'context': clean_context  # Clean context with new field names only
+                    'location': location,
+                    'context': clean_context
                 },
                 'options': {
                     'stream': stream

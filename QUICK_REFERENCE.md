@@ -57,23 +57,32 @@ cli.state_machine.reset_step_counter() # 重置计数
 
 ---
 
-## 🔄 启动模式
+## 🔄 执行流程 (统一协议 v2.0+)
 
-### Generation（默认）
+### 新的统一流程
 ```bash
-python main.py --start-mode generation start
+python main.py start --problem "任务描述"
 ```
-**流程:** STEP → BEHAVIOR → /actions → execute
 
-### Reflection（智能）
-```bash
-python main.py --start-mode reflection start
+**所有执行都遵循相同流程:**
 ```
-**流程:** STEP → /reflection → (if needed) BEHAVIOR → /actions
+STEP → /planning (检查目标)
+     ↓
+   已完成? → 是 → 跳过执行，进入下一步
+     ↓
+    否
+     ↓
+BEHAVIOR → /generating (获取actions)
+     ↓
+   执行 actions
+     ↓
+BEHAVIOR_COMPLETED → /planning (再次检查)
+```
 
-**何时使用:**
-- Generation: 执行任务、生成数据
-- Reflection: 验证目标、检查完成度
+**优势:**
+- 🎯 智能跳过已完成的任务
+- 🚀 避免重复执行
+- ✅ 每步都验证目标达成状态
 
 ---
 
@@ -239,7 +248,7 @@ python main.py status
 curl http://localhost:18600/initialize
 
 # 测试 DSLC
-curl http://localhost:28600/reflection -X POST
+curl http://localhost:28600/planning -X POST
 
 # 更改 URL
 python main.py --backend-url http://other:18600 start
@@ -314,5 +323,5 @@ tail -f workflow.log
 
 # 检查 API
 curl http://localhost:18600/initialize
-curl http://localhost:28600/reflection -X POST -d '{}'
+curl http://localhost:28600/planning -X POST -d '{}'
 ```

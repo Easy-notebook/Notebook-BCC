@@ -13,7 +13,7 @@ Notebook-BCC is a complete Python reimplementation of the TypeScript/React workf
 - ✅ **TODO List Management**: Task tracking with completion status
 - ✅ **Notebook System**: Cell management (code, markdown, thinking cells)
 - ✅ **Code Execution**: Remote Jupyter kernel execution via HTTP API
-- ✅ **API Integration**: Workflow (`/actions`, `/reflection`) and code execution APIs
+- ✅ **API Integration**: Workflow (`/generating`, `/planning`) and code execution APIs
 - ✅ **Custom Context**: Inject user-defined context into API calls
 - ✅ **Step Control**: Limit execution steps, pause/resume (breakpoint debugging)
 - ✅ **Start Modes**: Choose reflection (feedback-driven) or generation (action-driven)
@@ -130,22 +130,21 @@ python main.py --max-steps 10 start --problem "Debug workflow"
 python main.py --max-steps 5 --interactive start
 ```
 
-#### 3. Start Mode Selection
+#### 3. Planning First Protocol
 
-Choose workflow initiation strategy:
+**New in v2.0:** All workflows use the unified "Planning First" protocol.
 
 ```bash
-# Generation mode (default): Direct action execution
-python main.py --start-mode generation start
-
-# Reflection mode: Check goal completion first
-python main.py --start-mode reflection start
+# All executions follow this flow:
+# STEP → /planning (check) → /generating (if needed) → execute
+python main.py start --problem "Analyze data"
 ```
 
-**Reflection vs Generation:**
+**Execution Flow:**
 
-- **Generation**: Calls `/actions` API → executes actions immediately
-- **Reflection**: Calls `/reflection` API first → skips actions if goal achieved
+1. **Planning First**: Every step calls `/planning` API to check if target is achieved
+2. **Conditional Generation**: Only calls `/generating` API if more actions needed
+3. **Intelligent Execution**: Avoids redundant work by checking completion status first
 
 📖 **See [ADVANCED_USAGE.md](ADVANCED_USAGE.md) for detailed examples and best practices.**
 
