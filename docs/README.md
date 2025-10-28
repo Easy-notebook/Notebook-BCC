@@ -190,6 +190,8 @@ ScriptStore.register_custom_action('my_action', my_handler)
 ## 📝 更新日志
 
 ### 2025-10-28
+- ✅ 添加 POMDP 设计原理详解
+- ✅ 为所有 11 种 Actions 添加 POMDP 作用和状态转移示例
 - ✅ 添加流式响应处理详解
 - ✅ 更新 Action 协议规范（11 种 Actions）
 - ✅ 添加 API 配置说明

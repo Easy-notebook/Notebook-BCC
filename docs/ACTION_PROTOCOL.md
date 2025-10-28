@@ -122,6 +122,30 @@ S(t+1) = T(S(t), Action)
 
 **用途**: 向 Notebook 添加文本或代码内容
 
+**POMDP 作用**:
+- **状态维度**: 内容状态 (Notebook cells)
+- **状态转移**: `S.notebook.cells → S.notebook.cells + [new_cell]`
+- **观测影响**: 新 cell 在下次观测的 `context.notebook` 中可见
+- **副作用**: 更新 `context.effects.current` 和 AI Context
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: { cells: [cell_1, cell_2] },
+  effects: { current: ["Previous action"] }
+}
+
+# 执行 add(content="Hello World", shot_type="dialogue")
+Action = { action: "add", content: "Hello World", shot_type: "dialogue" }
+
+# 执行后状态
+S(t+1) = {
+  notebook: { cells: [cell_1, cell_2, cell_3(markdown)] },
+  effects: { current: ["Added content: Hello World"] }
+}
+```
+
 **格式**:
 ```json
 {
@@ -163,6 +187,32 @@ S(t+1) = T(S(t), Action)
 ### 2. EXEC_CODE (执行代码)
 
 **用途**: 执行指定的代码单元格
+
+**POMDP 作用**:
+- **状态维度**: 计算状态 (环境变量、输出)
+- **状态转移**: `S.variables → S.variables'` (代码执行产生副作用)
+- **观测影响**: 执行结果添加到 cell 的 outputs，并更新 `context.variables`
+- **副作用**: 可能改变运行时环境（定义变量、导入库、生成文件等）
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: { cells: [code_cell("x = 5")] },
+  variables: {},
+  effects: { current: [] }
+}
+
+# 执行 exec(codecell_id="code-1", need_output=true)
+Action = { action: "exec", codecell_id: "code-1" }
+
+# 执行后状态
+S(t+1) = {
+  notebook: { cells: [code_cell("x = 5", outputs=[{result: "x=5"}])] },
+  variables: { x: 5 },  # 环境中新增变量
+  effects: { current: ["Executed code: x = 5", "Output: x=5"] }
+}
+```
 
 **格式**:
 ```json
@@ -217,6 +267,36 @@ S(t+1) = T(S(t), Action)
 
 **用途**: 开始一个思考过程，创建思考单元格
 
+**POMDP 作用**:
+- **状态维度**: 认知状态 (Agent 思考过程)
+- **状态转移**: `S.thinking_active → true`
+- **观测影响**: 在 Notebook 中显示思考过程，提升可解释性
+- **副作用**: 创建特殊的 `thinking` 类型 cell，更新 AI Context
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: { cells: [cell_1] },
+  thinking_active: false
+}
+
+# 执行 is_thinking(thinking_text="正在分析数据...", agent_name="Analyst")
+Action = { action: "is_thinking", thinking_text: "正在分析数据..." }
+
+# 执行后状态
+S(t+1) = {
+  notebook: { cells: [cell_1, thinking_cell("正在分析数据...")] },
+  thinking_active: true,
+  effects: { current: ["Agent thinking started"] }
+}
+```
+
+**实际用途**:
+- 提供 AI 推理过程的可视化
+- 增强用户对工作流的理解
+- 支持调试和验证 Agent 决策
+
 **格式**:
 ```json
 {
@@ -255,6 +335,35 @@ S(t+1) = T(S(t), Action)
 
 **用途**: 结束当前的思考过程
 
+**POMDP 作用**:
+- **状态维度**: 认知状态 (Agent 思考过程)
+- **状态转移**: `S.thinking_active → false`
+- **观测影响**: 标记思考单元格为完成状态
+- **副作用**: 清理 AI Context 中的思考状态
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: { cells: [thinking_cell(finished=false)] },
+  thinking_active: true
+}
+
+# 执行 finish_thinking()
+Action = { action: "finish_thinking" }
+
+# 执行后状态
+S(t+1) = {
+  notebook: { cells: [thinking_cell(finished=true)] },
+  thinking_active: false,
+  effects: { current: ["Thinking completed"] }
+}
+```
+
+**实际用途**:
+- 标记推理过程结束
+- 清理思考状态，准备下一个 action
+
 **格式**:
 ```json
 {
@@ -272,6 +381,40 @@ S(t+1) = T(S(t), Action)
 ### 5. NEW_CHAPTER (创建章节)
 
 **用途**: 创建新的章节标题 (Markdown ## 标题)
+
+**POMDP 作用**:
+- **状态维度**: 内容状态 (Notebook 结构)
+- **状态转移**: `S.notebook.structure → 新增章节层级`
+- **观测影响**: 增加章节计数，更新 Notebook 结构
+- **副作用**: 创建带有 `is_chapter` 元数据的 markdown cell
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: {
+    cells: [cell_1],
+    chapter_count: 0
+  }
+}
+
+# 执行 new_chapter(content="数据预处理")
+Action = { action: "new_chapter", content: "数据预处理" }
+
+# 执行后状态
+S(t+1) = {
+  notebook: {
+    cells: [cell_1, markdown_cell("## 数据预处理", metadata={is_chapter: true})],
+    chapter_count: 1
+  },
+  effects: { current: ["Created chapter: 数据预处理"] }
+}
+```
+
+**实际用途**:
+- 组织 Notebook 结构，创建主要章节
+- 支持文档导航和目录生成
+- 标记工作流的主要阶段
 
 **格式**:
 ```json
@@ -311,6 +454,43 @@ S(t+1) = T(S(t), Action)
 
 **用途**: 创建新的小节标题 (Markdown ### 标题)
 
+**POMDP 作用**:
+- **状态维度**: 内容状态 (Notebook 结构)
+- **状态转移**: `S.notebook.structure → 新增小节层级`
+- **观测影响**: 增加小节计数，细化 Notebook 结构
+- **副作用**: 创建带有 `is_section` 元数据的 markdown cell
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: {
+    cells: [chapter_cell("## 数据预处理")],
+    section_count: 0
+  }
+}
+
+# 执行 new_section(content="缺失值处理")
+Action = { action: "new_section", content: "缺失值处理" }
+
+# 执行后状态
+S(t+1) = {
+  notebook: {
+    cells: [
+      chapter_cell("## 数据预处理"),
+      markdown_cell("### 缺失值处理", metadata={is_section: true})
+    ],
+    section_count: 1
+  },
+  effects: { current: ["Created section: 缺失值处理"] }
+}
+```
+
+**实际用途**:
+- 在章节内创建子主题
+- 细化文档结构层次
+- 支持更精细的内容组织
+
 **格式**:
 ```json
 {
@@ -349,6 +529,40 @@ S(t+1) = T(S(t), Action)
 
 **用途**: 更新 Notebook 的主标题
 
+**POMDP 作用**:
+- **状态维度**: 元数据状态 (Notebook metadata)
+- **状态转移**: `S.notebook.metadata.title → new_title`
+- **观测影响**: 更新 Notebook 元数据和首个标题 cell
+- **副作用**: 可能修改第一个 cell 为 `# Title` 格式
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  notebook: {
+    metadata: { title: "Untitled" },
+    cells: []
+  }
+}
+
+# 执行 update_title(title="销售数据分析报告")
+Action = { action: "update_title", title: "销售数据分析报告" }
+
+# 执行后状态
+S(t+1) = {
+  notebook: {
+    metadata: { title: "销售数据分析报告" },
+    cells: [markdown_cell("# 销售数据分析报告")]
+  },
+  effects: { current: ["Updated title: 销售数据分析报告"] }
+}
+```
+
+**实际用途**:
+- 设置 Notebook 的主题和标识
+- 生成文档标题页
+- 更新工作流元数据
+
 **格式**:
 ```json
 {
@@ -374,6 +588,42 @@ S(t+1) = T(S(t), Action)
 ### 8. UPDATE_WORKFLOW (更新工作流)
 
 **用途**: 更新整个工作流模板
+
+**POMDP 作用**:
+- **状态维度**: 元数据状态 (Workflow definition)
+- **状态转移**: `S.workflow → new_workflow` + `S.FSM → WORKFLOW_UPDATE_PENDING`
+- **观测影响**: 触发状态机进入 workflow 更新状态
+- **副作用**: 返回特殊标志 `workflow_update_pending: true`
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  workflow: {
+    name: "Data Analysis",
+    stages: [stage1, stage2]
+  },
+  FSM: { state: "BEHAVIOR_RUNNING" }
+}
+
+# 执行 update_workflow(updated_workflow={...})
+Action = { action: "update_workflow", updated_workflow: {...} }
+
+# 执行后状态
+S(t+1) = {
+  workflow: {
+    name: "Updated Workflow",
+    stages: [stage1, stage2, stage3]  # 更新后的结构
+  },
+  FSM: { state: "WORKFLOW_UPDATE_PENDING" },  # 状态机转换
+  effects: { current: ["Workflow update pending"] }
+}
+```
+
+**实际用途**:
+- 动态调整工作流结构
+- 基于运行时决策重新规划 Stages/Steps
+- 支持工作流的自适应
 
 **格式**:
 ```json
@@ -411,6 +661,52 @@ S(t+1) = T(S(t), Action)
 
 **用途**: 更新当前阶段的步骤列表
 
+**POMDP 作用**:
+- **状态维度**: 元数据状态 (Stage steps)
+- **状态转移**: `S.workflow.stages[i].steps → updated_steps`
+- **观测影响**: 修改 Stage 的 steps 列表，影响后续导航
+- **副作用**: 更新 location.progress.steps 信息
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  workflow: {
+    stages: [
+      { id: "stage1", steps: [step1, step2] }
+    ]
+  },
+  location: {
+    progress: { steps: { remaining: [step1, step2] } }
+  }
+}
+
+# 执行 update_stage_steps(stage_id="stage1", updated_steps=[...])
+Action = {
+  action: "update_stage_steps",
+  stage_id: "stage1",
+  updated_steps: [step1, step2, step3]  # 新增 step3
+}
+
+# 执行后状态
+S(t+1) = {
+  workflow: {
+    stages: [
+      { id: "stage1", steps: [step1, step2, step3] }  # 步骤列表更新
+    ]
+  },
+  location: {
+    progress: { steps: { remaining: [step1, step2, step3] } }
+  },
+  effects: { current: ["Updated steps for stage1"] }
+}
+```
+
+**实际用途**:
+- 动态调整单个 Stage 的步骤
+- 基于中间结果增减步骤
+- 支持更细粒度的工作流调整
+
 **格式**:
 ```json
 {
@@ -436,7 +732,55 @@ S(t+1) = T(S(t), Action)
 
 ### 10. COMPLETE_STEP (完成步骤)
 
-**用途**: 标记当前步骤完成
+**用途**: 标记当前步骤完成，触发状态机转移
+
+**POMDP 作用**:
+- **状态维度**: 流程状态 (FSM state)
+- **状态转移**: `S.FSM → STEP_COMPLETED` + 更新进度信息
+- **观测影响**: 将当前 step 移动到 completed 列表，更新 remaining
+- **副作用**: 触发状态机的 COMPLETE_STEP 事件
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  location: {
+    current: { step_id: "load_data" },
+    progress: {
+      steps: {
+        completed: [],
+        current: "load_data",
+        remaining: ["preprocess_data", "analyze_data"]
+      }
+    }
+  },
+  FSM: { state: "BEHAVIOR_RUNNING" }
+}
+
+# 执行 end_phase(step_id="load_data")
+Action = { action: "end_phase", step_id: "load_data" }
+
+# 执行后状态
+S(t+1) = {
+  location: {
+    current: { step_id: "preprocess_data" },  # 移动到下一步
+    progress: {
+      steps: {
+        completed: ["load_data"],  # 已完成
+        current: "preprocess_data",
+        remaining: ["analyze_data"]
+      }
+    }
+  },
+  FSM: { state: "STEP_COMPLETED" },  # 状态机转移
+  effects: { current: ["Step completed: load_data"] }
+}
+```
+
+**实际用途**:
+- 标记步骤完成，推进工作流
+- 触发状态机进入下一个状态
+- 更新进度追踪信息
 
 **格式**:
 ```json
@@ -455,7 +799,35 @@ S(t+1) = T(S(t), Action)
 
 ### 11. NEXT_EVENT (下一个事件)
 
-**用途**: 触发下一个工作流事件（保留用于未来扩展）
+**用途**: 触发自定义工作流事件（保留用于未来扩展）
+
+**POMDP 作用**:
+- **状态维度**: 流程状态 (FSM state)
+- **状态转移**: `S.FSM → custom_state` (根据 event_type)
+- **观测影响**: 触发特定的状态机事件
+- **副作用**: 可扩展的事件系统，支持自定义状态转移
+
+**状态转移示例**:
+```python
+# 执行前状态
+S(t) = {
+  FSM: { state: "BEHAVIOR_RUNNING" }
+}
+
+# 执行 next_event(event_type="custom_checkpoint")
+Action = { action: "next_event", event_type: "custom_checkpoint" }
+
+# 执行后状态
+S(t+1) = {
+  FSM: { state: "CUSTOM_CHECKPOINT" },  # 自定义状态
+  effects: { current: ["Triggered event: custom_checkpoint"] }
+}
+```
+
+**实际用途**:
+- 支持自定义工作流事件
+- 扩展状态机功能
+- 预留接口用于未来功能
 
 **格式**:
 ```json
