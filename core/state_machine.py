@@ -4,7 +4,7 @@ Replicates the TypeScript workflowStateMachine.ts
 """
 
 import time
-from typing import Dict, Optional, Any, Callable
+from typing import Dict, Optional, Any, Callable, List
 from silantui import ModernLogger
 from .events import WorkflowEvent, EVENTS
 from .states import WorkflowState, WORKFLOW_STATES
@@ -56,6 +56,11 @@ class WorkflowStateMachine(ModernLogger):
         self.max_steps = max_steps
         self.interactive = interactive
         self.paused = False
+
+        # Hierarchical focus management
+        self._stage_focus: List[str] = []
+        self._step_focus: List[str] = []
+        self._behavior_focus: List[str] = []
 
         # State effect handlers (will be populated)
         self._state_effects: Dict[WorkflowState, Callable] = {}
@@ -299,7 +304,8 @@ class WorkflowStateMachine(ModernLogger):
         stages_progress = {
             "completed": all_stages[:current_stage_idx] if current_stage_idx > 0 else [],
             "current": ctx.current_stage_id,
-            "remaining": all_stages[current_stage_idx + 1:] if current_stage_idx >= 0 else []
+            "remaining": all_stages[current_stage_idx + 1:] if current_stage_idx >= 0 else [],
+            "focus": self._stage_focus.copy()
         }
 
         # Get steps progress
@@ -311,16 +317,18 @@ class WorkflowStateMachine(ModernLogger):
             steps_progress = {
                 "completed": all_steps[:current_step_idx] if current_step_idx > 0 else [],
                 "current": ctx.current_step_id,
-                "remaining": all_steps[current_step_idx + 1:] if current_step_idx >= 0 else []
+                "remaining": all_steps[current_step_idx + 1:] if current_step_idx >= 0 else [],
+                "focus": self._step_focus.copy()
             }
         else:
-            steps_progress = {"completed": [], "current": None, "remaining": []}
+            steps_progress = {"completed": [], "current": None, "remaining": [], "focus": []}
 
         # Get behaviors progress (dynamically generated, track completed ones)
         behaviors_progress = {
             "completed": ctx.completed_behaviors.copy(),
             "current": ctx.current_behavior_id,
-            "iteration": ctx.behavior_iteration
+            "iteration": ctx.behavior_iteration,
+            "focus": self._behavior_focus.copy()
         }
 
         # Get goals
@@ -354,6 +362,81 @@ class WorkflowStateMachine(ModernLogger):
                 "behavior": None  # Behavior goal is dynamic
             }
         }
+
+    def update_progress_focus(self, level: str, focus: List[str]):
+        """
+        Update focus for a specific progress level.
+
+        Args:
+            level: "stages" | "steps" | "behaviors"
+            focus: List of variable names to focus on
+        """
+        if level == "stages":
+            self._stage_focus = focus.copy()
+            self.info(f"[FSM] Updated stages focus: {focus}")
+        elif level == "steps":
+            self._step_focus = focus.copy()
+            self.info(f"[FSM] Updated steps focus: {focus}")
+        elif level == "behaviors":
+            self._behavior_focus = focus.copy()
+            self.info(f"[FSM] Updated behaviors focus: {focus}")
+        else:
+            self.warning(f"[FSM] Invalid level: {level}")
+
+    def is_behavior_completed(self) -> bool:
+        """
+        Check if current behavior is completed based on behavior focus.
+
+        Returns:
+            True if all behavior focus variables are satisfied
+        """
+        if not self._behavior_focus:
+            # No behavior focus defined, always complete
+            return True
+
+        if not self.ai_context_store:
+            return False
+
+        variables = self.ai_context_store.get_context().variables
+        return all(variables.get(var) for var in self._behavior_focus)
+
+    def is_step_completed(self) -> bool:
+        """
+        Check if current step is completed based on step focus.
+
+        Returns:
+            True if all step focus variables are satisfied
+        """
+        if not self._step_focus:
+            # No step focus defined, cannot determine completion
+            return False
+
+        if not self.ai_context_store:
+            return False
+
+        variables = self.ai_context_store.get_context().variables
+        return all(variables.get(var) for var in self._step_focus)
+
+    def is_stage_completed(self) -> bool:
+        """
+        Check if current stage is completed based on stage focus.
+
+        Returns:
+            True if all stage focus variables are satisfied,
+            or if all steps are completed (when no stage focus defined)
+        """
+        if not self._stage_focus:
+            # No stage focus, rely on all steps being completed
+            progress = self.get_progress_info()
+            if progress:
+                return len(progress['progress']['steps']['remaining']) == 0
+            return False
+
+        if not self.ai_context_store:
+            return False
+
+        variables = self.ai_context_store.get_context().variables
+        return all(variables.get(var) for var in self._stage_focus)
 
     # ==============================================
     # Getters

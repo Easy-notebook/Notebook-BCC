@@ -169,6 +169,13 @@ def _apply_context_update(state_machine, context_update):
     """
     Apply context updates from the server response.
 
+    Handles:
+    - variables: Update context variables
+    - progress_update: Update hierarchical focus (stages/steps/behaviors)
+    - effects_update: Update execution effects
+    - workflow_update: Update workflow template
+    - stage_steps_update: Update stage steps
+
     Args:
         context_update: Dictionary containing context updates
     """
@@ -184,29 +191,46 @@ def _apply_context_update(state_machine, context_update):
             state_machine.ai_context_store.add_variable(key, value)
             state_machine.info(f"[FSM] Updated variable: {key} = {value}")
 
-    # Handle todo_list updates
-    if 'todo_list_update' in context_update and context_update['todo_list_update'] is not None:
-        todo_update = context_update['todo_list_update']
-        operation = todo_update.get('operation')
-        items = todo_update.get('items', [])
+    # Update hierarchical focus (NEW)
+    if 'progress_update' in context_update and context_update['progress_update'] is not None:
+        progress_update = context_update['progress_update']
+        level = progress_update.get('level')  # "stages" | "steps" | "behaviors"
+        focus = progress_update.get('focus', [])  # List of variable names
 
-        if operation == 'remove':
-            for item in items:
-                state_machine.ai_context_store.remove_from_to_do_list(item)
-                state_machine.info(f"[FSM] Removed TODO: {item}")
-        elif operation == 'add':
-            for item in items:
-                state_machine.ai_context_store.add_to_do_list(item)
-                state_machine.info(f"[FSM] Added TODO: {item}")
-        elif operation == 'replace':
-            state_machine.ai_context_store.clear_to_do_list()
-            for item in items:
-                state_machine.ai_context_store.add_to_do_list(item)
-            state_machine.info(f"[FSM] Replaced TODO list with {len(items)} items")
+        if level and isinstance(focus, list):
+            state_machine.update_progress_focus(level, focus)
+            state_machine.info(f"[FSM] Updated {level} focus: {focus}")
+        else:
+            state_machine.warning(f"[FSM] Invalid progress_update format: {progress_update}")
 
-    # Update section progress
-    if 'section_progress' in context_update and context_update['section_progress'] is not None:
-        state_machine.ai_context_store.set_section_progress(context_update['section_progress'])
-        state_machine.info(f"[FSM] Updated section progress: {context_update['section_progress']}")
+    # Update effects
+    if 'effects_update' in context_update and context_update['effects_update'] is not None:
+        effects = context_update['effects_update']
+        if isinstance(effects, dict):
+            state_machine.ai_context_store.set_effect(effects)
+            state_machine.info(f"[FSM] Updated effects")
+
+    # Update workflow template
+    if 'workflow_update' in context_update and context_update['workflow_update'] is not None:
+        workflow_data = context_update['workflow_update']
+        if state_machine.pipeline_store and 'workflowTemplate' in workflow_data:
+            from models.workflow import WorkflowTemplate
+            updated_template = WorkflowTemplate.from_dict(workflow_data['workflowTemplate'])
+            state_machine.pipeline_store.set_workflow_template(updated_template)
+            state_machine.info(f"[FSM] Updated workflow template: {updated_template.name}")
+
+    # Update stage steps
+    if 'stage_steps_update' in context_update and context_update['stage_steps_update'] is not None:
+        stage_steps = context_update['stage_steps_update']
+        stage_id = stage_steps.get('stage_id')
+        new_steps = stage_steps.get('steps', [])
+
+        if state_machine.pipeline_store and state_machine.pipeline_store.workflow_template and stage_id:
+            stage = state_machine.pipeline_store.workflow_template.find_stage(stage_id)
+            if stage:
+                # Update steps in the workflow template
+                from models.workflow import WorkflowStep
+                stage.steps = [WorkflowStep.from_dict(step) for step in new_steps]
+                state_machine.info(f"[FSM] Updated steps for stage {stage_id}: {len(new_steps)} steps")
 
     state_machine.info("[FSM] Context update applied successfully")

@@ -119,19 +119,55 @@ targetAchieved?
       },
       "progress": {
         "stages": {
-          "completed": ["stage1", "stage2"],
+          "completed": [
+            {
+              "stage_id": "stage1",
+              "goal": "...",
+              "outputs_produced": {...}
+            }
+          ],
           "current": "stage3",
-          "remaining": ["stage4"]
+          "remaining": ["stage4"],
+          "focus": "【Stage 详细分析文本】\n\n## 阶段目标\n...",  // Planner 生成的详细分析文本
+          "current_outputs": {
+            "expected": ["df_cleaned", "cleaning_report"],
+            "produced": [],
+            "in_progress": []
+          }
         },
         "steps": {
-          "completed": ["step1"],
+          "completed": [
+            {
+              "step_id": "step1",
+              "goal": "...",
+              "outputs_produced": {...}
+            }
+          ],
           "current": "step2",
-          "remaining": ["step3", "step4"]
+          "remaining": ["step3", "step4"],
+          "focus": "【Step 详细执行方案】\n\n...",  // Planner 生成的详细分析文本
+          "current_outputs": {
+            "expected": ["df", "missing_fill_report"],
+            "produced": [],
+            "in_progress": []
+          }
         },
         "behaviors": {
-          "completed": ["behavior_001", "behavior_002"],
+          "completed": [
+            {
+              "behavior_id": "behavior_001",
+              "goal": "...",
+              "outputs_produced": {...}
+            }
+          ],
           "current": "behavior_003",
-          "iteration": 3
+          "iteration": 3,
+          "focus": "【Behavior 详细指导】\n\n...",  // Planner 生成的详细分析文本
+          "current_outputs": {
+            "expected": ["df_working", "imputation_log"],
+            "produced": [],
+            "in_progress": []
+          }
         }
       },
       "goals": {
@@ -141,11 +177,12 @@ targetAchieved?
       }
     },
     "context": {
-      // 工作上下文
+      // 工作上下文 (简化后的结构)
       "variables": {
-        "key": "value"
+        "data_loaded": true,
+        "schema_validated": false,
+        // ... 其他变量
       },
-      "toDoList": ["task1", "task2"],
       "effects": {
         "current": ["effect text..."],
         "history": []
@@ -158,9 +195,9 @@ targetAchieved?
         "transition": [
           // 状态转换历史
         ]
-      },
-      "section_progress": "optional",
-      "workflow_progress": "optional"
+      }
+      // Note: focus 现在位于 observation.location.progress.*.focus
+      // 不再包含 toDoList, section_progress, workflow_progress
     }
   },
   "options": {
@@ -192,13 +229,35 @@ targetAchieved?
 ```json
 {
   "targetAchieved": true,  // 目标是否达成
+
   "context_update": {      // 可选：上下文更新
-    "variables": { "key": "new_value" },
-    "todo_list_update": {
-      "operation": "remove",  // "add" | "remove" | "replace"
-      "items": ["completed_task"]
+    "variables": {
+      "data_loaded": true,
+      "schema_validated": true
     },
-    "section_progress": "updated_value"
+    "progress_update": {
+      "level": "steps",  // "stages" | "steps" | "behaviors"
+      "focus": "【Step 详细执行方案】\n\n当前状态分析：...\n\n关键产出目标：...\n\n建议方法：..."  // 更新 focus（详细分析文本）
+    },
+    "workflow_update": {
+      "workflowTemplate": { /* 更新的工作流模板 */ }
+    },
+    "stage_steps_update": {
+      "stage_id": "stage3",
+      "steps": [ /* 更新的步骤列表 */ ]
+    }
+  },
+
+  "context_filter": {      // 可选：筛选指令（用于下次 Generating API 调用）
+    "variables_to_include": ["df", "missing_groups"],
+    "variables_to_summarize": {
+      "correlation_matrix": "shape_only"
+    },
+    "effects_config": {
+      "include_current": true,
+      "current_limit": 3
+    },
+    "focus_to_include": ["behaviors", "steps"]
   }
 }
 ```
@@ -290,8 +349,13 @@ async for chunk in response.content.iter_any():
     "target_achieved": false     // 目标是否达成
   },
   "context_update": {
-    "variables": { /* ... */ },
-    "todo_list_update": { /* ... */ }
+    "variables": {
+      "intermediate_result": "some_value"
+    },
+    "progress_update": {
+      "level": "behaviors",
+      "focus": "【Behavior 详细指导】\n\n执行目标：...\n关键产出：...\n建议方法：..."
+    }
   }
 }
 ```
@@ -425,38 +489,337 @@ except Exception as e:
 
 ## 📥 上下文更新协议
 
-服务器可以在响应中返回 `context_update` 来更新客户端状态：
+服务器可以在 Planning API 响应中返回 `context_update` 来更新客户端状态。
+
+### 更新类型
+
+| 更新类型 | 说明 | API |
+|---------|------|-----|
+| `variables` | 更新上下文变量 | Planning |
+| `progress_update` | 更新层级化 focus | Planning |
+| `effects_update` | 更新执行效果 | Planning |
+| `workflow_update` | 更新工作流模板 | Planning |
+| `stage_steps_update` | 更新阶段步骤 | Planning |
 
 ### 变量更新
+更新上下文变量，用于存储工作流执行过程中的数据：
+
 ```json
 {
   "context_update": {
     "variables": {
       "data_loaded": true,
-      "row_count": 1000
+      "row_count": 1000,
+      "schema_validated": true
     }
   }
 }
 ```
 
-### TODO 列表更新
+### 层级化 Focus 更新 (NEW)
+更新 Planner 生成的详细分析文本，用于指导 Generating API：
+
 ```json
 {
   "context_update": {
-    "todo_list_update": {
-      "operation": "remove",  // "add" | "remove" | "replace"
-      "items": ["Load data", "Preprocess"]
+    "progress_update": {
+      "level": "steps",  // "stages" | "steps" | "behaviors"
+      "focus": "【Step: 缺失值处理 - 详细执行方案】\n\n## 当前状态分析\n已完成 behavior_001 和 behavior_002，生成了 missing_summary 和 missing_groups。\n\n## 关键产出目标\n- df: 更新后的主数据集\n- missing_fill_report: 填充报告\n- imputation_log: 操作日志\n\n## 建议执行方法\n1. 针对高缺失特征使用语义填充\n2. 针对车库相关特征使用连带填充\n..."
     }
   }
 }
 ```
 
-### 进度更新
+**Focus 语义**:
+- Focus 是 Planner 生成的**详细分析文本**（字符串）
+- 不是变量名列表，不是任务描述列表
+- 用途：为 Generating API 提供上下文提示和执行指导
+- 格式：详细的分析、目标、建议等信息
+
+### 工作流更新
+更新工作流模板结构：
+
 ```json
 {
   "context_update": {
-    "section_progress": "Data preprocessing: 75%",
-    "workflow_progress": "Analysis phase: 2/5"
+    "workflow_update": {
+      "workflowTemplate": {
+        "name": "Updated Workflow",
+        "stages": [ /* 新的阶段列表 */ ]
+      },
+      "nextStageId": "stage_new"  // 可选：切换到新阶段
+    }
+  }
+}
+```
+
+### 阶段步骤更新
+更新特定阶段的步骤列表：
+
+```json
+{
+  "context_update": {
+    "stage_steps_update": {
+      "stage_id": "data_analysis",
+      "steps": [
+        { "id": "step1", "description": "Load data" },
+        { "id": "step2", "description": "Preprocess" }
+      ]
+    }
+  }
+}
+```
+
+### 效果更新
+更新执行效果记录：
+
+```json
+{
+  "context_update": {
+    "effects_update": {
+      "current": ["New effect text"],
+      "history": ["Previous effect 1", "Previous effect 2"]
+    }
+  }
+}
+```
+
+---
+
+## 🔍 Context Filter 协议（NEW）
+
+Planning API 可以在响应中返回 `context_filter`，指导 Client 在下次调用 Generating API 时应该传递哪些信息。这样可以：
+- 减少 token 消耗
+- 提高提示词质量（只包含相关信息）
+- 优化 API 性能
+
+### Context Filter 结构
+
+```json
+{
+  "context_filter": {
+    "variables_to_include": [
+      "df",
+      "missing_groups",
+      "missing_summary"
+    ],
+
+    "variables_to_summarize": {
+      "correlation_matrix": "shape_only",
+      "df_train": "describe_only"
+    },
+
+    "effects_config": {
+      "include_current": true,
+      "current_limit": 3,
+      "include_history": false,
+      "history_limit": 0
+    },
+
+    "focus_to_include": [
+      "behaviors",
+      "steps"
+    ],
+
+    "outputs_tracking": {
+      "expected_variables": ["df_working", "imputation_log"],
+      "validation_required": ["high_missing_validated"]
+    }
+  }
+}
+```
+
+### 字段说明
+
+#### 1. variables_to_include
+
+指定完整传递给 Generating API 的变量列表。
+
+**错误处理规则**：
+- ⚠️ **如果变量不存在，Client 不要静默丢弃**
+- 必须在 effects 中打 WARN：`"⚠️ WARN: Variable 'xxx' not found"`
+- 回退到 `variables_to_summarize` 策略（如果定义）
+- 记录日志供调试
+
+```python
+# Client 实现示例
+for var in variables_to_include:
+    if var not in context.variables:
+        warning = f"⚠️ WARN: Variable '{var}' requested but not found"
+        context.effects.current.append(warning)
+        logger.warning(warning)
+```
+
+#### 2. variables_to_summarize
+
+对大型变量进行摘要而非完整传递。
+
+**摘要策略**：
+- `shape_only`: 只传递 shape（适用于 DataFrame/矩阵）
+- `describe_only`: 只传递统计摘要
+- `head_only`: 只传递前几行
+- `last_N_only`: 只传递最后 N 个元素
+
+示例：
+```json
+"variables_to_summarize": {
+  "correlation_matrix": "shape_only",     // (79, 79)
+  "df_train": "describe_only",            // df.describe()
+  "model_history": "last_5_only"          // 最后5条记录
+}
+```
+
+#### 3. effects_config
+
+配置 effects 的传递方式。
+
+```json
+"effects_config": {
+  "include_current": true,        // 是否包含 current
+  "current_limit": 3,             // current 最多保留几条
+  "include_history": false,       // 是否包含 history
+  "history_limit": 0              // history 最多保留几条
+}
+```
+
+#### 4. focus_to_include
+
+指定传递哪些层级的 focus。通常包含当前层级和上层指导。
+
+```json
+"focus_to_include": [
+  "behaviors",  // 当前层级（必须）
+  "steps"       // 上层指导
+]
+// 不包含 "stages"（通常太宏观）
+```
+
+#### 5. outputs_tracking
+
+指定 Generating API 应该关注的期望产出。
+
+```json
+"outputs_tracking": {
+  "expected_variables": ["df_working", "imputation_log"],
+  "validation_required": ["high_missing_validated"]
+}
+```
+
+### Client 处理流程
+
+```python
+def apply_context_filter(observation, context_filter):
+    """应用 Planning API 返回的 context_filter"""
+
+    # 1. 筛选 variables
+    filtered_vars = {}
+    for var_name in context_filter.get('variables_to_include', []):
+        if var_name in observation.context.variables:
+            filtered_vars[var_name] = observation.context.variables[var_name]
+        else:
+            # 错误处理：打 WARN
+            warning = f"⚠️ WARN: Variable '{var_name}' not found"
+            observation.context.effects.current.append(warning)
+
+            # 尝试 summarize 回退
+            if var_name in context_filter.get('variables_to_summarize', {}):
+                strategy = context_filter['variables_to_summarize'][var_name]
+                filtered_vars[var_name] = f"<{strategy}: not available>"
+
+    # 2. 处理 summarize 变量
+    for var_name, strategy in context_filter.get('variables_to_summarize', {}).items():
+        if var_name in observation.context.variables:
+            var_value = observation.context.variables[var_name]
+            filtered_vars[var_name] = apply_summarize_strategy(var_value, strategy)
+
+    # 3. 筛选 effects
+    effects_cfg = context_filter.get('effects_config', {})
+    filtered_effects = {}
+
+    if effects_cfg.get('include_current', True):
+        limit = effects_cfg.get('current_limit', float('inf'))
+        filtered_effects['current'] = observation.context.effects.current[:limit]
+
+    if effects_cfg.get('include_history', False):
+        limit = effects_cfg.get('history_limit', 0)
+        filtered_effects['history'] = observation.context.effects.history[:limit]
+
+    # 4. 筛选 focus
+    filtered_progress = {}
+    for level in context_filter.get('focus_to_include', ['behaviors']):
+        filtered_progress[level] = {
+            'focus': observation.location.progress[level].focus,
+            'current_outputs': observation.location.progress[level].current_outputs
+        }
+
+    # 5. 构建精简 payload
+    return {
+        'observation': {
+            'location': {
+                'current': observation.location.current,
+                'progress': filtered_progress
+            },
+            'context': {
+                'variables': filtered_vars,
+                'effects': filtered_effects
+            }
+        },
+        'options': {'stream': True}
+    }
+```
+
+### 使用示例
+
+**场景**：Behavior 003 需要填充高缺失特征
+
+```json
+// Planning API 响应
+{
+  "targetAchieved": false,
+  "context_filter": {
+    "variables_to_include": [
+      "df",              // 需要主数据集
+      "missing_groups"   // 需要分组策略
+    ],
+    "variables_to_summarize": {
+      "correlation_matrix": "shape_only"  // 相关性矩阵太大，只传递形状
+    },
+    "effects_config": {
+      "current_limit": 3  // 只保留最近3条输出
+    },
+    "focus_to_include": ["behaviors", "steps"]
+  }
+}
+
+// Client 应用筛选后的 Generating API payload
+{
+  "observation": {
+    "location": {
+      "progress": {
+        "behaviors": {
+          "focus": "【Behavior 003 详细指导】...",
+          "current_outputs": {"expected": ["df_working", "imputation_log"]}
+        },
+        "steps": {
+          "focus": "【Step 详细方案】...",
+          "current_outputs": {"expected": ["df", "missing_fill_report"]}
+        }
+      }
+    },
+    "context": {
+      "variables": {
+        "df": "DataFrame(1460×79)",
+        "missing_groups": {...},
+        "correlation_matrix": "(79, 79)"  // 只传递形状
+      },
+      "effects": {
+        "current": [
+          "车库特征缺失连带性分析：...",
+          "{'high_missing': [...], ...}",
+          "LotFrontage 与 Neighborhood 相关性分析：..."
+        ]
+      }
+    }
   }
 }
 ```
@@ -474,9 +837,8 @@ except Exception as e:
 ### 可选字段
 
 1. **behavior_feedback** - Behavior 执行反馈 (仅在 Feedback 时提供)
-2. **context.section_progress** - 章节进度
-3. **context.workflow_progress** - 工作流进度
-4. **context.FSM** - 状态机追踪信息
+2. **context.FSM** - 状态机追踪信息
+3. **context_update** - 上下文更新 (Planning API 响应)
 
 ### 错误处理
 
@@ -492,8 +854,9 @@ ValueError: "Missing required 'progress_info' in state.
 ## 🎯 最佳实践
 
 1. **始终提供完整的 progress_info**
-   - 包含 current, progress, goals 三部分
+   - 包含 current, progress (含 focus), goals 三部分
    - 确保 behavior_id 和 iteration 正确
+   - 每个层级的 focus 是 Planner 生成的详细分析文本
 
 2. **使用 Planning First**
    - 每个 Step 开始前调用 Planning API
@@ -501,13 +864,20 @@ ValueError: "Missing required 'progress_info' in state.
 
 3. **正确处理 context_update**
    - 立即应用服务器返回的上下文更新
+   - 特别注意 progress_update 更新层级化 focus（详细文本）
    - 保持客户端和服务器状态同步
 
-4. **流式响应处理**
+4. **Focus 文本设计**
+   - Focus 是 Planner 生成的详细分析文本，不是变量名列表
+   - 应包含：当前状态分析、关键产出目标、建议执行方法
+   - 用于为 Generating API 提供丰富的上下文和指导
+   - 示例格式：`"【Behavior: ...】\n\n## 状态分析\n...\n\n## 关键目标\n...\n\n## 建议方法\n..."`
+
+5. **流式响应处理**
    - Generating API 建议使用流式模式
    - 可以实时显示生成进度
 
-5. **错误重试**
+6. **错误重试**
    - Planning API 失败时，可以降级到 Generating API
    - Generating API 失败时，应该传播错误并停止
 

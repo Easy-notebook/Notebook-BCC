@@ -22,9 +22,6 @@ from .handlers import (
     handle_is_thinking,
     handle_finish_thinking,
     handle_update_title,
-    handle_complete_step,
-    handle_update_workflow,
-    handle_update_step_list,
     handle_update_last_text,
 )
 from .handlers.code_handlers import exec_code_cell, set_effect_as_thinking
@@ -47,20 +44,22 @@ CELL_TYPE_MAPPING = {
     'thinking': 'thinking',
 }
 
-# Action types
+# Action types (Generating Actions only - 7 types)
 ACTION_TYPES = {
     'ADD_ACTION': 'add',
+    'EXEC_CODE': 'exec',
     'IS_THINKING': 'is_thinking',
     'FINISH_THINKING': 'finish_thinking',
-    'EXEC_CODE': 'exec',
-    'UPDATE_TITLE': 'update_title',
-    'UPDATE_WORKFLOW': 'update_workflow',
-    'UPDATE_STEP_LIST': 'update_stage_steps',
-    'COMPLETE_STEP': 'end_phase',
-    'NEXT_EVENT': 'next_event',
     'NEW_CHAPTER': 'new_chapter',
     'NEW_SECTION': 'new_section',
+    'UPDATE_TITLE': 'update_title',
 }
+
+# Removed actions (now handled by Planning API context_update):
+# - 'UPDATE_WORKFLOW': 'update_workflow' → context_update.workflow_update
+# - 'UPDATE_STEP_LIST': 'update_stage_steps' → context_update.stage_steps_update
+# - 'COMPLETE_STEP': 'end_phase' → Planning API targetAchieved
+# - 'NEXT_EVENT': 'next_event' → Removed (unclear purpose)
 
 # =====================================================================
 # Main ScriptStore Class

@@ -1,202 +1,225 @@
-# Notebook-BCC 文档索引
+# Notebook-BCC 文档中心
 
-欢迎查阅 Notebook-BCC 的技术文档。
+## 📚 核心协议文档
+
+### [OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md) 🆕
+**Observation 协议规范** - 完整的 POMDP observation 结构定义
+
+**包含内容**：
+- 完整 observation 结构（location, progress, goals, context）
+- 层级化进度追踪机制（stages/steps/behaviors）
+- 产出追踪系统（expected/produced/in_progress）
+- 临时变量升格规则（df_working → df_imputed@iter3）
+- Context Filter 协议详解
+- 错误处理规则（变量不存在时的 WARN 机制）
+
+**适用对象**：
+- 后端开发者（实现 Planning/Generating API）
+- 前端开发者（构建 observation payload）
+- 系统架构师（理解数据流）
 
 ---
 
-## 📚 文档列表
+### [API_PROTOCOL.md](./API_PROTOCOL.md)
+**API 交互协议** - Planning 和 Generating API 的完整规范
 
-### 1. [API 交互协议](./API_PROTOCOL.md)
-
-**内容**：
-- ⚙️ API 配置和环境变量
-- 🔄 API 工作流程（Planning First Protocol）
-- 📤 请求格式（POMDP Observation）
-- 📥 响应格式和上下文更新
-- 🌊 **流式响应处理详解**
-- 🔒 协议要求和错误处理
-- 🎯 最佳实践和完整示例
+**包含内容**：
+- API 端点配置
+- Planning First 协议
+- 请求/响应格式
+- 流式响应处理
+- **Context Filter 协议**（NEW）
+- 上下文更新机制
+- 最佳实践
 
 **适用对象**：
-- 后端开发者（了解需要实现的 API 格式）
-- 前端开发者（了解如何调用 API）
-- 集成开发者（了解协议规范）
+- API 集成开发者
+- 后端服务实现者
+
+**关键更新**：
+- ✅ 添加 Context Filter 协议
+- ✅ 更新 focus 为文本格式（非变量名列表）
+- ✅ 明确 effects 是代码执行输出
 
 ---
 
-### 2. [Action 协议规范](./ACTION_PROTOCOL.md)
+### [ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md)
+**Action 协议规范** - 7 种 Generating Actions 的详细定义
 
-**内容**：
-- 📋 11 种 Action 类型总览
-- 📝 每种 Action 的详细规范
-  - `add` - 添加内容
-  - `exec` - 执行代码
-  - `is_thinking` / `finish_thinking` - 思考过程
-  - `new_chapter` / `new_section` - 章节管理
-  - `update_title` / `update_workflow` - 元数据更新
-  - `end_phase` / `next_event` - 流程控制
-- 🔧 Action 元数据结构
-- 📊 处理流程和错误处理
-- 🎨 Shot Type 说明
-- 📝 完整使用示例
+**包含内容**：
+- POMDP 设计原理
+- 7 种 Generating Actions：
+  1. ADD_ACTION - 添加内容
+  2. EXEC_CODE - 执行代码
+  3. IS_THINKING / FINISH_THINKING - 思考过程
+  4. NEW_CHAPTER / NEW_SECTION - 结构标记
+  5. UPDATE_TITLE - 更新标题
+- 已弃用的 Actions（UPDATE_WORKFLOW, COMPLETE_STEP 等）
+- Shot Type 说明
+- 错误处理
 
 **适用对象**：
-- 后端开发者（生成正确格式的 Actions）
-- 扩展开发者（注册自定义 Actions）
-- 测试人员（验证 Action 格式）
+- Action 执行器实现者
+- Generating API 开发者
+
+**关键更新**：
+- ✅ 明确 Generating Actions（7个）vs Planning Updates（6个）
+- ✅ 添加已弃用 Actions 章节
+- ✅ 更新 POMDP observation 示例
+
+---
+
+## 📖 总结文档
+
+### [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md)
+**系统重构总结** - Action 系统重构的完整记录
+
+**包含内容**：
+- 重构前后对比
+- Actions 分组（Generating vs Planning）
+- Context 简化
+- 层级化 Focus 系统设计
+- 迁移指南
+- 测试清单
+
+**适用对象**：
+- 项目维护者
+- 新加入的开发者
+- 系统审计
+
+---
+
+## 🗂️ 目录结构
+
+```
+docs/
+├── README.md                      # 本文档（导航）
+├── OBSERVATION_PROTOCOL.md        # 🆕 Observation 协议（核心）
+├── API_PROTOCOL.md                # API 交互协议
+├── ACTION_PROTOCOL.md             # Action 规范
+└── REFACTORING_SUMMARY.md         # 重构总结
+```
 
 ---
 
 ## 🚀 快速开始
 
-### 查看 API 配置
+### 我是后端开发者
 
-```python
-from config import Config
+1. **首先阅读**：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md)
+   - 理解完整的 observation 结构
+   - 理解产出追踪机制
+   - 理解 Context Filter 协议
 
-# 获取 API 配置
-api_config = Config.get_api_config()
-print(f"Planning API: {api_config['feedback_api_url']}")
-print(f"Generating API: {api_config['behavior_api_url']}")
-```
+2. **然后阅读**：[API_PROTOCOL.md](./API_PROTOCOL.md)
+   - 实现 Planning API
+   - 实现 Generating API
+   - 实现 context_filter 逻辑
 
-### 调用 Planning API
+3. **最后阅读**：[ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md)
+   - 生成 7 种 Generating Actions
 
-```python
-from utils.api_client import workflow_api_client
+### 我是前端开发者
 
-response = workflow_api_client.send_feedback_sync(
-    stage_id="data_analysis",
-    step_id="load_data",
-    state={
-        "observation": {
-            "location": { /* 进度信息 */ },
-            "context": { /* 工作上下文 */ }
-        }
-    }
-)
+1. **首先阅读**：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md)
+   - 构建 observation payload
+   - 实现产出追踪
+   - 实现临时变量升格
 
-if response['targetAchieved']:
-    print("目标已达成！")
-```
+2. **然后阅读**：[API_PROTOCOL.md](./API_PROTOCOL.md)
+   - 调用 Planning/Generating API
+   - 处理 context_filter
+   - 应用筛选逻辑
 
-### 调用 Generating API（流式）
+3. **参考**：[ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md)
+   - 执行 Actions
+   - 更新 effects
 
-```python
-from utils.api_client import workflow_api_client
+### 我是新加入的开发者
 
-# 流式获取 Actions
-actions = workflow_api_client.fetch_behavior_actions_sync(
-    stage_id="data_analysis",
-    step_id="load_data",
-    state=current_state,
-    stream=True  # 启用流式响应
-)
+1. **快速了解**：[REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md)
+   - 理解系统架构
+   - 理解设计决策
+   - 理解重构原因
 
-# 逐个执行 Actions
-for action in actions:
-    print(f"执行 Action: {action['action']}")
-    script_store.exec_action(action)
-```
-
-### 执行 Actions
-
-```python
-from stores.script_store import ScriptStore
-
-store = ScriptStore(
-    notebook_store=notebook_store,
-    ai_context_store=ai_context_store,
-    code_executor=code_executor
-)
-
-# 执行单个 Action
-action = {
-    "action": "add",
-    "shot_type": "dialogue",
-    "content": "Hello World"
-}
-
-result = store.exec_action(action)
-```
+2. **深入学习**：按上述角色指南阅读相关文档
 
 ---
 
-## 🔗 相关文档
+## 🔑 核心概念速查
 
-- [README](../README.md) - 项目概述和安装指南
-- [快速参考](../QUICK_REFERENCE.md) - 常用命令和 API
-- [高级用法](../ADVANCED_USAGE.md) - 扩展和定制
+### Observation
+完整的 POMDP 观测数据，包含：
+- **Location**: 当前位置、进度、目标
+- **Context**: 变量、effects、notebook 状态
+- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md)
 
----
+### Focus
+Planner 生成的**详细分析文本**，用于指导 Generating API：
+- 不是变量名列表
+- 不是任务描述列表
+- 是完整的分析和建议文本
+- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md#2-progress层级化进度)
 
-## 📊 协议版本
+### Effects
+Python 代码执行的**实际输出**：
+- 不是操作日志
+- 是 print() 输出、显示结果、返回值
+- 用于提供执行证据
+- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md#2-effectseffects)
 
-- **当前版本**: POMDP v2.0
-- **主要特性**:
-  - 层级化进度信息（location/progress/goals）
-  - Planning First Protocol（规划优先）
-  - Behavior Feedback（行为反馈）
-  - 流式响应支持（NDJSON）
+### 产出追踪
+三状态追踪系统：
+- **expected**: 期望产出
+- **produced**: 已完成产出
+- **in_progress**: 正在构建
+- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md#产出追踪机制)
 
----
+### Context Filter
+Planning API 的筛选指令：
+- 控制传递给 Generating API 的信息
+- 减少 token 消耗
+- 提高提示词质量
+- 详见：[API_PROTOCOL.md](./API_PROTOCOL.md#-context-filter-协议new)
 
-## 🆘 常见问题
-
-### Q: 流式响应格式是什么？
-
-**A**: 服务器返回 NDJSON 格式，每行一个 JSON 对象：
-
-```json
-{"action": {"action": "add", "content": "Hello"}}
-{"action": {"action": "exec", "codecell_id": "code-1"}}
-```
-
-注意：action 包装在 `"action"` 键中。
-
-### Q: 如何配置 API 端点？
-
-**A**: 三种方式：
-1. 环境变量：`.env` 文件设置 `DSLC_BASE_URL`
-2. 运行时配置：`Config.set_dslc_url("http://...")`
-3. 代码中直接修改：`config.py`
-
-### Q: Planning API 和 Generating API 的区别？
-
-**A**:
-- **Planning API** - 检查目标是否达成，返回 `targetAchieved`
-- **Generating API** - 生成具体的 Actions，返回 action 列表
-
-每个 Step 开始时**必须先调用 Planning API**。
-
-### Q: 如何注册自定义 Action？
-
-**A**:
-```python
-from stores.script_store import ScriptStore
-
-def my_handler(script_store, step):
-    # 处理逻辑
-    return result
-
-# 注册
-ScriptStore.register_custom_action('my_action', my_handler)
-```
-
-详见：[Action 协议规范 - 注册自定义 Action](./ACTION_PROTOCOL.md#注册自定义-action)
+### Actions 分组
+- **Generating Actions**（7个）：由 Generating API 返回
+- **Planning Updates**（6个）：由 Planning API 通过 context_update 返回
+- 详见：[ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md#-action-类型总览)
 
 ---
 
 ## 📝 更新日志
 
-### 2025-10-28
-- ✅ 添加 POMDP 设计原理详解
-- ✅ 为所有 11 种 Actions 添加 POMDP 作用和状态转移示例
-- ✅ 添加流式响应处理详解
-- ✅ 更新 Action 协议规范（11 种 Actions）
-- ✅ 添加 API 配置说明
-- ✅ 完善错误处理指南
+### 2025-01-15
+- 🆕 创建 OBSERVATION_PROTOCOL.md
+- ✅ 更新 API_PROTOCOL.md，添加 Context Filter 协议
+- ✅ 更新 ACTION_PROTOCOL.md，明确 Generating vs Planning
+- 🗑️ 清理旧设计文档
+
+### 2025-01-14
+- ✅ 完成系统重构
+- ✅ 创建 REFACTORING_SUMMARY.md
 
 ---
 
-**文档维护**: 如有问题或建议，请提交 Issue 或 PR。
+## 🤝 贡献指南
+
+更新文档时请遵循：
+1. **保持一致性**：使用相同的术语和格式
+2. **添加示例**：每个概念都要有代码示例
+3. **注明版本**：重大更新要标记日期
+4. **交叉引用**：相关概念要链接到其他文档
+
+---
+
+## 📧 联系方式
+
+如有疑问或建议，请：
+- 提交 Issue
+- 查看 [GitHub Repository](https://github.com/anthropics/notebook-bcc)
+
+---
+
+**Last Updated**: 2025-01-15
+**Version**: 2.0 (After Refactoring)

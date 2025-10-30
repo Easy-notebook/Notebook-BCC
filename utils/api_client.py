@@ -91,21 +91,13 @@ class WorkflowAPIClient(ModernLogger):
             # Build location with hierarchical progress structure
             location = progress_info
 
-            # Build clean context (new format only) - exclude behavior_id/iteration/progress/FSM
+            # Build clean context (simplified format after refactoring)
+            # Note: Progress and focus are now in observation.location.progress.*.focus
             clean_context = {
                 'variables': compressed_state.get('variables', {}),
-                'toDoList': compressed_state.get('toDoList', []),
                 'effects': compressed_state.get('effects', {'current': [], 'history': []}),
                 'notebook': compressed_state.get('notebook', {})
             }
-
-            # Add section_progress only if it exists (avoid sending empty/null values)
-            if compressed_state.get('section_progress'):
-                clean_context['section_progress'] = compressed_state.get('section_progress')
-
-            # Add workflow_progress only if it exists
-            if compressed_state.get('workflow_progress'):
-                clean_context['workflow_progress'] = compressed_state.get('workflow_progress')
 
             # Add FSM info to context
             if fsm_info:
@@ -204,21 +196,13 @@ class WorkflowAPIClient(ModernLogger):
             # Build location with hierarchical progress structure
             location = progress_info
 
-            # Build clean context (new format only) - exclude behavior_id/iteration/progress/FSM
+            # Build clean context (simplified format after refactoring)
+            # Note: Progress and focus are now in observation.location.progress.*.focus
             clean_context = {
                 'variables': compressed_state.get('variables', {}),
-                'toDoList': compressed_state.get('toDoList', []),
                 'effects': compressed_state.get('effects', {'current': [], 'history': []}),
                 'notebook': compressed_state.get('notebook', {})
             }
-
-            # Add section_progress only if it exists (avoid sending empty/null values)
-            if compressed_state.get('section_progress'):
-                clean_context['section_progress'] = compressed_state.get('section_progress')
-
-            # Add workflow_progress only if it exists
-            if compressed_state.get('workflow_progress'):
-                clean_context['workflow_progress'] = compressed_state.get('workflow_progress')
 
             # Add FSM info to context
             if fsm_info:

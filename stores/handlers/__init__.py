@@ -18,9 +18,6 @@ from .thinking_handlers import (
 )
 from .workflow_handlers import (
     handle_update_title,
-    handle_complete_step,
-    handle_update_workflow,
-    handle_update_step_list,
 )
 from .text_handlers import (
     handle_update_last_text,
@@ -39,9 +36,6 @@ __all__ = [
     'handle_finish_thinking',
     # Workflow handlers
     'handle_update_title',
-    'handle_complete_step',
-    'handle_update_workflow',
-    'handle_update_step_list',
     # Text handlers
     'handle_update_last_text',
 ]

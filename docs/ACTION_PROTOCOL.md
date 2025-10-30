@@ -39,10 +39,58 @@ R - Rewards:       奖励函数（目标达成度）
         "behavior_iteration": 3
       },
       "progress": {
-        // 进度追踪（历史信息）
-        "stages": {"completed": [...], "current": "...", "remaining": [...]},
-        "steps": {"completed": [...], "current": "...", "remaining": [...]},
-        "behaviors": {"completed": [...], "current": "...", "iteration": 3}
+        // 进度追踪（历史信息）+ 层级化 focus + 产出追踪
+        "stages": {
+          "completed": [
+            {
+              "stage_id": "...",
+              "goal": "...",
+              "outputs_produced": {...}
+            }
+          ],
+          "current": "...",
+          "remaining": [...],
+          "focus": "【Stage 详细分析文本】\n\n## 阶段目标\n...",  // Planner 生成的详细分析文本
+          "current_outputs": {
+            "expected": ["df_cleaned", "cleaning_report"],
+            "produced": [],
+            "in_progress": []
+          }
+        },
+        "steps": {
+          "completed": [
+            {
+              "step_id": "...",
+              "goal": "...",
+              "outputs_produced": {...}
+            }
+          ],
+          "current": "...",
+          "remaining": [...],
+          "focus": "【Step 详细执行方案】\n\n...",  // Planner 生成的详细分析文本
+          "current_outputs": {
+            "expected": ["df", "missing_fill_report"],
+            "produced": [],
+            "in_progress": []
+          }
+        },
+        "behaviors": {
+          "completed": [
+            {
+              "behavior_id": "...",
+              "goal": "...",
+              "outputs_produced": {...}
+            }
+          ],
+          "current": "...",
+          "iteration": 3,
+          "focus": "【Behavior 详细指导】\n\n...",  // Planner 生成的详细分析文本
+          "current_outputs": {
+            "expected": ["df_working", "imputation_log"],
+            "produced": [],
+            "in_progress": []
+          }
+        }
       },
       "goals": {
         // 目标定义
@@ -53,8 +101,11 @@ R - Rewards:       奖励函数（目标达成度）
     },
     "context": {
       // 工作上下文（状态的可观测部分）
-      "variables": {"row_count": 1000},        // 环境变量
-      "toDoList": ["Check data quality"],       // 任务列表
+      "variables": {                            // 环境变量
+        "row_count": 1000,
+        "df": "DataFrame(1460×79)",
+        "missing_summary": {...}
+      },
       "effects": {"current": ["Loaded CSV"]},   // 效果历史
       "notebook": {                             // Notebook 状态
         "cells": [...],
@@ -64,6 +115,7 @@ R - Rewards:       奖励函数（目标达成度）
         "state": "BEHAVIOR_RUNNING",
         "transition": [...]
       }
+      // Note: focus 是详细分析文本，位于 observation.location.progress.*.focus
     }
   },
   "options": {"stream": true}
@@ -82,9 +134,9 @@ S(t+1) = T(S(t), Action)
 
 每个 Action 执行后会：
 1. **改变 Notebook 状态** - 添加/修改 cells
-2. **更新 Context** - 修改 variables、effects、toDoList
+2. **更新 Context** - 修改 variables、effects
 3. **影响观测** - 新的观测反映状态变化
-4. **触发奖励计算** - 评估目标达成度
+4. **触发奖励计算** - 评估目标达成度（由 Planning API 完成）
 
 ### 为什么需要不同的 Action 类型
 
@@ -93,12 +145,16 @@ S(t+1) = T(S(t), Action)
 | **内容状态** | `add`, `new_chapter`, `new_section` | 构建 Notebook 结构和内容 |
 | **计算状态** | `exec` | 执行代码，产生副作用（变量、输出） |
 | **认知状态** | `is_thinking`, `finish_thinking` | 显示推理过程，增强可解释性 |
-| **元数据状态** | `update_title`, `update_workflow` | 修改工作流结构 |
-| **流程状态** | `end_phase`, `next_event` | 控制状态转移 |
+| **元数据状态** | `update_title` | 修改 Notebook 元数据 |
+
+**流程控制**由 Planning API 通过 `context_update` 和 `targetAchieved` 实现，不再使用 Actions。
 
 ---
 
 ## 🎯 Action 类型总览
+
+### Generating Actions (7 types)
+由 Generating API 返回，用于内容生成：
 
 | Action Type | 类型标识 | 用途 | Shot Type |
 |------------|---------|------|-----------|
@@ -109,10 +165,25 @@ S(t+1) = T(S(t), Action)
 | **NEW_CHAPTER** | `new_chapter` | 创建新章节 (##) | `dialogue` |
 | **NEW_SECTION** | `new_section` | 创建新小节 (###) | `dialogue` |
 | **UPDATE_TITLE** | `update_title` | 更新 Notebook 标题 | `dialogue` |
-| **UPDATE_WORKFLOW** | `update_workflow` | 更新工作流模板 | `action` |
-| **UPDATE_STEP_LIST** | `update_stage_steps` | 更新阶段步骤列表 | `action` |
-| **COMPLETE_STEP** | `end_phase` | 完成当前步骤 | `action` |
-| **NEXT_EVENT** | `next_event` | 触发下一个事件 | `action` |
+
+### Planning Updates (via context_update)
+由 Planning API 通过 `context_update` 字段返回：
+
+| 更新类型 | 用途 |
+|---------|------|
+| `variables` | 更新上下文变量 |
+| `progress_update` | 更新层级化 focus (详细分析文本) - stages/steps/behaviors |
+| `workflow_update` | 更新工作流模板 (替代 UPDATE_WORKFLOW) |
+| `stage_steps_update` | 更新阶段步骤 (替代 UPDATE_STEP_LIST) |
+| `effects_update` | 更新执行效果 |
+| `targetAchieved` | 标记目标达成 (替代 COMPLETE_STEP) |
+
+### 已删除的 Actions
+以下 Actions 已被 Planning API 的 context_update 取代：
+- ~~UPDATE_WORKFLOW~~ → `context_update.workflow_update`
+- ~~UPDATE_STEP_LIST~~ → `context_update.stage_steps_update`
+- ~~COMPLETE_STEP / end_phase~~ → Planning API 的 `targetAchieved` 标志
+- ~~NEXT_EVENT~~ → 已移除（用途不明确）
 
 ---
 
@@ -585,257 +656,60 @@ S(t+1) = {
 
 ---
 
-### 8. UPDATE_WORKFLOW (更新工作流)
+## ⚠️ 已弃用的 Actions
 
-**用途**: 更新整个工作流模板
+以下 Actions 已被 Planning API 的 `context_update` 机制取代，不再作为 Generating Actions 返回：
 
-**POMDP 作用**:
-- **状态维度**: 元数据状态 (Workflow definition)
-- **状态转移**: `S.workflow → new_workflow` + `S.FSM → WORKFLOW_UPDATE_PENDING`
-- **观测影响**: 触发状态机进入 workflow 更新状态
-- **副作用**: 返回特殊标志 `workflow_update_pending: true`
+### UPDATE_WORKFLOW (已弃用)
+**替代方案**: 使用 Planning API 的 `context_update.workflow_update`
 
-**状态转移示例**:
-```python
-# 执行前状态
-S(t) = {
-  workflow: {
-    name: "Data Analysis",
-    stages: [stage1, stage2]
-  },
-  FSM: { state: "BEHAVIOR_RUNNING" }
-}
-
-# 执行 update_workflow(updated_workflow={...})
-Action = { action: "update_workflow", updated_workflow: {...} }
-
-# 执行后状态
-S(t+1) = {
-  workflow: {
-    name: "Updated Workflow",
-    stages: [stage1, stage2, stage3]  # 更新后的结构
-  },
-  FSM: { state: "WORKFLOW_UPDATE_PENDING" },  # 状态机转换
-  effects: { current: ["Workflow update pending"] }
-}
-```
-
-**实际用途**:
-- 动态调整工作流结构
-- 基于运行时决策重新规划 Stages/Steps
-- 支持工作流的自适应
-
-**格式**:
 ```json
+// Planning API 响应
 {
-  "action": "update_workflow",
-  "updated_workflow": {
-    "name": "Updated Workflow",
-    "stages": [
-      {
-        "id": "stage1",
-        "name": "Stage 1",
-        "steps": [...]
-      }
-    ]
+  "context_update": {
+    "workflow_update": {
+      "workflowTemplate": { /* 新的工作流模板 */ },
+      "nextStageId": "stage_new"
+    }
   }
 }
 ```
 
-**处理流程**:
-1. 验证新工作流格式
-2. 标记为 pending update
-3. 返回特殊标志通知状态机
-4. 状态机转换到 WORKFLOW_UPDATE_PENDING
+### UPDATE_STEP_LIST (已弃用)
+**替代方案**: 使用 Planning API 的 `context_update.stage_steps_update`
 
-**特殊返回**:
-```python
+```json
+// Planning API 响应
 {
-  'workflow_update_pending': True
-}
-```
-
----
-
-### 9. UPDATE_STEP_LIST (更新步骤列表)
-
-**用途**: 更新当前阶段的步骤列表
-
-**POMDP 作用**:
-- **状态维度**: 元数据状态 (Stage steps)
-- **状态转移**: `S.workflow.stages[i].steps → updated_steps`
-- **观测影响**: 修改 Stage 的 steps 列表，影响后续导航
-- **副作用**: 更新 location.progress.steps 信息
-
-**状态转移示例**:
-```python
-# 执行前状态
-S(t) = {
-  workflow: {
-    stages: [
-      { id: "stage1", steps: [step1, step2] }
-    ]
-  },
-  location: {
-    progress: { steps: { remaining: [step1, step2] } }
+  "context_update": {
+    "stage_steps_update": {
+      "stage_id": "stage1",
+      "steps": [ /* 新的步骤列表 */ ]
+    }
   }
 }
-
-# 执行 update_stage_steps(stage_id="stage1", updated_steps=[...])
-Action = {
-  action: "update_stage_steps",
-  stage_id: "stage1",
-  updated_steps: [step1, step2, step3]  # 新增 step3
-}
-
-# 执行后状态
-S(t+1) = {
-  workflow: {
-    stages: [
-      { id: "stage1", steps: [step1, step2, step3] }  # 步骤列表更新
-    ]
-  },
-  location: {
-    progress: { steps: { remaining: [step1, step2, step3] } }
-  },
-  effects: { current: ["Updated steps for stage1"] }
-}
 ```
 
-**实际用途**:
-- 动态调整单个 Stage 的步骤
-- 基于中间结果增减步骤
-- 支持更细粒度的工作流调整
+### COMPLETE_STEP / end_phase (已弃用)
+**替代方案**: 使用 Planning API 的 `targetAchieved` 标志
 
-**格式**:
 ```json
+// Planning API 响应
 {
-  "action": "update_stage_steps",
-  "stage_id": "stage-id",
-  "updated_steps": [
-    {
-      "id": "step1",
-      "name": "Step 1",
-      "description": "..."
-    }
-  ]
+  "targetAchieved": true,  // 标记目标达成
+  "transition": {
+    "continue_behaviors": false,
+    "target_achieved": true
+  }
 }
 ```
 
-**处理流程**:
-1. 获取当前工作流
-2. 找到指定阶段
-3. 更新该阶段的 steps 列表
-4. 保存更新后的工作流
+**流程控制职责**:
+- **Server (Planning API)** - 检查目标是否达成，返回 `targetAchieved`
+- **Client** - 根据 `targetAchieved` 决定是否推进到下一个 Step
 
----
-
-### 10. COMPLETE_STEP (完成步骤)
-
-**用途**: 标记当前步骤完成，触发状态机转移
-
-**POMDP 作用**:
-- **状态维度**: 流程状态 (FSM state)
-- **状态转移**: `S.FSM → STEP_COMPLETED` + 更新进度信息
-- **观测影响**: 将当前 step 移动到 completed 列表，更新 remaining
-- **副作用**: 触发状态机的 COMPLETE_STEP 事件
-
-**状态转移示例**:
-```python
-# 执行前状态
-S(t) = {
-  location: {
-    current: { step_id: "load_data" },
-    progress: {
-      steps: {
-        completed: [],
-        current: "load_data",
-        remaining: ["preprocess_data", "analyze_data"]
-      }
-    }
-  },
-  FSM: { state: "BEHAVIOR_RUNNING" }
-}
-
-# 执行 end_phase(step_id="load_data")
-Action = { action: "end_phase", step_id: "load_data" }
-
-# 执行后状态
-S(t+1) = {
-  location: {
-    current: { step_id: "preprocess_data" },  # 移动到下一步
-    progress: {
-      steps: {
-        completed: ["load_data"],  # 已完成
-        current: "preprocess_data",
-        remaining: ["analyze_data"]
-      }
-    }
-  },
-  FSM: { state: "STEP_COMPLETED" },  # 状态机转移
-  effects: { current: ["Step completed: load_data"] }
-}
-```
-
-**实际用途**:
-- 标记步骤完成，推进工作流
-- 触发状态机进入下一个状态
-- 更新进度追踪信息
-
-**格式**:
-```json
-{
-  "action": "end_phase",
-  "step_id": "optional-step-id"
-}
-```
-
-**处理流程**:
-1. 记录步骤完成
-2. 更新进度信息
-3. 触发状态机完成步骤事件
-
----
-
-### 11. NEXT_EVENT (下一个事件)
-
-**用途**: 触发自定义工作流事件（保留用于未来扩展）
-
-**POMDP 作用**:
-- **状态维度**: 流程状态 (FSM state)
-- **状态转移**: `S.FSM → custom_state` (根据 event_type)
-- **观测影响**: 触发特定的状态机事件
-- **副作用**: 可扩展的事件系统，支持自定义状态转移
-
-**状态转移示例**:
-```python
-# 执行前状态
-S(t) = {
-  FSM: { state: "BEHAVIOR_RUNNING" }
-}
-
-# 执行 next_event(event_type="custom_checkpoint")
-Action = { action: "next_event", event_type: "custom_checkpoint" }
-
-# 执行后状态
-S(t+1) = {
-  FSM: { state: "CUSTOM_CHECKPOINT" },  # 自定义状态
-  effects: { current: ["Triggered event: custom_checkpoint"] }
-}
-```
-
-**实际用途**:
-- 支持自定义工作流事件
-- 扩展状态机功能
-- 预留接口用于未来功能
-
-**格式**:
-```json
-{
-  "action": "next_event",
-  "event_type": "custom_event"
-}
-```
+### NEXT_EVENT (已移除)
+此 Action 用途不明确，已从系统中移除。
 
 ---
 
@@ -1014,13 +888,10 @@ def my_handler(script_store, step):
     "action": "add",
     "shot_type": "dialogue",
     "content": "数据集包含 1000 行，5 列"
-  },
-
-  // 8. 完成步骤
-  {
-    "action": "end_phase",
-    "step_id": "load_data"
   }
+
+  // Note: 步骤完成由 Planning API 的 targetAchieved 标志控制
+  // 不再使用 end_phase action
 ]
 ```
 
