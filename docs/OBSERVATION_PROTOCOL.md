@@ -776,6 +776,7 @@ def filter_variables(var_list, context_vars, effects):
 
 ## 🔗 相关文档
 
+- [STATE_MACHINE_PROTOCOL.md](./STATE_MACHINE_PROTOCOL.md) - 状态机协议和状态转移规则
 - [API_PROTOCOL.md](./API_PROTOCOL.md) - API 交互协议
 - [ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md) - Action 类型和格式
 - [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md) - 系统重构总结

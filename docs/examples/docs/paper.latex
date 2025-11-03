@@ -1,0 +1,538 @@
+\documentclass[11pt]{article}
+\usepackage{macros}
+\newcommand{\xiangyu}[1]{{{\textcolor{red}{[xiangyu: #1]}}}}
+
+\newcommand{\yunxuan}[1]{{\textcolor{orange}{[yunxuan: #1]}}}
+
+
+
+\title{
+\texttt{VDSAgents}: A PCS-Guided Multi-Agent System for Veridical Data Science Automation
+}
+
+
+\author{
+Yunxuan Jiang \thanks{Shool of Management, Xi’an Jiaotong University; \texttt{fengjianliu@stu.xjtu.edu.cn}. } \\
+\and Silan Hu \thanks{National University of Singapore; \texttt{silan.hu@u.nus.edu}. \\~~Yunxuan Jiang and Silan Hu have equally contributed to this work.} \\
+\and Xiaoning Wang \thanks{School of Data Science and Media Intelligence, Communication University of China; \texttt{sdwangxiaoning@cuc.edu.cn}.}\\ 
+\and Yuanyuan Zhang \thanks{Beijing Baixingkefu Network Technology Co., Ltd.;  \texttt{zhang.huanzhiyuan@gmail.com}.}\\
+\and Xiangyu Chang \thanks{School of Management, Xi’an Jiaotong University; \texttt{xiangyuchang@xjtu.edu.cn}. 
+} 
+}
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\begin{document}
+
+\maketitle
+\begin{abstract}%
+Large language models (LLMs) become increasingly integrated into data science workflows for automated system design. 
+However, these LLM-driven data science systems rely solely on the internal reasoning of LLMs, lacking guidance from scientific and theoretical principles. 
+This limits their trustworthiness and robustness, especially when dealing with noisy and complex real-world datasets.
+This paper provides \texttt{VDSAgents}, a multi-agent system grounded in the Predictability-Computability-Stability (PCS) principles~\citep{Yu2020VDS} proposed in the Veridical Data Science (VDS)~\citep{vdsbook}.
+Guided by PCS principles, the system implements a modular and interpretable workflow for data cleaning, feature engineering, modeling, and evaluation.
+Each phase is handled by an elegant agent, incorporating perturbation analysis, unit testing, and model validation to ensure both functionality and scientific auditability.
+We evaluate \texttt{VDSAgents} on nine datasets with diverse characteristics, comparing it with state-of-the-art end-to-end data science systems, such as 
+\texttt{AutoKaggle} and \texttt{DataInterpreter}, using DeepSeek-V3 and GPT-4o as backends.
+\texttt{VDSAgents} consistently outperforms the results of \texttt{AutoKaggle} and \texttt{DataInterpreter}, which validates the feasibility of embedding PCS principles into LLM-driven data science automation.
+\end{abstract}
+
+\section{Introduction}
+
+Data science has emerged as a multidisciplinary field that integrates statistics, computer science, mathematics, and domain knowledge to extract meaningful insights and guide decision-making from complex data~\citep{Yu2020VDS}.
+Its scope spans the entire data science lifecycle (DSLC), from collection and pre-processing to modeling, validation, and knowledge refinement, and plays a vital role in decision-making in scientific, industrial, and policy domains~\citep{Cao2017,provost2013science}.
+A typical DSLC is illustrated in Figure~\ref{fig_ds} proposed by~\citet{vdsbook}, which outlines the key stages of data science-based research.
+As data continues to grow in volume, complexity, and heterogeneity, standard data science approaches are increasingly insufficient to meet the demands for trustworthiness and robustness. 
+This has fueled the development of automated and principled DSLC. 
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.85\linewidth]{arxiv_temp/fig/data_science.png}
+\caption{Illustration of the DSLC. It includes six stages: (1) identifying and formulating domain problems and collecting data; (2) data cleaning, pre-processing, and early exploration; (3) optional structural analysis and data mining; (4) optional modeling and statistical inference; (5) evaluation and validation of results; and (6) interpretation, communication, and domain knowledge update.}
+\label{fig_ds}
+\end{figure}
+
+%\xiangyu{why we need this paragraph?}
+%Two major trends define the recent evolution of data science. The first is the pursuit of automation through systems such as agent-based architectures, which aim to reduce manual intervention and increase efficiency\xiangyu{reference}. 
+%The second is the growing emphasis on scientific rigor, particularly in terms of reproducibility, verifiability, and stability. The former trend reflects technological progress, while the latter addresses the need for theoretical foundations. Bridging these two dimensions is crucial for building trustworthy and generalizable data science systems.
+
+Recent advances in large language models (LLMs), especially frontier models like GPT-4~\citep{achiam2023gpt} and DeepSeek-V3~\citep{deepseek-llm}, have significantly reshaped the landscape of data science automation. 
+Using prompt engineering, tool integration, and code generation capabilities, LLMs have been incorporated into systems that perform various stages of the data science pipeline~\citep{Li2024AutoKaggle,Sun2024LAMBDA,Hong2024DataInterpreter}. 
+A new paradigm has emerged, the agent-based approach, in which LLMs are organized into structured, role-based entities capable of simulating data scientists in end-to-end workflows. 
+As~\citet{Tu2024LLMDataScience} observe, LLMs are increasingly positioned as strategic collaborators, shifting practitioners from manual operations to high-level planning and oversight.
+
+Despite the promise of this approach, current agent-based data science systems face several persistent challenges. 
+Existing frameworks like \texttt{AutoKaggle}~\citep{Li2024AutoKaggle}, \texttt{LAMBDA}~\citep{Sun2024LAMBDA}, and \texttt{DataInterpreter}~\citep{Hong2024DataInterpreter} depend primarily on the intrinsic reasoning ability of the LLM to plan and execute multistep tasks. However, this autonomy often results in brittle execution paths, low reproducibility, and limited robustness, especially in the presence of noisy, missing, or structurally inconsistent data.
+These systems typically lack principled mechanisms to guide workflow design, evaluate stability, or explore alternative analytic decisions. 
+Consequently, while they are capable of producing seemingly valid pipelines, they often fail to ensure trustworthiness or consistency across datasets and contexts.
+
+The Veridical Data Science (VDS) framework~\citep{Yu2020VDS} provides a theory-based foundation for addressing these issues.
+%Predictability-Computability-Stability (PCS)
+Based on Predictability-Computability-Stability (PCS) principles, VDS advocates data science as a process of critical and transparent reasoning rather than a mere algorithm execution.
+It emphasizes the importance of systematically examining model choices, testing stability via perturbation, and ensuring analytic reproducibility. 
+%Although influential in human-guided workflows, VDS has yet to be operationalized within automated LLM-based systems\xiangyu{what do you mean?}.
+%\yunxuan{I am not}
+In this work, we propose integrating VDS into the architecture of LLM-agent systems by utilizing it as a structured external planning framework.
+This work leverages PCS principles and proposes a novel agent-based data science framework, which is naturally referred to as \texttt{VDSAgents}.
+Rather than relying solely on LLMs to autonomously generate task plans, we provide a predefined multistage skeleton grounded in DSLC (see Figure \ref{fig_ds}). 
+This structure divides the pipeline into phases, including problem formulation, data cleaning and exploration, feature engineering and modeling, and result evaluation. 
+Each stage is managed by a dedicated agent, and a central \texttt{PCS-Agent} operates across all phases to assess and improve the predictability, computability, and stability of the overall workflow.
+The \texttt{PCS-Agent} offers theoretical feedback at all levels of the workflow—questioning data credibility, suggesting alternative problem framings, and enforcing reproducibility checks. 
+This design enables the system to systematically explore diverse analytic paths, explicitly model uncertainty, and ensure more reliable results using PCS principles~\citep{vdsbook}.
+
+%We present \texttt{VDSAgents}, a new multi-agent framework that combines the theory-driven structure (PCS principles) of VDS with the execution flexibility of LLM-based agents. 
+The main contributions of this paper are summarized as follows:
+
+\begin{itemize}
+  \item \textbf{\texttt{VDSAgents} framework:} We propose the first multi-agent system that systematically integrates the DSLC into LLM-based architectures, guided by the PCS principles.
+  The framework designs a dedicated \texttt{PCS-Agent} to guide all other agents in the DSLC.
+
+  \item \textbf{Scientific tool integration:} A modular tool set is developed to support code execution, unit testing, fault diagnosis, and image-to-text transformation, enhancing robustness and flexibility.
+
+  \item \textbf{Paradigm advancement:} This work proposes a new paradigm of automation for trustworthy AI-assisted data science, bridging VDS and LLM agent methodologies.
+\end{itemize}
+
+We validate the proposed framework through systematic experiments on real-world datasets. 
+Our results demonstrate that \texttt{VDSAgents} achieves superior framework robustness and predictive performance compared to representative LLM-based systems.
+
+\section{Related Work}
+
+\subsection{Large Language Models for Data Science}
+
+LLMs have demonstrated powerful capabilities in natural language understanding, reasoning, and code generation~\citep{achiam2023gpt,deepseek-llm}.
+These advances have led to their growing use in data science, where LLMs can assist with tasks such as data cleaning, exploratory data analysis (EDA), feature engineering, modeling, and automated report writing~\citep{Li2024AutoKaggle,Hong2024DataInterpreter,Sun2024LAMBDA,aide2025}. Their ability to follow natural language instructions enables users to perform complex analyses with minimal coding.
+
+As LLMs become more embedded in data science workflows, the focus shifts from manual execution to oversight and validation~\citep{Tu2024LLMDataScience}.
+To support this transition, there is a pressing need to introduce external theoretical frameworks that ensure the transparency, stability, and reproducibility of LLM-driven data analysis.
+
+\subsection{Tool Integration and Execution Reliability}
+
+Recent research shows that the integration of external mechanisms, such as unit testing, execution feedback, and self-refinement, can significantly improve the reliability of LLM in complex tasks~\citep{Madaan2023SelfRefine}.
+For example, \texttt{AutoKaggle}~\citep{Li2024AutoKaggle} incorporates an executor with error capture capabilities that detects runtime failures and automatically triggers correction procedures, thus improving both task completion rates and execution stability.
+In addition, other studies emphasize the use of tool-enhanced pipelines for verification and debugging~\citep{wang2023selfdebug,zhou2023whiteboxtest}.
+Beyond using predefined tools, recent approaches also allow LLMs to dynamically create, manage, or adapt tools for specific tasks~\citep{cai2023toolmaker,schick2023toolformer,qian2023creator}.
+
+Unit testing has emerged as a practical approach to validating the logic of LLM-generated code~\citep{zhou2023autoagents}.
+Frameworks such as PAL~\citep{Gao2022PAL} embed intermediate programmatic reasoning and use test cases to verify the correctness of intermediate steps.
+This helps ensure the internal consistency and verifiability of multi-step reasoning processes.
+
+Our system integrates a modular and extensible toolset to support reliable execution.
+This includes components for code execution, fault detection, self-debugging, OCR-based image-to-text conversion, and unit testing.
+All tools are designed to be dynamically callable by agents and are decoupled from specific back-end models, enabling flexible deployment across different environments.
+
+\subsection{Multi-Agent Systems and Task Planning}
+% 现有 LLM 系统多采用自主规划（如 ReAct, ToT），但在数据科学中稳定性差
+% 多智能体系统（AutoKaggle, LAMBDA）通过任务分工提升了执行效率与结构可控性
+% Data Interpreter 引入图结构的动态规划机制，应对任务依赖
+% 将“外部稳定规划 + 多智能体执行”结合起来，增强可解释性与稳定性
+
+Many LLM-based systems rely on internal planning methods such as ReAct~\citep{yao2022react} and Tree-of-Thoughts (ToT)~\citep{yao2023tree} to structure reasoning and execution.
+However, these approaches often suffer from instability and lack of reproducibility in DSLC, where task dependencies are complex and results must be tightly controlled.
+
+To mitigate these issues, recent frameworks have adopted multi-agent designs with explicit task decomposition.
+\texttt{AutoKaggle}~\citep{Li2024AutoKaggle} structures the pipeline into dedicated agents for data pre-processing, modeling, and evaluation, improving modularity and execution traceability.
+\texttt{LAMBDA}~\citep{Sun2024LAMBDA} similarly defines role-specific agents to coordinate modeling tasks.
+\texttt{DataInterpreter}~\citep{Hong2024DataInterpreter} further enhances coordination with a hierarchical task graph that supports dynamic planning and revision at all stages.
+
+These systems demonstrate that combining structured planning with agent-based collaboration can improve interpretability and robustness.
+Our framework extends this principle by integrating an external \texttt{PCS-Agent} as a critical thinker to guide multi-agent execution across the full DSLC.
+
+\subsection{Veridical Data Science and PCS Principle}
+% Overview of Veridical Data Science and PCS principles（引用 Yu 2020），突出它尚未与 LLM agent 系统整合；
+% Predictability, Computability, Stability
+% Value in managing perturbations and ensuring robustness
+% 说明工作的核心创新点：首次引入这一框架作为 LLM agent 的规划层
+VDS is a principled framework proposed by~\citet{Yu2020VDS} to promote robust, reliable, and reproducible data science. 
+It centers around the PCS principles: predictability, computability, and stability, each addressing critical aspects of reliable data analysis~\citep{Yu2013Stability}. Predictability ensures that models generalize to new data; Computability emphasizes practical feasibility; and Stability tests the sensitivity of results to data and decision perturbations.
+
+Despite its growing influence on human-led workflows, the VDS framework has not yet been integrated into autonomous LLM-driven agent systems.
+We argue that PCS principles provide valuable guidance for managing uncertainty and enhancing reproducibility in LLM-driven pipelines.
+Our work makes the first attempt to systematically apply PCS principles to guide agent behavior across the entire DSLC.
+
+In summary, LLM-driven data science systems are evolving toward greater structure, moving from single-model reasoning to multi-agent collaboration and tool-assisted execution. 
+Although these systems have improved efficiency and task coverage, they still struggle with the complexity of real-world data, reasoning stability, and the trustworthiness of results. 
+Existing solutions, such as unit testing and workflow supervision, offer partial improvements but often lack a theoretical foundation. 
+To address these challenges, we propose \texttt{VDSAgents}, a multi-agent framework guided by the PCS principles, aiming to support trustworthy, stable, and reproducible automated DSLC.
+% -------------------------------
+
+\section{Methodology}
+
+\subsection{Overview of \texttt{VDSAgents}}
+
+%We present \texttt{VDSAgents}, a PCS-guided modular multi-agent system designed to automate DSLC with scientific rigor and structural reliability. 
+In real-world data science, challenges such as complex task dependencies, inconsistent data quality, and subjective modeling choices often compromise the trustworthiness, reproducibility, and robustness of results. 
+To address these issues, \texttt{VDSAgents} decomposes the workflow into the following five dedicated agents.
+
+\begin{itemize}
+  \item \texttt{Define-Agent}: \textbf{$\mathcal{A}_\mathrm{define}$} — Formulates the problem and evaluates the quantities of dataset;
+  \item \texttt{Explore-Agent}: \textbf{$\mathcal{A}_\mathrm{explore}$} — Handles data cleaning, preprocessing, and exploratory analysis;
+  \item \texttt{Model-Agent}: \textbf{$\mathcal{A}_\mathrm{model}$} — Conducts feature engineering, model training, and prediction;
+  \item \texttt{Evaluate-Agent}: \textbf{$\mathcal{A}_\mathrm{evaluate}$} — Assesses model performance and interprets results;
+  \item \texttt{PCS-Agent}: \textbf{$\mathcal{A}_\mathrm{PCS}$} — Operates across all stages, enforcing predictability, computability, and stability through perturbation analysis and reproducibility checks.
+\end{itemize}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=1\linewidth]{arxiv_temp/fig/framework.png}
+  \caption{Workflow architecture of the \texttt{VDSAgents}. 
+  Note that the \texttt{PCS-Agent} interacts with all stage-specific agents to evaluate predictability, computability, and stability.}
+  \label{fig:vds_framework}
+\end{figure}
+
+Figure~\ref{fig:vds_framework} illustrates the high-level system architecture. The system has two key design components:
+\begin{itemize}
+    \item \textbf{PCS-Guided Workflow.}  
+The data science process is divided into five sequential stages: problem definition and evaluation of data quality, data cleaning and EDA, predictive modeling, evaluation of results, and PCS-Guided perturbation and comparison. 
+This structure ensures that each step is scientifically grounded and aligned with the PCS principles.
+\item \textbf{Modular Multi-Agent Architecture.}  
+Each agent is responsible for executing a specific phase of the workflow and operates using standardized prompts from the vdsbook~\citep{vdsbook} and shared memory.
+The \texttt{PCS-Agent} continuously analyzes intermediate outputs, performs perturbation testing, and evaluates the stability and consistency of the results.
+\end{itemize}
+
+To further formalize the execution logic, we define a high-level algorithm (Algorithm~\ref{alg:vdsagent}) that governs the interactions between agents and tool usage across stages. 
+Let $\Phi = \{\phi_1, \phi_2, \phi_3, \phi_4\}$ represent the different stages of problem definition and evaluation of data quality, data cleaning and EDA, predictive modeling, and evaluation of results, $s_t$ the state of the system at time $t$, $r_a$ the output of agent $a$, $T$ the set of unit tests in the current stage, and $\hat{Y}_{\text{test}}$ the predictions of the final model.
+The toolset $\mathcal{T}_i$ includes task-specific utilities such as a converter code executor, debug tool, machine learning (ML) library, and image-to-text, which allows for stage-specific automation and recovery.
+
+\begin{algorithm}[ht]
+\caption{\texttt{VDSAgents} Workflow}
+\label{alg:vdsagent}
+\KwIn{Raw dataset $D_{\mathrm{raw}}$}
+\KwOut{Structured analysis report $\mathcal{R}$ and predictions $\hat{Y}_{\mathrm{test}}$}
+
+Initialize system state $s_0 \leftarrow$ task description and problem definition\;
+Define stage sequence $\Phi = \{\phi_1, \phi_2, \phi_3, \phi_4\}$\;
+Define agent set $\mathcal{A} = \{\mathcal{A}_\mathrm{define}, \mathcal{A}_\mathrm{explore}, \mathcal{A}_\mathrm{model}, \mathcal{A}_\mathrm{evaluate}, \mathcal{A}_\mathrm{PCS}\}$\;
+
+\ForEach{stage $\phi \in \Phi$}{
+    \uIf{$\phi = \phi_1$}{
+        $\mathcal{T}_1 = \{\textnormal{code executor}, \textnormal{debug tool}\}$\;
+        $r_1 \leftarrow \mathcal{A}_\mathrm{define}.\mathrm{execute}(D_{\mathrm{raw}}, \mathcal{T}_1)$\;
+        $\mathcal{A}_\mathrm{PCS}.\mathrm{analyze}(r_1, \mathcal{T}_1)$\;
+    }
+    \uElseIf{$\phi = \phi_2$}{
+        $\mathcal{T}_2 = \{\textnormal{code executor}, \textnormal{debug tool}, \textnormal{ML tools}, \textnormal{image-to-text}\}$\;
+        $D_{\mathrm{clean}} \leftarrow \mathcal{A}_\mathrm{explore}.\mathrm{clean}(D_{\mathrm{raw}}, \mathcal{T}_2)$\;
+        \If{$\mathrm{unitTestsPassed}(D_{\mathrm{clean}})$}{
+            $E \leftarrow \mathcal{A}_\mathrm{explore}.\mathrm{EDA}(D_{\mathrm{clean}}, \mathcal{T}_2)$\;
+            $D_{1}, ..., D_{k} \leftarrow \mathcal{A}_\mathrm{PCS}.\mathrm{perturb}(D_{\mathrm{clean}}, k)$\;
+        }
+    }
+    \uElseIf{$\phi = \phi_3$}{
+        $\mathcal{T}_3 = \{\textnormal{code executor}, \textnormal{debug tool}, \textnormal{ML tools}\}$\;
+        $\mathcal{M}_{1:l} \leftarrow \mathcal{A}_\mathrm{model}.\mathrm{train}(D_{\mathrm{clean}}, \mathcal{T}_3)$\;
+        $\mathcal{A}_\mathrm{PCS}.\mathrm{reproduce}(D_{1:k}, \mathcal{M}_{1:l}, \mathcal{T}_3)$\;
+        $\mathcal{A}_\mathrm{PCS}.\mathrm{selectTopK}(\mathrm{results})$\;
+        $\mathcal{A}_\mathrm{PCS}.\mathrm{generateReport}()$\;
+    }
+    \uElseIf{$\phi = \phi_4$}{
+        $\mathcal{T}_4 = \{\textnormal{code executor}, \textnormal{debug tool}\}$\;
+        $\hat{Y}_{\mathrm{test}} \leftarrow \mathcal{A}_\mathrm{evaluate}.\mathrm{model}(D_{\mathrm{test}}, \mathcal{M}_{\mathrm{best}}, \mathcal{T}_4)$\;
+    }
+}
+\Return{$\mathcal{R}, \hat{Y}_{\mathrm{test}}$}\;
+\end{algorithm}
+
+
+\subsection{PCS-Guided Planning and Perturbation}
+
+A key innovation of the \texttt{VDSAgents} lies in embedding PCS-Guided planning in each agent through structured prompting and shared memory.
+This ensures that the agents operate not only reactively, but also in accordance with principled scientific reasoning.
+
+Each agent receives two layers of prompt instructions:  
+\begin{itemize}
+  \item \textbf{System Message:} defines the agent’s role, scope of action, and associated PCS principle;
+  \item \textbf{Task-Specific Message:} includes upstream outputs, stage-specific objectives, expected output formats (e.g., Python, Markdown, JSON), and relevant domain constraints.
+\end{itemize}
+
+Agents also maintain an intermediate memory state, allowing them to incorporate decisions made in earlier stages and reason within the context of the entire pipeline.
+This forms a cohesive planning skeleton aligned with the DSLC.
+Among all agents, the {\texttt{PCS-Agent}} plays a central role which continuously evaluates outputs from $\mathcal{A}_\mathrm{define}$, $\mathcal{A}_\mathrm{explore}$ $\mathcal{A}_\mathrm{model}$, and $\mathcal{A}_\mathrm{evaluation}$
+in ensuring stability throughout the workflow. 
+
+To operationalize these principles, the \texttt{PCS-Agent} automatically generates multiple versions of perturbed data $\{D_1, D_2, \dots, D_k\}$ using different strategies, such as imputation methods, outlier handling, and feature transformations. 
+Each version passes unit tests to ensure semantic and structural validity.
+For each perturbed dataset $D_i$, the system trains a corresponding model $\mathcal{M}_i$, forming a set of predictive fits (the pairing of an algorithm and a particular cleaned/preprocessed training dataset used for training the algorithm~\citep{vdsbook}) $\mathcal{F}_i = (D_i, \mathcal{M}_i)$.
+These fits are compared on the basis of generalization performance and PCS-guided diagnostics, allowing the system to identify and report the most robust and reliable models.
+
+%This mechanism not only enforces the theoretical principles of stability and predictability of the VDS framework, but also equips the system to handle real-world data variability with rigor and transparency.
+
+\subsection{Tool Infrastructure and Execution Flow}
+
+To support stable, modular, and reproducible execution in different stages of the pipeline, \texttt{VDSAgents} is equipped with an extensible tool infrastructure $\mathcal{T}$. 
+These tools are available to all agents and serve key roles such as code execution, logic validation, error handling, and perturbation control.
+
+\subsubsection{PCS-Guided ML Function Library.}
+The core of the tool infrastructure is a modular ML function library $\mathcal{T}_\mathrm{ML}$, which supports data pre-processing, feature engineering, and structured perturbation.
+It is used by $\mathcal{A}_\mathrm{explore}$ for cleaning and exploratory analysis, by $\mathcal{A}_\mathrm{model}$ for feature construction and model fitting, and by $\mathcal{A}_\mathrm{PCS}$ to generate perturbations.
+
+Each function is implemented in a standalone format with explicit parameter interfaces and operation semantics.
+The LLM can call these functions through natural language prompts by referencing predefined descriptions injected into the system message.
+This design ensures consistent behavior across different agents and promotes traceability and reproducibility in multi-agent execution.
+For a complete list of functions and their descriptions, see Appendix~\ref{append:mltools}.
+
+\subsubsection{Unit Testing}
+The unit test is a validation mechanism designed to systematically examine datasets for structural integrity and logical correctness~\citep{turkishtechnology2024unit}. Its primary purpose is to ensure that the processed datasets remain logically consistent and free of errors introduced during data perturbation and pre-processing steps.
+
+After data cleaning, \texttt{Explore-Agent} invokes a suite of unit tests $\mathcal{U} = \{u_1, u_2, \dots, u_m\}$ to verify the structural and statistical validity of the dataset.
+These tests detect issues such as missing values, unprocessed data loss, or duplicates. Each test outputs a structured result $\langle \text{name}, \text{passed}, \text{message} \rangle$ to guide downstream execution or debugging.
+This mechanism reinforces computability and stability in early processing.
+See Appendix~\ref{append:unit-tests} for test details.
+
+
+\subsubsection{Code Execution and Debugging}
+
+To ensure reliable code execution, each agent-generated script is handled by a \texttt{code executor}.
+If execution fails or unit tests are not passed, the system invokes a \texttt{debug tool} that identifies errors, generates repair suggestions, and returns the corrected code.
+This self-healing mechanism supports up to $N_{\max}$ retries (default value $N_{\max}=3$).
+Upon repeated failures, it triggers human intervention or rolls back to the original planning state.
+This design ensures robustness and recoverability in complex workflows. A schematic of this mechanism is provided in the Appendix~\ref{append:debug-flow}.
+
+
+\subsubsection{Image-to-Text Support}
+
+To enhance visual reasoning during EDA, \texttt{VDSAgents} incorporates an image-to-text module $\mathcal{T}_{\mathrm{OCR}}$ that extracts structured textual descriptions from graphical outputs such as histograms, box plots, and heatmaps.
+
+Given an image input $I$, the module returns a set of textual elements:
+\[
+\mathcal{T}_{\mathrm{OCR}}(I) \rightarrow \mathcal{V}_{\mathrm{text}} = \{v_1, v_2, \dots, v_n\}.
+\]
+These include titles, axis labels, statistical extremes, trends, and outliers. The resulting set $\mathcal{V}_{\mathrm{text}}$ is then used by downstream agents (\texttt{Explore-Agent}, \texttt{PCS-Agent}) to assist in logic validation, anomaly interpretation and stability assessment.
+
+\subsubsection{System Extensibility and Modularity}
+
+\texttt{VDSAgents} is built with modularity and extensibility in mind.
+On the model side, it defines an abstract interface $\mathcal{M}_{\mathrm{LLM}}$ that supports interchangeable use of various LLMs (e.g., ChatGPT, Claude, DeepSeek), allowing seamless switching without altering core logic.
+
+On the tool side, the system maintains a dynamic set of modules:
+\[
+\mathcal{T} = \{\mathcal{T}_{\mathrm{ML}}, \mathcal{T}_{\mathrm{OCR}}, \mathcal{T}_{\mathrm{unit}}, \dots\},
+\]
+each registered with standardized interfaces for plug-and-play integration. Researchers can customize pipelines by adding domain-specific tools, pre-processing functions, or validation tests.
+
+This architecture enables flexible adaptation to diverse tasks, from general-purpose modeling to specialized workflows such as time series forecasting or biomedical analysis—making \texttt{VDSAgents} a customizable and portable foundation for automated data science systems.
+
+\subsection{Agent Function Interface and Mapping}
+
+Each agent in the \texttt{VDSAgents} is equipped with a set of structured functions $\mathcal{F}_{\mathcal{A}_i} = \{f_1, f_2, \dots, f_m\}$, enabling it to perform domain-specific reasoning, code generation, and intermediate decision-making.
+These functions can be called using natural language prompts and operate within a unified context composed of system messages, task instructions, and memory states.
+
+The behavior of any agent $\mathcal{A}_i$ can be formalized as a functional mapping:
+\[
+\mathcal{A}_i: \quad (\mathcal{S}_{\text{context}}, \mathcal{F}_{\mathcal{A}_i}) \longrightarrow \mathcal{R}_{\text{task}},
+\]
+where
+\begin{itemize}
+  \item $\mathcal{S}_{\text{context}}$ represents the accumulated upstream outputs and task state;
+  \item $\mathcal{F}_{\mathcal{A}_i}$ is the agent's internal callable function set;
+  \item $\mathcal{R}_{\text{task}}$ is the resulting code, outputs, or structured reasoning reports.
+\end{itemize}
+
+Each function is designed to be modular, interpretable, and robust in perturbation. Appendix~\ref{append:agent-functions} provides detailed function listings for key agents.
+
+
+% -------------------------------
+
+\section{Experiments and Evaluation} % 实验与评估
+
+\subsection{Experimental Setup} % 实验设置
+
+\subsubsection{Dataset} % 数据集选择
+
+To evaluate the stability, robustness, and predictive performance of the proposed \texttt{VDSAgents}, we carry out experiments on nine representative datasets. These datasets range from clean, preprocessed data to raw data, allowing us to assess generalizability.
+
+Let $\mathcal{D} = \{D_1, D_2, \dots, D_9\}$ denote the dataset collection, categorized as follows:
+
+\begin{itemize}
+  \item \textbf{Clean datasets} ($\mathcal{D}_\mathrm{clean}$): This group includes \texttt{bank\_churn}, \texttt{titanic}, and \texttt{obesity\_risks}, sourced from \href{https://www.kaggle.com}{Kaggle}. These datasets are already partially processed, with low missingness and consistent logical structures.
+
+  \item \textbf{Raw datasets} ($\mathcal{D}_\mathrm{raw}$): Including \texttt{adult}, \texttt{In-Vehicle\_Coupon\_Recommendation}, \texttt{parkinsons}, and \texttt{Seoul\_Bike\_Sharing\_Demand}, these are drawn from the \href{https://archive.ics.uci.edu/}{UCI Machine Learning Repository}.
+  They feature minimal pre-processing and present more realistic challenges, such as missing data and noisy attributes.
+
+  \item \textbf{High-dimensional complex datasets} ($\mathcal{D}_\mathrm{complex}$): Consisting of \texttt{ames\_houses} and \texttt{online\_shopping}, both from \href{https://vdsbook.com/}{vdsbook.com}, these datasets are used in real-world educational or applied settings and involve intricate combinations of continuous and categorical features.
+\end{itemize}
+
+These datasets enable a comprehensive evaluation of \texttt{VDSAgents}' capabilities across various scenarios, particularly in tasks such as identification of response variables, selection of the feature pipeline, model comparison, and evaluation of the stability based on perturbations.
+The complete datasets details are provided in Appendix~\ref{append:datasets}.
+
+\subsubsection{Evaluation Metrics}
+
+To systematically evaluate the performance of \texttt{VDSAgents} across diverse tasks and perturbed scenarios, we adopt the evaluation protocol introduced by~\citet{Hong2024DataInterpreter}, incorporating additional considerations regarding task performance and completion quality.
+Three core metrics are defined below:
+
+%for reasoning structure and PCS-Guided stability
+
+\begin{itemize}
+  \item \textbf{Valid Submission (VS)}:  
+  Measures the proportion of attempts in which the system successfully generates a syntactically correct, executable, and evaluable pipeline:
+  \[
+  \mathrm{VS} = \frac{T_s}{T},
+  \]
+  where $T_s$ is the number of successful attempts, and $T$ is the total number of attempts.
+
+  \item \textbf{Average Normalized Performance Score (ANPS)}:  
+  Instead of averaging normalized scores per run, we first compute the mean of raw metrics across all valid runs, then normalize them using a unified formula:
+  \[
+  \mathrm{ANPS} =
+  \begin{cases}
+  \dfrac{1}{4} \left( \mathrm{Accuracy}_{\mathrm{avg}} + \mathrm{F1}_{\mathrm{avg}} + \mathrm{Precision}_{\mathrm{avg}} + \mathrm{Recall}_{\mathrm{avg}} \right), & \text{for classification task,} \\[12pt]
+  \dfrac{1}{3} \left( \dfrac{1}{1 + \mathrm{RMSE}_{\mathrm{avg}}} + \dfrac{1}{1 + \mathrm{MAE}_{\mathrm{avg}}} + R^2_{\mathrm{avg}} \right), & \text{for regression task.}
+  \end{cases}
+  \]
+  This ``average-then-normalize'' approach improves metric stability and mitigates high variance in LLM-generated outputs.
+
+  \item \textbf{Comprehensive Score (CS)}:  
+  Combines execution robustness and modeling performance into a unified metric:
+  \[
+  \mathrm{CS} = 0.5 \times \mathrm{VS} + 0.5 \times \mathrm{ANPS}.
+  \]
+  Equal weights are assigned to validity and quality, making CS suitable for comparing systems under heterogeneous data science tasks.
+\end{itemize}
+
+\subsubsection{Baselines and Model Configurations}
+
+To benchmark the performance of \texttt{VDSAgents}, we compare it with two representative multi-stage automated data science frameworks: \texttt{AutoKaggle}~\citep{Li2024AutoKaggle} and \texttt{DataInterpreter}~\citep{Sun2024LAMBDA}.
+For each system and dataset, experiments are repeated multiple times until five successful runs with valid outputs are obtained, and the final reported performance is averaged over these five runs.
+
+We test both systems under two widely used LLM backends:
+
+\begin{itemize}
+  \item \textbf{GPT-4o}: A state-of-the-art OpenAI model with strong reasoning and code generation capabilities.
+  \item \textbf{DeepSeek-V3}: A competitive open-source model representing leading domestic performance in structured tasks.
+\end{itemize}
+For all EDA-related visual analysis, we employ \textbf{Qwen-VL-7B} as the unified image-to-text module $\mathcal{T}_{\mathrm{OCR}}$ in both systems.
+
+\subsection{Results and Analysis}
+% Visual results
+% Impact of different combinations of operation items and models
+% Generalization performance and robustness
+% Real-world dataset adaptability
+
+% -------------------------------
+This section presents a comprehensive evaluation of \texttt{VDSAgents} compared to \texttt{AutoKaggle} and \texttt{DataInterpreter} on nine benchmark tasks, comprising six classification datasets and three regression datasets.
+The comparison focuses on three core dimensions that we have defined: VS, ANPS, and CS. 
+Table~\ref{tab:metric-comparison-appendix} summarizes the performance in nine system configurations, each using one of two LLM back-ends: DeepSeek-V3 and GPT-4o. 
+%To aid in interpretation, classification and regression tasks are clearly grouped in the table.
+
+\subsubsection{Execution Stability}
+
+VS measures the proportion of trials where the system successfully produces a valid, executable, and predictive output.
+As shown in Table~\ref{tab:metric-comparison-appendix}, \texttt{VDSAgents} consistently achieves higher execution stability compared to \texttt{AutoKaggle} and \texttt{DataInterpreter}.
+Specifically, with \texttt{DeepSeek-V3} and \texttt{GPT-4o}, \texttt{VDSAgents} attains average VS scores of 0.869 and 0.948 respectively, clearly outperforming \texttt{AutoKaggle} (0.563 and 0.526) and \texttt{DataInterpreter} (0.671 and 0.686).
+
+Notably, \texttt{VDSAgents} with \texttt{GPT-4o} achieves 100\% success in eight of nine tasks, demonstrating strong robustness and compatibility with advanced LLMs. In contrast, both baseline methods exhibit lower and more variable performance, especially in challenging regression scenarios such as \texttt{parkinsons} and \texttt{online\_shopping} datasets.
+
+Overall, \texttt{VDSAgents} offers a significantly more reliable execution framework for diverse tasks and conditions.
+
+\subsubsection{Predictive Effectiveness}
+
+ANPS reflects average predictive quality conditional on successful execution, combining classification accuracy and regression effectiveness.
+As shown in Table~\ref{tab:metric-comparison-appendix}, \texttt{VDSAgents} consistently achieves higher ANPS scores than both \texttt{AutoKaggle} and \texttt{DataInterpreter}.
+With \texttt{GPT-4o}, \texttt{VDSAgents} achieves an average ANPS of 0.640, clearly outperforming \texttt{AutoKaggle} (0.341) and \texttt{DataInterpreter} (0.436). Similarly, with \texttt{DeepSeek-V3}, \texttt{VDSAgents} obtains 0.577, surpassing \texttt{AutoKaggle} (0.503) and \texttt{DataInterpreter} (0.490).
+
+In classification tasks, the three systems show relatively similar performance, with the average ANPS generally ranging between 0.7 and 0.9.
+However, \texttt{VDSAgents} maintains slightly more stable and higher performance overall, particularly evident in datasets with noise or high dimensionality (e.g., online shopping).
+
+In regression tasks, performance divergence is more significant.
+\texttt{VDSAgents} with \texttt{GPT-4o} excels substantially (Parkinson’s ANPS=0.942, Seoul Bike ANPS=0.237), indicating its superior capability to model continuous numerical outputs.
+In contrast, both \texttt{AutoKaggle} and \texttt{DataInterpreter} frequently deliver poor results, with \texttt{AutoKaggle-GPT4o} even yielding negative scores (e.g., Ames Houses), revealing clear limitations in numerical modeling capability and pipeline robustness.
+
+These trends underscore the advantage of \texttt{VDSAgents}, particularly in regression contexts involving continuous variables, noise, or high dimensionality, where baseline methods struggle significantly.
+
+\subsubsection{Overall Capability}
+
+To jointly evaluate the stability and robustness of the execution and predictive effectiveness, we define CS as the average of VS and ANPS. 
+As shown in Table~\ref{tab:metric-comparison-appendix} and Figure~\ref{fig:cs-comparison}, \texttt{VDSAgents} consistently achieves the highest CS scores compared to both \texttt{AutoKaggle} and \texttt{DataInterpreter}.
+Specifically, \texttt{VDSAgents-GPT4o} attains an average CS of 0.794, clearly surpassing \texttt{AutoKaggle-GPT4o} (0.434) and \texttt{DataInterpreter-GPT4o} (0.561). Similar advantages persist with DeepSeek-V3.
+
+In general, these results underscore the clear superiority of \texttt{VDSAgents}, offering robust execution combined with effective predictions in diverse tasks and challenging conditions.
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=13.5cm, height=9cm]{arxiv_temp/fig/cs_comparison.png}
+\caption{Comparison of Comprehensive Score (CS) across four system variants on nine tasks}
+\label{fig:cs-comparison}
+\end{figure}
+
+
+\section{Discussion}
+
+The superior performance of \texttt{VDSAgents} over \texttt{AutoKaggle} and \texttt{DataInterpreter} is not only attributable to more powerful LLM back-ends, but to its principled design grounded in PCS principles. 
+%Unlike traditional LLM-driven pipelines that rely on prompt templates or monolithic reasoning, \texttt{VDSAgents} integrates LLMs into a structured system of modular agents, each guided by the PCS triad and capable of context-aware decision-making.
+\texttt{VDSAgents} emphasizes three key elements of PCS: the ability to generate models that generalize (predictability), execute reliably (computability), and remain robust under perturbations (stability).
+These principles are encoded in the logic of the \texttt{VDSAgents} at both the system and function levels.
+Agents are not passive responders to prompts, but active planners that construct problem-solving trajectories aligned with the structure of the data and the goals of the analysis.
+
+A concrete manifestation of this structure is observed in the way the system performs data cleaning.
+For example, in missing value imputation, \texttt{AutoKaggle} typically applies global methods (e.g., filling with column-wise mean), overlooking latent data hierarchies.
+This is a common pitfall in datasets where group structure matters, such as time series per stock or country-level survey data, where such methods can distort distributions and mislead downstream models.
+
+In contrast, \texttt{VDSAgents}, under PCS-Guided, decomposes the cleaning process into reasoning steps: it first identifies the semantic roles of variables (e.g., \texttt{StockCode}, \texttt{Country}), then proposes targeted imputation strategies (e.g., per-stock mean, per-region median) that align with domain structure.
+These strategies are not hallucinated, but supported by executable modular functions from the \texttt{mltools} library.
+
+Furthermore, the \texttt{PCS-Agent} operationalizes stability by generating perturbed variants of the data based on alternative, yet plausible, structural assumptions, such as imputing by continent instead of country.
+This enables the system to systematically assess the sensitivity of modeling outcomes, a core idea of the PCS principles that is often neglected in black-box pipelines.
+
+By aligning each phase of the workflow, cleaning, modeling, evaluation, with a PCS-Guided structure, \texttt{VDSAgents} avoids the brittleness of purely prompt-driven systems.
+It produces results that are not only accurate, but also reproducible, interpretable, and robust to variation.
+In short, \texttt{VDSAgents} is not just ``LLM powered'' but ``PCS-Guided'', and this distinction is central to its observed advantages in diverse tasks and data types.
+
+% -------------------------------
+\section{Conclusion and Future Work}{}
+
+This paper introduces \texttt{VDSAgents}, a modular, PCS-Guided, multi-agent automated data science framework. 
+Guided by the core principles of predictability, computability, and stability, the system decomposes tasks into structured agent workflows, integrates reusable tools, and enables scientifically grounded modeling in real-world data scenarios.
+
+Empirical results in nine datasets demonstrate the effectiveness of our design. \texttt{VDSAgents} achieves superior execution stability, robust predictive performance, and leading overall capability, outperforming the baseline \texttt{AutoKaggle} and \texttt{DataInterpreter} under both the GPT-4o and DeepSeek-V3 backends.
+Its performance is especially notable on complex and noisy datasets, where its structured inference paths and stability-driven evaluation yield consistent gains.
+
+%The key innovation of the \texttt{VDSAgents} lies in its theory-informed architecture. By embedding the VDS lifecycle in agent roles and introducing a dedicated perturbation agent ($\mathcal{A}_{\mathrm{PCS}}$), the system forms a closed loop of reasoning, validation, and selection. This contrasts with traditional prompt-based LLM workflows by providing more transparency, robustness, and adaptability in imperfect, dynamic data environments.
+
+Several promising directions remain open for extending the capabilities of \texttt{VDSAgents}:
+
+\begin{itemize}
+  \item \textbf{Fine-grained stability modeling:} Beyond basic data cleaning and feature selection, future work could explore stability-aware designs for more advanced modeling paths such as causal inference~\citep{wang2025epistasis} and multitask learning~\citep{agarwal2025pcs}.
+
+  \item \textbf{Human-in-the-loop feedback:} Integrating expert feedback at key decision points could enable adaptive refinement of strategies and improve performance in domain-specific tasks.
+
+  \item \textbf{Cross-domain generalization:} Applying the PCS-Guided architecture to critical domains such as healthcare, finance, or policy analysis will help evaluate its transferability and practical value under higher reliability demands.
+
+  %\item \textbf{Memory and meta-learning mechanisms:} A system-level memory to track stability outcomes and reuse past inference paths could support efficient adaptation and knowledge transfer between tasks.
+\end{itemize}
+
+By combining theoretical guidance with system-level engineering, \texttt{VDSAgents} offers a trustworthy foundation for LLM-driven data science.
+We envision its broader applications in intelligent research, automated analysis, and education, helping bridge the gap between automation and scientific reasoning in data-driven practice.
+
+% Summary of contributions
+% Future directions:
+% - Agent negotiation / game-theoretic systems
+% - Causal-based modeling
+% - Extending to unsupervised tasks (e.g., clustering)
+
+
+% \begin{algorithm}[tb]
+% 	\caption{Local SGD}
+% 	\label{alg:local_sgd}
+% 	\begin{algorithmic}
+% 		\STATE {\bfseries Input:} functions $\{f_k\}_{k=1}^K$, initial point $\x_0$, step size $\eta_0$, communication set $\IM = \{t_0, %t_1, \cdots\}$.
+% 		\STATE {\bfseries Initialization:} let $\x_{0}^{k} = \x_0$ for all $k$.
+% 		\FOR{round $m=0$ {\bfseries to} $T-1$}
+% 		 \FOR{iteration $t=t_{m}+1$ {\bfseries to} $t_{m+1}$}
+% 		\FOR {each device $k=1$ {\bfseries to} $K$}
+% 		\STATE  {$\x_t^{k} = \x_{t-1}^{k} - \eta_{m} \nabla f_k(\x_{t-1}^{k}; \xi_{t-1}^{k}).$   \quad \# perform $E_m = t_{m+1}-t_m$ steps of local updates.}
+% 		\ENDFOR
+% 		\ENDFOR
+% 		  \STATE {The central server aggregates: $\bx_{t_{m+1}} = \sum_{k=1}^K p_k \x_{t_{m+1}}^{k}.$}
+%  		\STATE {Synchronization: $\x_{t_{m+1}}^k \gets \bx_{t_{m+1}}$ for all $k$.}
+% 		 \ENDFOR
+% 		\STATE {\bfseries Return: $\widehat{\x} = \frac{1}{T} \sum_{m=1}^T\bx_{t_m}$.} 
+% 	\end{algorithmic}
+% \end{algorithm}
+
+
+\end{document}

@@ -23,16 +23,19 @@ def effect_step_running(state_machine, payload: Any = None):
 
 def effect_step_completed(state_machine, payload: Any = None):
     """
-    Effect for STEP_COMPLETED state - CLIENT-CONTROLLED navigation.
+    Effect for STEP_COMPLETED state.
+    Per STATE_MACHINE_PROTOCOL.md: Should call Planning API to determine if stage is complete.
 
     Args:
         state_machine: Reference to WorkflowStateMachine instance
         payload: Optional payload data
     """
-    state_machine.info(f"[FSM Effect] STEP_COMPLETED")
+    state_machine.info(f"[FSM Effect] STEP_COMPLETED - Calling Planning API")
 
     if not state_machine.pipeline_store:
         state_machine.error("[FSM Effect] Pipeline store not available")
+        from core.events import WorkflowEvent
+        state_machine.transition(WorkflowEvent.FAIL, {'error': 'Pipeline store not available'})
         return
 
     workflow = state_machine.pipeline_store.workflow_template
@@ -40,23 +43,59 @@ def effect_step_completed(state_machine, payload: Any = None):
 
     if not workflow or not ctx.current_stage_id or not ctx.current_step_id:
         state_machine.error("[FSM Effect] Invalid context in STEP_COMPLETED")
+        from core.events import WorkflowEvent
+        state_machine.transition(WorkflowEvent.FAIL, {'error': 'Invalid context'})
         return
 
-    # Client-side navigation based on workflow template
-    is_last = workflow.is_last_step_in_stage(ctx.current_stage_id, ctx.current_step_id)
+    try:
+        # Call Planning API to check if stage is complete
+        from utils.api_client import workflow_api_client
 
-    from core.events import WorkflowEvent
-    if is_last:
-        state_machine.transition(WorkflowEvent.COMPLETE_STAGE)
-    else:
-        # Move to next step
+        current_state = build_api_state(state_machine, require_progress_info=True)
+
+        state_machine.info(f"[FSM Effect] Calling Planning API for stage={ctx.current_stage_id}")
+
+        feedback_response = workflow_api_client.send_feedback_sync(
+            stage_id=ctx.current_stage_id,
+            step_index=ctx.current_step_id,
+            state=current_state
+        )
+
+        # Apply context updates
+        if 'context_update' in feedback_response:
+            from core.state_effects.behavior_effects import _apply_context_update
+            _apply_context_update(state_machine, feedback_response['context_update'])
+
+        # Check if stage is complete (targetAchieved at stage level)
+        target_achieved = feedback_response.get('targetAchieved', False)
+
+        from core.events import WorkflowEvent
+        if target_achieved:
+            state_machine.info("[FSM Effect] Stage complete per Planning API")
+            state_machine.transition(WorkflowEvent.COMPLETE_STAGE)
+        else:
+            # Move to next step
+            next_step = workflow.get_next_step(ctx.current_stage_id, ctx.current_step_id)
+            if next_step:
+                ctx.current_step_id = next_step.id
+                ctx.reset_for_new_step()
+                state_machine.info(f"[FSM Effect] Moving to next step: {next_step.id}")
+                state_machine.transition(WorkflowEvent.NEXT_STEP)
+            else:
+                # No more steps, complete stage
+                state_machine.info("[FSM Effect] No more steps, completing stage")
+                state_machine.transition(WorkflowEvent.COMPLETE_STAGE)
+
+    except Exception as e:
+        state_machine.error(f"[FSM Effect] Failed to call Planning API: {e}", exc_info=True)
+        # Fallback: check if there are more steps
+        from core.events import WorkflowEvent
         next_step = workflow.get_next_step(ctx.current_stage_id, ctx.current_step_id)
         if next_step:
             ctx.current_step_id = next_step.id
             ctx.reset_for_new_step()
             state_machine.transition(WorkflowEvent.NEXT_STEP)
         else:
-            state_machine.error("[FSM Effect] No next step found")
             state_machine.transition(WorkflowEvent.COMPLETE_STAGE)
 
 
@@ -80,9 +119,9 @@ def _start_with_planning(state_machine):
         return
 
     try:
-        # Build API state (progress_info is optional for planning)
+        # Build API state (progress_info is REQUIRED per OBSERVATION_PROTOCOL.md)
         from utils.api_client import workflow_api_client
-        current_state = build_api_state(state_machine, require_progress_info=False)
+        current_state = build_api_state(state_machine, require_progress_info=True)
 
         state_machine.info(f"[FSM Effect] Calling reflection API for stage={ctx.current_stage_id}, step={ctx.current_step_id}")
 
@@ -93,14 +132,19 @@ def _start_with_planning(state_machine):
             state=current_state
         )
 
-        state_machine.info(f"[FSM Effect] Reflection response: {feedback_response}")
+        state_machine.info(f"[FSM Effect] Planning API response: {feedback_response}")
+
+        # Apply context updates from Planning API
+        if 'context_update' in feedback_response:
+            from core.state_effects.behavior_effects import _apply_context_update
+            _apply_context_update(state_machine, feedback_response['context_update'])
 
         # Check if target achieved
         target_achieved = feedback_response.get('targetAchieved', False)
 
         from core.events import WorkflowEvent
         if target_achieved:
-            state_machine.info("[FSM Effect] Target achieved per reflection API, completing step")
+            state_machine.info("[FSM Effect] Target achieved per Planning API, completing step")
             state_machine.transition(WorkflowEvent.COMPLETE_STEP)
         else:
             # Target not achieved, proceed with behavior generation

@@ -1,0 +1,141 @@
+<stages>
+  <remaining>
+    <stage id="problem_definition" title="Problem Definition">
+      <goal>
+        Define the prediction goal, dataset scope, and evaluation metrics, ensuring the project aligns with PCS principles. 
+        Artifacts: df_raw, problem_definition_doc, workflow_plan; 
+        Acceptance: file './assets/ames_housing.csv' exists AND len(df_raw)>0 AND workflow_plan includes RMSE<25000 and R²>0.85 targets.
+      </goal>
+      <verified_artifacts>
+        <variable name="df_raw">Loaded raw Ames Housing dataset</variable>
+        <variable name="problem_definition_doc">Written summary defining prediction objective and evaluation criteria</variable>
+      </verified_artifacts>
+      <required_variables>
+      </required_variables>
+    </stage>
+
+    <stage id="data_preparation" title="Data Preparation">
+      <goal>
+        Clean and preprocess the Ames dataset to ensure structural consistency and remove missing or invalid entries.
+        Artifacts: df_cleaned, data_quality_report;
+        Acceptance: `df_cleaned.isnull().sum().sum()==0` AND all columns have valid dtypes.
+      </goal>
+      <verified_artifacts>
+        <variable name="df_cleaned">Cleaned DataFrame ready for analysis and modeling</variable>
+        <variable name="data_quality_report">Summary of missing values, outliers, and dtype corrections</variable>
+      </verified_artifacts>
+      <required_variables>
+        <variable name="df_raw">Raw input dataset loaded in previous stage</variable>
+      </required_variables>
+    </stage>
+
+    <stage id="data_analysis" title="Data Analysis">
+      <goal>
+        Perform exploratory data analysis to identify key patterns, feature correlations, and initial modeling hypotheses.
+        Artifacts: eda_summary, correlation_matrix, distribution_analysis, feature_importance_preliminary, ./outputs/eda_visualizations.png;
+        Acceptance: top-5 correlated features with target 'SalePrice' identified and visualization file exists.
+      </goal>
+      <verified_artifacts>
+        <variable name="eda_summary">Text or structured report summarizing main EDA findings</variable>
+        <variable name="correlation_matrix">Matrix showing correlation between numerical features and target</variable>
+        <variable name="distribution_analysis">Plots and statistics describing feature distributions</variable>
+        <variable name="feature_importance_preliminary">Initial ranking of important variables</variable>
+        <variable name="eda_visualizations">EDA visualization image stored in ./outputs/eda_visualizations.png</variable>
+      </verified_artifacts>
+      <required_variables>
+        <variable name="df_cleaned">Cleaned dataset ready for EDA</variable>
+      </required_variables>
+    </stage>
+
+    <stage id="model_selection" title="Model Selection">
+      <goal>
+        Train and compare baseline models to determine the best candidate for final tuning.
+        Artifacts: baseline_models, model_comparison_report, selected_model_name, model_selection_rationale;
+        Acceptance: at least 3 models trained AND baseline RMSE<30000 AND selected_model_name recorded.
+      </goal>
+      <verified_artifacts>
+        <variable name="baseline_models">Collection of trained baseline regressors</variable>
+        <variable name="model_comparison_report">Table comparing model performance metrics</variable>
+        <variable name="selected_model_name">String identifying best-performing baseline model</variable>
+        <variable name="model_selection_rationale">Documented justification for model choice</variable>
+      </verified_artifacts>
+      <required_variables>
+        <variable name="df_cleaned">Prepared data for model training</variable>
+        <variable name="feature_importance_preliminary">EDA insights guiding model choice</variable>
+      </required_variables>
+    </stage>
+
+    <stage id="model_training" title="Model Training">
+      <goal>
+        Tune hyperparameters and train the selected model to achieve optimal predictive performance.
+        Artifacts: final_model, hyperparameter_tuning_report, best_params, training_history, ./models/ames_model.pkl;
+        Acceptance: model file exists AND size>0 AND 'best_params' recorded.
+      </goal>
+      <verified_artifacts>
+        <variable name="final_model">Trained predictive model object</variable>
+        <variable name="hyperparameter_tuning_report">Results summary of tuning experiments</variable>
+        <variable name="best_params">Key-value pairs of selected optimal parameters</variable>
+        <variable name="training_history">Loss and metric history over epochs or folds</variable>
+        <variable name="model_file">Pickled model saved at ./models/ames_model.pkl</variable>
+      </verified_artifacts>
+      <required_variables>
+        <variable name="selected_model_name">Chosen model from selection stage</variable>
+        <variable name="df_cleaned">Training data with target variable</variable>
+      </required_variables>
+    </stage>
+
+    <stage id="model_evaluation" title="Model Evaluation">
+      <goal>
+        Evaluate the final model using held-out test data and cross-validation to verify PCS compliance.
+        Artifacts: test_rmse, test_r2, cv_scores, cv_mean, cv_std, model_performance_report, residual_analysis, pcs_validation_report;
+        Acceptance: test_rmse<25000 AND test_r2>0.85 AND cv_std<3000.
+      </goal>
+      <verified_artifacts>
+        <variable name="test_rmse">Root mean square error on test set</variable>
+        <variable name="test_r2">R² score on test set</variable>
+        <variable name="cv_scores">Cross-validation score list</variable>
+        <variable name="cv_mean">Mean of cross-validation scores</variable>
+        <variable name="cv_std">Standard deviation of CV scores</variable>
+        <variable name="model_performance_report">Detailed evaluation summary</variable>
+        <variable name="residual_analysis">Residual distribution and error plots</variable>
+        <variable name="pcs_validation_report">PCS-based validation and robustness check</variable>
+      </verified_artifacts>
+      <required_variables>
+        <variable name="final_model">Trained model from previous stage</variable>
+        <variable name="df_cleaned">Evaluation dataset</variable>
+      </required_variables>
+    </stage>
+
+    <stage id="model_deployment" title="Model Deployment">
+      <goal>
+        Generate predictions on test data and prepare deployment artifacts for end-user access and documentation.
+        Artifacts: predictions, ./outputs/predictions.csv, deployment_report, model_card;
+        Acceptance: len(predictions)==test set size AND CSV file exists with matching rows.
+      </goal>
+      <verified_artifacts>
+        <variable name="predictions">Array or DataFrame of predicted values</variable>
+        <variable name="predictions_csv">CSV file with predicted results saved in ./outputs/predictions.csv</variable>
+        <variable name="deployment_report">Summary of deployment process and verification</variable>
+        <variable name="model_card">Standardized model documentation following PCS principles</variable>
+      </verified_artifacts>
+      <required_variables>
+        <variable name="final_model">Final trained model ready for inference</variable>
+        <variable name="df_cleaned">Test data for prediction</variable>
+      </required_variables>
+    </stage>
+
+  </remaining>
+
+  <focus>
+    - RMSE < 25000  
+    - R² > 0.85  
+    - cv_std < 3000  
+    - PCS compliance (Predictability, Computability, Stability)  
+    - Reproducible workflow with validated artifacts and non-null datasets  
+    - Verifiable file existence and metric thresholds
+  </focus>
+
+  <goals>
+    Only when specific actions are completed, concrete artifacts are produced, and measurable standards are met, can the task be considered accomplished.
+  </goals>
+</stages>

@@ -191,17 +191,27 @@ def _apply_context_update(state_machine, context_update):
             state_machine.ai_context_store.add_variable(key, value)
             state_machine.info(f"[FSM] Updated variable: {key} = {value}")
 
-    # Update hierarchical focus (NEW)
+    # Update hierarchical focus (detailed analysis text from Planner)
     if 'progress_update' in context_update and context_update['progress_update'] is not None:
         progress_update = context_update['progress_update']
         level = progress_update.get('level')  # "stages" | "steps" | "behaviors"
-        focus = progress_update.get('focus', [])  # List of variable names
+        focus = progress_update.get('focus', "")  # Detailed text string
 
-        if level and isinstance(focus, list):
+        if level and isinstance(focus, str):
             state_machine.update_progress_focus(level, focus)
-            state_machine.info(f"[FSM] Updated {level} focus: {focus}")
+            state_machine.info(f"[FSM] Updated {level} focus ({len(focus)} chars)")
         else:
-            state_machine.warning(f"[FSM] Invalid progress_update format: {progress_update}")
+            state_machine.warning(f"[FSM] Invalid progress_update format: level={level}, focus type={type(focus)}")
+
+    # Update outputs tracking (expected/produced/in_progress)
+    if 'outputs_update' in context_update and context_update['outputs_update'] is not None:
+        outputs_update = context_update['outputs_update']
+        level = outputs_update.get('level')  # "stages" | "steps" | "behaviors"
+        outputs = outputs_update.get('outputs', {})
+
+        if level and isinstance(outputs, dict):
+            state_machine.update_progress_outputs(level, outputs)
+            state_machine.info(f"[FSM] Updated {level} outputs")
 
     # Update effects
     if 'effects_update' in context_update and context_update['effects_update'] is not None:

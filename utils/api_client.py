@@ -61,20 +61,29 @@ class WorkflowAPIClient(ModernLogger):
         step_index: str,
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
-        behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
+        behavior_feedback: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Send feedback to get next workflow command.
+        Send feedback to Planning API (/planning).
+
+        This is the Planning API call per STATE_MACHINE_PROTOCOL.md.
+        Used in two scenarios:
+        1. STEP_RUNNING state: Check if step goal is achieved (Planning First)
+        2. BEHAVIOR_COMPLETED state: Send behavior feedback and get next instruction
 
         Args:
             stage_id: Current stage ID
             step_index: Current step ID/index (will be renamed to step_id in future)
-            state: Current workflow state/context
+            state: Current workflow state/context (contains progress_info per OBSERVATION_PROTOCOL.md)
             notebook_id: Optional notebook ID
-            behavior_feedback: Optional behavior execution feedback
+            behavior_feedback: Optional behavior execution feedback (for scenario 2)
 
         Returns:
-            Feedback response containing next command
+            Planning API response containing:
+            - targetAchieved: bool - Whether goal is achieved
+            - transition: dict - Server control signals (continue_behaviors, target_achieved)
+            - context_update: dict - Updates to apply (variables, progress_update, etc.)
+            - context_filter: dict - (Optional) Filtering instructions for next Generating API call
         """
         try:
             # Compress state
@@ -169,17 +178,30 @@ class WorkflowAPIClient(ModernLogger):
         behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
     ) -> AsyncIterator[Dict[str, Any]]:
         """
-        Fetch actions for a behavior (streaming).
+        Fetch actions from Generating API (/generating).
+
+        This is the Generating API call per STATE_MACHINE_PROTOCOL.md.
+        Called in BEHAVIOR_RUNNING state after Planning API determines goal not achieved.
+
+        The Generating API:
+        - Receives filtered observation (may be affected by context_filter from Planning API)
+        - Returns a list of Actions to execute
+        - Actions can be streamed (recommended) or returned in batch
 
         Args:
             stage_id: Current stage ID
             step_index: Current step ID/index
-            state: Current workflow state/context
-            stream: Whether to use streaming
+            state: Current workflow state/context (contains progress_info per OBSERVATION_PROTOCOL.md)
+            stream: Whether to use streaming (True recommended)
             behavior_feedback: Optional behavior execution feedback
 
         Yields:
-            Action dictionaries
+            Action dictionaries per ACTION_PROTOCOL.md:
+            - add: Add content to notebook
+            - exec: Execute code cell
+            - is_thinking/finish_thinking: Show thinking process
+            - new_chapter/new_section: Create structure markers
+            - update_title: Update notebook title
         """
         try:
             # Compress state

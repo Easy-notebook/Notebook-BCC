@@ -939,6 +939,8 @@ else:
 
 ## 🔗 相关文档
 
-- [Action 协议](./ACTION_PROTOCOL.md) - 详细的 Action 类型和格式
-- [README](../README.md) - 项目概述和快速开始
-- [快速参考](../QUICK_REFERENCE.md) - 常用命令和 API
+- [STATE_MACHINE_PROTOCOL.md](./STATE_MACHINE_PROTOCOL.md) - 状态机协议和状态转移规则
+- [OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md) - 完整 Observation 结构和 Context Filter 协议
+- [ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md) - 详细的 Action 类型和格式
+- [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md) - 系统重构总结
+- [README.md](./README.md) - 文档导航和核心概念速查
