@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.1.2: DOCUMENT IMPLEMENTATION DETAILS
+================================================================================
+
+GOAL: Document implementation details
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.1.2.1: Execute Primary Task
+  Document implementation details
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.1.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- implementation_details_results
+- implementation_details_documentation
+  

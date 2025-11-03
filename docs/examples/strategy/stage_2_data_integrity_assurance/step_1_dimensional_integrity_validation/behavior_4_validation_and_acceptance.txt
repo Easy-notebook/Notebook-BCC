@@ -1,0 +1,52 @@
+================================================================================
+BEHAVIOR DI.1.4: VALIDATION AND ACCEPTANCE
+================================================================================
+
+GOAL: Validate all step activities meet acceptance criteria and align with PCS framework.
+
+RECOMMENDED AGENT: PCS-Agent
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.1.4.1: Artifact Completeness Check
+  Verify all required artifacts generated and complete
+  - Confirm all behavior artifacts exist
+  - Verify artifact content quality
+  - Check format correctness
+
+ACTION DI.1.4.2: Acceptance Criteria Validation
+  Validate all acceptance criteria met
+  - Review each criterion from step goal.txt
+  - Mark PASS/FAIL with evidence
+  - Document gaps requiring resolution
+
+ACTION DI.1.4.3: PCS Framework Alignment
+  Verify PCS framework alignment
+  - Predictability: Confirm prediction support
+  - Computability: Verify reproducibility
+  - Stability: Validate robustness
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- step_validation_report
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Create acceptance criteria checklist
+- Mark each PASS/FAIL with evidence
+- Document issues and remediation
+- Provide recommendation: PROCEED or REWORK
+- Persist under ./outputs/stage_*/step_*/
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- step_validation_report exists with complete evaluation
+- Critical criteria marked as PASS
+- PCS alignment confirmed
+- Clear recommendation provided

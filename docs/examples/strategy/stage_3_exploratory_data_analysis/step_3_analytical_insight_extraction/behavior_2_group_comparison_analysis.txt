@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.3.2: PERFORM GROUP COMPARISON AND DIFFERENCE ANALYSIS
+================================================================================
+
+GOAL: Perform group comparison and difference analysis
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.3.2.1: Execute Primary Task
+  Perform group comparison and difference analysis
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.3.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- group_comparison_analysis_results
+- group_comparison_analysis_documentation
+  

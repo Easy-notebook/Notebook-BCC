@@ -2,114 +2,143 @@
   "observation": {
     "location": {
       "current": {
-        "stage_id": "problem_definition",
-        "step_id": "load_dataset",
+        "stage_id": "data_existence_establishment",
+        "step_id": "load_and_verify_dataset",
         "behavior_id": null,
         "behavior_iteration": null
       },
       "progress": {
         "stages": {
           "completed": [],
-          "current": 
-          {
-            "stage_id": "problem_definition",
-            "title": "Problem Definition",
-            "goal": "Define the prediction goal, dataset scope, and evaluation metrics, ensuring the project aligns with PCS principles. Artifacts: df_raw, problem_definition_doc, workflow_plan; Acceptance: file './assets/ames_housing.csv' exists AND len(df_raw)>0 AND workflow_plan includes RMSE<25000 and R²>0.85 targets.",
+          "current": {
+            "stage_id": "data_existence_establishment",
+            "title": "Data Existence Establishment",
+            "goal": "Establish and verify the existence, structure, and relevance of the housing dataset to ensure readiness for predictive modeling. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: `os.path.exists(\"./assets/housing.csv\")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.",
             "verified_artifacts": {
-              "df_raw": "Loaded raw Ames Housing dataset",
-              "problem_definition_doc": "Written summary defining prediction objective and evaluation criteria"
+              "data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics.",
+              "data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable.",
+              "variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price).",
+              "pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."
             }
           },
           "remaining": [
             {
-              "stage_id": "data_preparation",
-              "title": "Data Preparation",
-              "goal": "Clean and validate the dataset to ensure it is analysis-ready, free from missing or inconsistent values. Artifacts: df_cleaned (clean dataset), data_quality_report (quality documentation); Acceptance: df_cleaned.isnull().sum().sum()==0, data types verified, data_quality_report recorded.",
+              "stage_id": "data_integrity_assurance",
+              "title": "Data Integrity Assurance",
+              "goal": "Clean and validate the housing dataset to ensure completeness, accuracy, and reproducibility. Artifacts: df_cleaned, data_quality_report, processing_pipeline_doc, integrity_verification_report; Acceptance: `df_cleaned.isnull().sum().sum()==0` and `len(df_cleaned.columns)==len(df_raw.columns)` and `df_cleaned.duplicated().sum()==0`.",
               "verified_artifacts": {
-                "df_cleaned": "Cleaned DataFrame with no missing values, correct dtypes, and consistent feature naming",
-                "data_quality_report": "Dictionary summarizing all cleaning operations, outlier handling, and dtype corrections"
+                "df_cleaned": "Pandas DataFrame with no missing values or duplicates, correct dtypes, and valid ranges.",
+                "data_quality_report": "Quality metrics summary with before/after cleaning comparisons.",
+                "processing_pipeline_doc": "Document outlining reproducible data cleaning operations and parameters.",
+                "integrity_verification_report": "Formal validation log ensuring full data integrity under PCS checks."
               },
               "required_variables": {
-                "df_raw": "Raw dataset from Problem Definition stage"
+                "df_raw": "Initial dataset loaded from housing.csv."
               }
             },
             {
-              "stage_id": "data_analysis",
-              "title": "Data Analysis",
-              "goal": "Perform exploratory data analysis to identify key predictive features and understand target distribution. Artifacts: eda_summary, correlation_matrix, distribution_analysis, feature_importance_preliminary, ./outputs/eda_visualizations.png; Acceptance: correlation_matrix complete, Top-5 correlated features identified, visualization file generated.",
+              "stage_id": "exploratory_data_analysis",
+              "title": "Exploratory Data Analysis",
+              "goal": "Explore variable distributions and relationships to uncover predictive patterns and modeling insights. Artifacts: eda_summary, correlation_matrix, distribution_analysis, modeling_recommendations, ./outputs/eda/; Acceptance: `os.path.exists(\"./outputs/eda/\")==True` and `len(correlation_matrix.columns)>3` and `len(modeling_recommendations)>0`.",
               "verified_artifacts": {
-                "correlation_matrix": "DataFrame showing all feature correlations, including target correlation coefficients",
-                "eda_summary": "Dictionary with descriptive statistics for all features (mean, std, quantiles)",
-                "eda_visualizations": "Visualization charts saved as ./outputs/eda_visualizations.png"
+                "eda_summary": "Comprehensive statistical overview for each variable, including min, max, mean, std.",
+                "correlation_matrix": "Matrix of variable correlations, highlighting top correlated features with price.",
+                "distribution_analysis": "Dictionary summarizing target and feature distribution shapes.",
+                "modeling_recommendations": "Suggested feature engineering methods and model families.",
+                "./outputs/eda/": "Visualization folder containing at least 6 distribution/correlation plots."
               },
               "required_variables": {
-                "df_cleaned": "Cleaned and validated dataset"
+                "df_cleaned": "Cleaned dataset ready for analysis."
               }
             },
             {
-              "stage_id": "model_selection",
-              "title": "Model Selection",
-              "goal": "Compare baseline algorithms to select the most promising model strategy. Artifacts: baseline_models, model_comparison_report, selected_model_name, model_selection_rationale; Acceptance: at least 3 models tested, baseline RMSE<30000, selected_model_name recorded, rationale documented.",
+              "stage_id": "methodology_strategy_formulation",
+              "title": "Methodology Strategy Formulation",
+              "goal": "Design a modeling methodology covering feature engineering, model selection, and evaluation standards. Artifacts: feature_engineering_strategy, model_method_candidates, evaluation_framework, methodology_document; Acceptance: `len(model_method_candidates)>2` and `(\"RMSE\" in evaluation_framework)` and `(\"R²\" in evaluation_framework)`.",
               "verified_artifacts": {
-                "baseline_models": "Dictionary containing trained baseline models (LinearRegression, Ridge, Lasso, etc.)",
-                "model_comparison_report": "DataFrame comparing RMSE, R², MAE, and training time for all baseline models",
-                "selected_model_name": "String identifier of the selected best model"
+                "feature_engineering_strategy": "Detailed plan describing feature transformation and encoding methods.",
+                "model_method_candidates": "List of algorithms considered (e.g., Linear Regression, RandomForest, XGBoost).",
+                "evaluation_framework": "Evaluation metrics and validation scheme ensuring PCS compliance.",
+                "methodology_document": "Consolidated modeling strategy ready for implementation."
               },
               "required_variables": {
-                "correlation_matrix": "Feature correlation matrix for model feature selection",
-                "df_cleaned": "Clean dataset used for model training and validation"
+                "eda_summary": "Exploratory analysis results.",
+                "modeling_recommendations": "Modeling insights and transformation guidelines."
               }
             },
             {
-              "stage_id": "model_training",
-              "title": "Model Training",
-              "goal": "Train, tune, and save the final production model with optimal hyperparameters. Artifacts: final_model, hyperparameter_tuning_report, best_params, training_history, ./models/ames_model.pkl; Acceptance: model file exists and is non-empty, best_params recorded, training_history documented.",
+              "stage_id": "model_implementation_execution",
+              "title": "Model Implementation Execution",
+              "goal": "Implement and train models following the defined strategy to produce a robust housing price predictor. Artifacts: feature_pipeline, trained_models, final_model, training_history, best_params, ./models/model.pkl; Acceptance: `os.path.exists(\"./models/model.pkl\")==True` and `final_rmse<25000` and `final_r2>0.85`.",
               "verified_artifacts": {
-                "final_model": "Trained model object ready for evaluation",
-                "hyperparameter_tuning_report": "Dictionary summarizing search space, best params, and CV results",
-                "best_params": "Dictionary of optimal hyperparameter values",
-                "training_history": "Dictionary logging loss and validation metrics per epoch/fold"
+                "feature_pipeline": "Reusable feature transformation pipeline consistent with strategy.",
+                "trained_models": "Collection of trained models with varying algorithms and parameters.",
+                "final_model": "Optimized model object chosen by PCS metrics.",
+                "training_history": "Training and validation performance logs across iterations.",
+                "best_params": "Hyperparameter configuration yielding best results.",
+                "./models/model.pkl": "Serialized model file for deployment."
               },
               "required_variables": {
-                "selected_model_name": "Best-performing model name selected from previous stage",
-                "df_cleaned": "Feature-engineered dataset used for training"
+                "feature_engineering_strategy": "Defined feature transformation plan.",
+                "evaluation_framework": "Evaluation metrics and validation scheme."
               }
             },
             {
-              "stage_id": "model_evaluation",
-              "title": "Model Evaluation",
-              "goal": "Evaluate model generalization and robustness under PCS standards. Artifacts: test_rmse, test_r2, cv_scores, cv_mean, cv_std, model_performance_report, residual_analysis, pcs_validation_report; Acceptance: test_rmse<25000 AND test_r2>0.85 AND cv_std<3000.",
+              "stage_id": "predictability_validation",
+              "title": "Predictability Validation",
+              "goal": "Validate model generalization using cross-validation and independent test sets to ensure performance consistency. Artifacts: cv_scores, test_performance, temporal_validation_report, domain_generalization_report, business_impact_report; Acceptance: `test_performance[\"RMSE\"]<25000` and `test_performance[\"R²\"]>0.85` and `len(cv_scores)>=5`.",
               "verified_artifacts": {
-                "test_rmse": "Float indicating test set RMSE",
-                "test_r2": "Float indicating test set R² score",
-                "cv_std": "Float representing CV standard deviation <3000",
-                "pcs_validation_report": "Dictionary summarizing PCS compliance checks"
+                "cv_scores": "Cross-validation scores array covering multiple folds.",
+                "test_performance": "Performance metrics dict including RMSE, R², and MAE on unseen data.",
+                "temporal_validation_report": "Time-based performance analysis ensuring stability.",
+                "domain_generalization_report": "Cross-domain performance and robustness testing results.",
+                "business_impact_report": "Summary of predictive model's business impact (ROI, decisions)."
               },
               "required_variables": {
-                "final_model": "Trained model from previous stage",
-                "df_cleaned": "Cleaned data split into train/test sets"
+                "final_model": "Trained model for evaluation.",
+                "df_cleaned": "Cleaned dataset with target variable."
               }
             },
             {
-              "stage_id": "model_deployment",
-              "title": "Model Deployment",
-              "goal": "Generate predictions, export results, and prepare model documentation for delivery. Artifacts: predictions, ./outputs/predictions.csv, deployment_report, model_card; Acceptance: prediction file exists, row count matches test size, model_card includes metrics, usage, and limitations.",
+              "stage_id": "stability_assessment",
+              "title": "Stability Assessment",
+              "goal": "Conduct perturbation and sensitivity analysis to assess model stability under varying data and hyperparameter conditions. Artifacts: perturbation_test_results, sensitivity_analysis_report, stability_metrics, stability_certification, improvement_recommendations; Acceptance: `stability_metrics[\"variation_coefficient\"]<0.05` and `len(improvement_recommendations)>0`.",
               "verified_artifacts": {
-                "predictions": "Numpy array of test set predictions aligned with test IDs",
-                "predictions_csv": "CSV file ./outputs/predictions.csv with Id and SalePrice columns",
-                "model_card": "Markdown text containing performance metrics, usage instructions, and limitations"
+                "perturbation_test_results": "Results from noise-injected and resampled data tests.",
+                "sensitivity_analysis_report": "Ranking of influential features and hyperparameters.",
+                "stability_metrics": "Dictionary of robustness metrics including variation coefficient.",
+                "stability_certification": "Formal statement ensuring stability bounds and validity range.",
+                "improvement_recommendations": "Recommended stability enhancement strategies."
               },
               "required_variables": {
-                "final_model": "Final trained model",
-                "df_cleaned": "Test set portion of cleaned dataset"
+                "final_model": "Trained model to assess stability.",
+                "test_performance": "Evaluation results as baseline reference."
+              }
+            },
+            {
+              "stage_id": "results_communication",
+              "title": "Results Communication",
+              "goal": "Communicate final outcomes to technical and business audiences effectively through reports, documentation, and dashboards. Artifacts: technical_documentation, executive_summary, visualization_package, implementation_guide, model_card; Acceptance: `os.path.exists(\"./reports/\")==True` and `len(executive_summary)>300` and `(\"RMSE\" in model_card)`.",
+              "verified_artifacts": {
+                "technical_documentation": "Complete methodology and reproducibility documentation.",
+                "executive_summary": "Concise business-level explanation of model results and insights.",
+                "visualization_package": "Interactive dashboards summarizing performance and stability.",
+                "implementation_guide": "Deployment and usage instructions.",
+                "model_card": "Model transparency document with metrics, use cases, and caveats."
+              },
+              "required_variables": {
+                "test_performance": "Validated model results.",
+                "stability_metrics": "Stability findings for inclusion in model card."
               }
             }
           ],
-          "focus": "Key PCS thresholds: RMSE<25000, R²>0.85, cv_std<3000. Verified Artifacts: df_cleaned, final_model, predictions.csv, pcs_validation_report. Workflow stability and reproducibility must be demonstrable via fixed seeds and documented transformations.",
+          "focus": "RMSE < 25000; R² > 0.85; CV folds ≥ 5; PCS compliance verified at all stages; stability variation_coefficient < 0.05; reproducibility logs complete; all artifacts saved deterministically under ./outputs and ./models/.",
           "current_outputs": {
             "expected": [
-              {"df_raw":"Loaded raw Ames Housing dataset"},
-              {"problem_definition_doc":"Written summary defining prediction objective and evaluation criteria"}
+              {"data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics."},
+              {"data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable."},
+              {"variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price)."},
+              {"pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."}
             ],
             "produced": [],
             "in_progress": []
@@ -118,97 +147,96 @@
         "steps": {
           "completed": [],
           "current": {
-            "step_id": "load_dataset",
-            "title": "Load Housing Dataset",
-            "goal": "Load the housing.csv file into a DataFrame, ensuring valid structure, no missing headers, and consistent data types. Artifacts: df_raw (pandas DataFrame loaded from CSV); Acceptance: `os.path.exists(\"./assets/housing.csv\")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>1`.",
+            "step_id": "load_and_verify_dataset",
+            "title": "Load and Verify Housing Dataset",
+            "goal": "Load the raw housing dataset from the submitted file and verify its existence, shape, and column structure. Artifacts: df_raw (pandas DataFrame of housing data), data_existence_report (summary of file validity, rows, columns); Acceptance: `os.path.exists(\"./assets/housing.csv\")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.",
             "verified_artifacts": {
-              "df_raw": "Raw DataFrame loaded from housing.csv, type: pandas.DataFrame, must be non-empty with valid numeric and categorical columns."
+              "df_raw": "Raw DataFrame containing the housing dataset, type: pandas.DataFrame, must be non-empty and structured with at least 6 valid columns.",
+              "data_existence_report": "JSON/text report describing file path, file size, number of rows/columns, and missing values summary."
             },
             "required_variables": {
-              "file_path": "Path to housing.csv, source: user_submit_files."
+              "user_submit_files": "Path to the housing dataset file, from user submission."
             },
             "pcs_considerations": {
-              "predictability": "Ensures consistent dataset input for fair generalization and comparison across experiments.",
-              "computability": "Use deterministic read parameters (encoding, dtype inference) for reproducible loading.",
-              "stability": "Verify data completeness and consistent schema to avoid downstream model instability."
+              "predictability": "Ensures consistent and validated data input, reducing variability between runs.",
+              "computability": "File loading process uses deterministic encoding and consistent library versions to guarantee reproducibility.",
+              "stability": "Verifies schema completeness and structure to prevent downstream instability from missing or malformed data."
             }
           },
           "remaining": [
             {
-              "step_id": "inspect_structure",
-              "title": "Inspect Dataset Structure",
-              "goal": "Examine df_raw to summarize data schema, column types, and missing value patterns. Artifacts: data_summary_report (dict with column info and null counts); Acceptance: `isinstance(data_summary_report, dict)==True` and `len(data_summary_report.keys())==len(df_raw.columns)`.",
+              "step_id": "analyze_data_structure",
+              "title": "Analyze Data Structure and Schema",
+              "goal": "Examine the internal structure of df_raw including data types, missing values, and unique identifiers to generate a schema document. Artifacts: data_structure_document (metadata and schema mapping); Acceptance: `len(data_structure_document[\"columns\"])==len(df_raw.columns)` and `all([\"dtype\" in c for c in data_structure_document[\"columns\"]])`.",
               "verified_artifacts": {
-                "data_summary_report": "Summary of columns, types, and missing counts, type: dict, must cover all columns and reflect correct dtype distribution."
+                "data_structure_document": "Dictionary describing dataset schema: column names, data types, null counts, and inferred primary key, type: dict, must align with df_raw."
               },
               "required_variables": {
-                "df_raw": "Loaded dataset for analysis, source: previous step."
+                "df_raw": "Loaded housing dataset from previous step."
+              },
+              "pcs_considerations": {
+                "predictability": "Ensures feature consistency and supports reliable variable mapping for modeling.",
+                "computability": "Schema captured in reproducible structured format for automated processing.",
+                "stability": "Prevents silent schema drift and missing variable errors during later computation."
               }
             },
             {
-              "step_id": "define_problem",
-              "title": "Define Prediction Objective",
-              "goal": "Formulate the prediction problem (target variable, key features, and metrics). Artifacts: problem_definition_doc (problem description with RMSE and R² thresholds); Acceptance: `\"RMSE\" in problem_definition_doc` and `\"R²\" in problem_definition_doc` and `problem_definition_doc[\"RMSE\"]<25000`.",
+              "step_id": "perform_variable_semantic_analysis",
+              "title": "Perform Variable Semantic Analysis",
+              "goal": "Conduct semantic analysis of variables to interpret their meaning and assess potential relevance to target price. Artifacts: variable_analysis_report (semantic and correlation summary); Acceptance: `variable_analysis_report[\"status\"]==\"completed\"` and `len(variable_analysis_report[\"variables\"])>5`.",
               "verified_artifacts": {
-                "problem_definition_doc": "Structured dictionary defining target, metrics, and PCS rationale, type: dict, must contain threshold and metric details."
+                "variable_analysis_report": "Structured JSON report containing variable-level semantics, type, correlation with target variable, and missing rate summary."
               },
               "required_variables": {
-                "data_summary_report": "Schema summary for selecting target and features, source: previous step."
+                "df_raw": "Loaded housing dataset from prior step.",
+                "data_structure_document": "Dataset schema description."
+              },
+              "pcs_considerations": {
+                "predictability": "Identifies variables with potential predictive power and ensures semantic clarity for modeling.",
+                "computability": "Automated variable inspection methods (dtype checks, correlation computation) ensure consistent reproducibility.",
+                "stability": "Detects noisy or unstable variables that may cause model performance fluctuation."
               }
             },
             {
-              "step_id": "set_constraints",
-              "title": "Establish PCS Criteria",
-              "goal": "Document PCS-aligned data and model constraints including validation splits, random seeds, and reproducibility scope. Artifacts: pcs_criteria_doc (JSON or dict); Acceptance: `\"predictability\" in pcs_criteria_doc` and `\"computability\" in pcs_criteria_doc` and `\"stability\" in pcs_criteria_doc`.",
+              "step_id": "establish_observation_unit",
+              "title": "Establish Observation Unit and Relevance",
+              "goal": "Identify the observation unit (e.g., individual houses) and verify its representativeness and completeness for predictive modeling. Artifacts: observation_unit_report (structure of observation unit, distribution stats); Acceptance: `observation_unit_report[\"unique_id_ratio\"]>0.9` and `observation_unit_report[\"representative\"]==True`.",
               "verified_artifacts": {
-                "pcs_criteria_doc": "Formal PCS constraint record including parameters, type: dict, must include all three PCS dimensions."
+                "observation_unit_report": "JSON report summarizing observation unit definition, unique identifier field, and data representativeness metrics."
               },
               "required_variables": {
-                "problem_definition_doc": "Problem description providing metric baselines, source: previous step."
+                "df_raw": "Loaded housing dataset."
+              },
+              "pcs_considerations": {
+                "predictability": "Ensures each observation represents a valid data unit for generalization.",
+                "computability": "Standardizes indexing and observation representation to simplify data manipulation.",
+                "stability": "Confirms dataset completeness and avoids biases from duplicated or missing identifiers."
               }
             },
             {
-              "step_id": "draft_workflow_plan",
-              "title": "Design Workflow Roadmap",
-              "goal": "Outline the full data science pipeline stages with inputs, outputs, and responsible components. Artifacts: workflow_plan (ordered dict with all seven stages and milestones); Acceptance: `len(workflow_plan.keys())==7` and `\"data_preparation\" in workflow_plan`.",
+              "step_id": "generate_pcs_hypothesis",
+              "title": "Generate PCS Hypothesis Framework",
+              "goal": "Formulate PCS-aligned hypotheses connecting data characteristics to testable predictability, computability, and stability aspects. Artifacts: pcs_hypothesis_framework (structured hypothesis documentation); Acceptance: `len(pcs_hypothesis_framework[\"hypotheses\"])>=3`.",
               "verified_artifacts": {
-                "workflow_plan": "Dictionary describing sequential stages, type: OrderedDict, must list all stages with input/output dependencies."
+                "pcs_hypothesis_framework": "Document listing testable hypotheses linking data quality and feature relevance to PCS components, type: dict, must contain at least three hypotheses."
               },
               "required_variables": {
-                "pcs_criteria_doc": "PCS-aligned guidelines for defining workflow consistency, source: previous step."
-              }
-            },
-            {
-              "step_id": "validate_stage_outputs",
-              "title": "Validate Defined Artifacts",
-              "goal": "Verify existence, type, and content validity of df_raw, problem_definition_doc, and workflow_plan. Artifacts: validation_report (dict of artifact checks); Acceptance: `all(validation_report.values())==True`.",
-              "verified_artifacts": {
-                "validation_report": "Artifact existence and consistency record, type: dict, must return True for all checks."
+                "data_structure_document": "Dataset schema description.",
+                "variable_analysis_report": "Semantic and correlation analysis report.",
+                "observation_unit_report": "Observation unit report."
               },
-              "required_variables": {
-                "df_raw": "Raw dataset, source: previous step.",
-                "problem_definition_doc": "Defined prediction problem, source: previous step.",
-                "workflow_plan": "Workflow roadmap, source: previous step."
-              }
-            },
-            {
-              "step_id": "finalize_documentation",
-              "title": "Compile Problem Definition Package",
-              "goal": "Combine all verified artifacts into a single PCS-compliant documentation bundle. Artifacts: problem_package (zip or dict containing df_raw, problem_definition_doc, workflow_plan); Acceptance: `\"df_raw\" in problem_package` and `\"workflow_plan\" in problem_package`.",
-              "verified_artifacts": {
-                "problem_package": "Comprehensive package consolidating all definition artifacts, type: dict or zip, must include validated components and metadata."
-              },
-              "required_variables": {
-                "df_raw": "Dataset artifact, source: previous step.",
-                "problem_definition_doc": "Problem statement artifact, source: previous step.",
-                "workflow_plan": "Workflow structure artifact, source: previous step."
+              "pcs_considerations": {
+                "predictability": "Defines measurable factors that influence model generalization performance.",
+                "computability": "Specifies standardized experimental paths for reproducible validation.",
+                "stability": "Guides robustness assessment and sensitivity evaluation during later experiments."
               }
             }
           ],
-          "focus": "Sequentially execute steps from dataset loading to final packaging. Log all intermediate artifacts for traceability and reproducibility. Maintain strict PCS adherence by recording seeds, file paths, and validation summaries. Store final outputs under version-controlled directory for reuse by downstream stages.",
+          "focus": "1. Begin with verifying dataset presence and loading integrity. 2. Explore structure and metadata systematically to confirm field-level consistency. 3. Conduct semantic mapping and correlation analysis to align features with target. 4. Define observation unit to ensure the dataset reflects correct sampling granularity. 5. Summarize results into a PCS hypothesis document linking observed data characteristics to veridicality standards.",
           "current_outputs": {
             "expected": [
-              {"df_raw": "Raw DataFrame loaded from housing.csv, type: pandas.DataFrame, must be non-empty with valid numeric and categorical columns."}
+              {"df_raw": "Raw DataFrame containing the housing dataset, type: pandas.DataFrame, must be non-empty and structured with at least 6 valid columns."},
+              {"data_existence_report": "JSON/text report describing file path, file size, number of rows/columns, and missing values summary."}
             ],
             "produced": [],
             "in_progress": []
@@ -226,14 +254,14 @@
           }
         }
       },
-      "goals": "Refine the current stage goal as: \"Define and verify the complete problem setup for house price prediction, ensuring PCS-aligned artifacts (df_raw, problem_definition_doc, workflow_plan) are validated and traceable for downstream reproducibility.\" Current step: Load the housing.csv file into a DataFrame (df_raw), ensuring valid structure, no missing headers, and consistent data types for reproducible analysis."
+      "goals": "Refine the current stage goal as: \"Establish and verify the existence, structure, and relevance of the housing dataset through systematic data discovery, structure analysis, semantic mapping, observation unit identification, and PCS hypothesis generation to ensure readiness for predictive modeling.\" Current step: Load the raw housing dataset from the submitted file and verify its existence, shape, and column structure (df_raw, data_existence_report) for reproducible analysis."
     }
   },
   "state": {
     "variables": {
       "user_problem": "基于 Ames Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
       "user_submit_files": [
-        "./assets/ames_housing.csv"
+        "./assets/housing.csv"
       ]
     },
     "effects": {
@@ -247,9 +275,9 @@
       "last_output": null
     },
     "FSM": {
-      "state": "IDLE",
-      "last_transition": null,
-      "timestamp": "2025-10-30T10:00:00.000Z"
+      "state": "STEP_RUNNING",
+      "last_transition": "START_SECTION",
+      "timestamp": "2025-11-03T12:05:00.000Z"
     }
   }
 }

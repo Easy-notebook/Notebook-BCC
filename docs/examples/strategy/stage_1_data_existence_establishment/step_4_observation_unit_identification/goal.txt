@@ -1,0 +1,39 @@
+================================================================================
+STEP DE.4: OBSERVATION UNIT IDENTIFICATION
+================================================================================
+
+GOAL: Complete observation unit identification with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_observation_unit_definition.txt
+   - Define observation units and uniqueness identifiers
+2. behavior_2_temporal_dimension_analysis.txt
+   - Analyze temporal span, frequency, and continuity
+3. behavior_3_spatial_dimension_analysis.txt
+   - Analyze geographic/spatial distribution
+
+4. behavior_4_validation_and_acceptance.txt
+   - Validate step completeness and acceptance criteria
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- observation_unit_definition_results
+- temporal_dimension_analysis_results
+- spatial_dimension_analysis_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

@@ -1,0 +1,47 @@
+================================================================================
+BEHAVIOR DE.3.1: MAP VARIABLE N TO BUSINESS CONCEPTS AND IDENTIFY MEASUREMENT UNITS
+================================================================================
+
+GOAL: Map variable n to business concepts and identify measurement units
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.3.1.1: Establish Variable-Business Mapping
+  Map variables to business concepts
+  - Create mapping between variable n and business terminology
+  - Identify measurement units and scales for each variable
+  - Document business context and usage scenarios
+
+ACTION DE.3.1.2: Document Variable Semantics
+  Document semantic meaning of variables
+  - Record variable definitions in business terms
+  - Document expected value ranges and constraints
+  - Note any domain-specific interpretations
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- variable_semantic_map
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operations with variable/file names
+- Ensure deterministic seeds and document parameters
+- Produce/update specified artifacts
+- Use consistent naming conventions
+- Persist outputs under ./outputs/stage_3_*/step_3/
+- Ensure all operations are reproducible
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- All specified artifacts exist and are non-empty
+- Artifacts contain required information and meet quality standards
+- Operations documented and reproducible
+- PCS framework considerations addressed

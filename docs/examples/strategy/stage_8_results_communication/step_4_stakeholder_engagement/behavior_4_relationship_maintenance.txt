@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.4.4: MAINTAIN LONG-TERM RELATIONSHIPS
+================================================================================
+
+GOAL: Maintain long-term relationships
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.4.4.1: Execute Primary Task
+  Maintain long-term relationships
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.4.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- relationship_maintenance_results
+- relationship_maintenance_documentation
+  

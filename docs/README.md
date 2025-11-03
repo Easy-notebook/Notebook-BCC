@@ -173,7 +173,7 @@ docs/
 ├── CODE_UPDATE_SUMMARY.md         # 🆕 代码实现更新总结
 ├── REFACTORING_SUMMARY.md         # 重构总结
 └── examples/                       # 🆕 示例和测试用例
-    └── ames_housing/               # Ames Housing 房价预测示例
+    └── housing/               #  Housing 房价预测示例
         ├── README.md               # 示例说明
         ├── workflow.json           # 工作流定义
         └── payloads/               # 所有状态的 payload 示例
@@ -228,7 +228,7 @@ docs/
    - 理解设计决策
    - 理解重构原因
 
-2. **查看示例**：[examples/ames_housing/](./examples/ames_housing/)
+2. **查看示例**：[examples/housing/](./examples/housing/)
    - 完整的 workflow 示例
    - 所有状态的 payload 示例
    - API 调用实例
@@ -302,7 +302,7 @@ Planning API 的筛选指令：
 
 ## 💡 示例和测试用例
 
-### [Ames Housing 房价预测示例](./examples/ames_housing/) 🆕
+### [ Housing 房价预测示例](./examples/housing/) 🆕
 
 **完整的端到端示例**，展示整个 workflow 的状态转移和 payload 结构。
 
@@ -322,28 +322,28 @@ Planning API 的筛选指令：
 **快速开始**：
 ```bash
 # 查看 workflow 定义
-cat examples/ames_housing/workflow.json | jq .
+cat examples/housing/workflow.json | jq .
 
 # 查看 Planning First 示例
-cat examples/ames_housing/payloads/03_STEP_RUNNING_s1_step1.json | jq .
+cat examples/housing/payloads/03_STEP_RUNNING_s1_step1.json | jq .
 
 # 查看所有 payload 索引
-cat examples/ames_housing/payloads/INDEX.md
+cat examples/housing/payloads/INDEX.md
 ```
 
 **关键示例**：
-- **Planning First**: [03_STEP_RUNNING_s1_step1.json](./examples/ames_housing/payloads/03_STEP_RUNNING_s1_step1.json)
-- **Generating API**: [04_BEHAVIOR_RUNNING_s1_step1_b1.json](./examples/ames_housing/payloads/04_BEHAVIOR_RUNNING_s1_step1_b1.json)
-- **Behavior Feedback**: [06_ACTION_COMPLETED_s1_step1_b1.json](./examples/ames_housing/payloads/06_ACTION_COMPLETED_s1_step1_b1.json)
-- **产出追踪**: [08_STEP_COMPLETED_s1_step1.json](./examples/ames_housing/payloads/08_STEP_COMPLETED_s1_step1.json)
+- **Planning First**: [03_STEP_RUNNING_s1_step1.json](./examples/housing/payloads/03_STEP_RUNNING_s1_step1.json)
+- **Generating API**: [04_BEHAVIOR_RUNNING_s1_step1_b1.json](./examples/housing/payloads/04_BEHAVIOR_RUNNING_s1_step1_b1.json)
+- **Behavior Feedback**: [06_ACTION_COMPLETED_s1_step1_b1.json](./examples/housing/payloads/06_ACTION_COMPLETED_s1_step1_b1.json)
+- **产出追踪**: [08_STEP_COMPLETED_s1_step1.json](./examples/housing/payloads/08_STEP_COMPLETED_s1_step1.json)
 
 ---
 
 ## 📝 更新日志
 
 ### 2025-10-30 (Phase 5: Examples)
-- 🆕 创建 examples/ames_housing/ 示例目录
-- 🆕 创建完整的 Ames Housing 房价预测 workflow 定义
+- 🆕 创建 examples/housing/ 示例目录
+- 🆕 创建完整的  Housing 房价预测 workflow 定义
 - 🆕 创建 10 个关键状态的 payload 示例
 - ✅ 覆盖所有 Planning API 和 Generating API 调用场景
 - ✅ 展示 Planning First 协议

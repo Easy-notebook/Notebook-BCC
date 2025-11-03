@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MI.1.2: CREATE ADVANCED AND ENGINEERED FEATURES
+================================================================================
+
+GOAL: Create advanced and engineered features
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MI.1.2.1: Execute Primary Task
+  Create advanced and engineered features
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MI.1.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- advanced_feature_creation_results
+- advanced_feature_creation_documentation
+  

@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DE.6.1: GENERATE TESTABLE PREDICTABILITY HYPOTHESES
+================================================================================
+
+GOAL: Generate testable predictability hypotheses
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.6.1.1: Execute Primary Task
+  Generate testable predictability hypotheses
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DE.6.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- predictability_hypothesis_results
+- predictability_hypothesis_documentation
+  

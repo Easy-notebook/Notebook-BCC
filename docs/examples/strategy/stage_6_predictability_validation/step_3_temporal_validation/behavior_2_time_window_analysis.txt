@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.3.2: ANALYZE PERFORMANCE ACROSS TIME WINDOWS
+================================================================================
+
+GOAL: Analyze performance across time windows
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.3.2.1: Execute Primary Task
+  Analyze performance across time windows
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.3.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- time_window_analysis_results
+- time_window_analysis_documentation
+  

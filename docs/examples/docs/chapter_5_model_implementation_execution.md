@@ -5,7 +5,7 @@
 
 ## 核心活动流程
 
-### Section 1: Workflow Initialization (工作流初始化)
+### Section 1:  
 **目标**: 建立模型实施的系统化执行环境
 
 **具体步骤**:

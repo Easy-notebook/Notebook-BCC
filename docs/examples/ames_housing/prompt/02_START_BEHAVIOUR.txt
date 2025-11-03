@@ -89,8 +89,8 @@ Current State
 Variables:
 
 {
-  "user_problem": "Build a housing price prediction model based on the Ames Housing dataset, with RMSE < 25000 and R² > 0.85, following PCS standards.",
-  "user_submit_files": ["./assets/ames_housing.csv"]
+  "user_problem": "Build a housing price prediction model based on the Housing dataset, with RMSE < 25000 and R² > 0.85, following PCS standards.",
+  "user_submit_files": ["./assets/housing.csv"]
 }
 
 Effects:

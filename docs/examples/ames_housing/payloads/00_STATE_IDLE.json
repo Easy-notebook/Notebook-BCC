@@ -47,8 +47,8 @@
   },
   "state": {
     "variables": {
-      "user_problem": "基于 Ames Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
-      "user_submit_files": ["./assets/ames_housing.csv"]
+      "user_problem": "基于  Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+      "user_submit_files": ["./assets/housing.csv"]
     },
     "effects": {
       "current": [],

@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.3.1: EXECUTE COMPREHENSIVE CORRELATION ANALYSIS
+================================================================================
+
+GOAL: Execute comprehensive correlation analysis
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.3.1.1: Execute Primary Task
+  Execute comprehensive correlation analysis
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.3.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- correlation_analysis_results
+- correlation_analysis_documentation
+  

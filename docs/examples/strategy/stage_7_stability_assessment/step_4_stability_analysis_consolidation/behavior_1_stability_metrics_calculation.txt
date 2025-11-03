@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR SA.4.1: CALCULATE COMPREHENSIVE STABILITY METRICS
+================================================================================
+
+GOAL: Calculate comprehensive stability metrics
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION SA.4.1.1: Execute Primary Task
+  Calculate comprehensive stability metrics
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION SA.4.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- stability_metrics_calculation_results
+- stability_metrics_calculation_documentation
+  

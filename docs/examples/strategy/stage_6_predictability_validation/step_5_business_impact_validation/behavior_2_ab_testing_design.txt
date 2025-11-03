@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.5.2: DESIGN A/B TESTING EXPERIMENTS
+================================================================================
+
+GOAL: Design A/B testing experiments
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.5.2.1: Execute Primary Task
+  Design A/B testing experiments
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.5.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- ab_testing_design_results
+- ab_testing_design_documentation
+  

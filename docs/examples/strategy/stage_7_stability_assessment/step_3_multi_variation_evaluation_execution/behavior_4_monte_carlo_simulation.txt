@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR SA.3.4: PERFORM MONTE CARLO SIMULATIONS
+================================================================================
+
+GOAL: Perform Monte Carlo simulations
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION SA.3.4.1: Execute Primary Task
+  Perform Monte Carlo simulations
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION SA.3.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- monte_carlo_simulation_results
+- monte_carlo_simulation_documentation
+  

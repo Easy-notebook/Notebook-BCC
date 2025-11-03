@@ -1,135 +1,102 @@
 <steps>
-  <step id="load_dataset" title="Load Housing Dataset">
+  <step id="load_and_verify_dataset" title="Load and Verify Housing Dataset">
     <goal>
-      Load the housing.csv file into a DataFrame, ensuring valid structure, no missing headers, and consistent data types. Artifacts: df_raw (pandas DataFrame loaded from CSV); Acceptance: `os.path.exists("./assets/housing.csv")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>1`.
+      Load the raw housing dataset from the submitted file and verify its existence, shape, and column structure. Artifacts: df_raw (pandas DataFrame of housing data), data_existence_report (summary of file validity, rows, columns); Acceptance: `os.path.exists("./assets/housing.csv")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.
     </goal>
     <verified_artifacts>
-      <variable name="df_raw">Raw DataFrame loaded from housing.csv, type: pandas.DataFrame, must be non-empty with valid numeric and categorical columns.</variable>
+      <variable name="df_raw">Raw DataFrame containing the housing dataset, type: pandas.DataFrame, must be non-empty and structured with at least 6 valid columns.</variable>
+      <variable name="data_existence_report">JSON/text report describing file path, file size, number of rows/columns, and missing values summary.</variable>
     </verified_artifacts>
     <required_variables>
-      <variable name="file_path">Path to housing.csv, source: user_submit_files.</variable>
+      <variable name="user_submit_files">Path to the housing dataset file, from user submission.</variable>
     </required_variables>
     <pcs_considerations>
-      <predictability>Ensures consistent dataset input for fair generalization and comparison across experiments.</predictability>
-      <computability>Use deterministic read parameters (encoding, dtype inference) for reproducible loading.</computability>
-      <stability>Verify data completeness and consistent schema to avoid downstream model instability.</stability>
+      <predictability>Ensures consistent and validated data input, reducing variability between runs.</predictability>
+      <computability>File loading process uses deterministic encoding and consistent library versions to guarantee reproducibility.</computability>
+      <stability>Verifies schema completeness and structure to prevent downstream instability from missing or malformed data.</stability>
     </pcs_considerations>
   </step>
 
-  <step id="inspect_structure" title="Inspect Dataset Structure">
+  <step id="analyze_data_structure" title="Analyze Data Structure and Schema">
     <goal>
-      Examine df_raw to summarize data schema, column types, and missing value patterns. Artifacts: data_summary_report (dict with column info and null counts); Acceptance: `isinstance(data_summary_report, dict)==True` and `len(data_summary_report.keys())==len(df_raw.columns)`.
+      Examine the internal structure of df_raw including data types, missing values, and unique identifiers to generate a schema document. Artifacts: data_structure_document (metadata and schema mapping); Acceptance: `len(data_structure_document["columns"])==len(df_raw.columns)` and `all(["dtype" in c for c in data_structure_document["columns"]])`.
     </goal>
     <verified_artifacts>
-      <variable name="data_summary_report">Summary of columns, types, and missing counts, type: dict, must cover all columns and reflect correct dtype distribution.</variable>
+      <variable name="data_structure_document">Dictionary describing dataset schema: column names, data types, null counts, and inferred primary key, type: dict, must align with df_raw.</variable>
     </verified_artifacts>
     <required_variables>
-      <variable name="df_raw">Loaded dataset for analysis, source: previous step.</variable>
+      <variable name="df_raw">Loaded housing dataset from previous step.</variable>
     </required_variables>
     <pcs_considerations>
-      <predictability>Helps define reproducible feature handling paths for later modeling consistency.</predictability>
-      <computability>Computes summary stats using deterministic methods to ensure exact reproducibility.</computability>
-      <stability>Identifies unstable fields (e.g., with high null ratio) early to prevent later drift sensitivity.</stability>
+      <predictability>Ensures feature consistency and supports reliable variable mapping for modeling.</predictability>
+      <computability>Schema captured in reproducible structured format for automated processing.</computability>
+      <stability>Prevents silent schema drift and missing variable errors during later computation.</stability>
     </pcs_considerations>
   </step>
 
-  <step id="define_problem" title="Define Prediction Objective">
+  <step id="perform_variable_semantic_analysis" title="Perform Variable Semantic Analysis">
     <goal>
-      Formulate the prediction problem (target variable, key features, and metrics). Artifacts: problem_definition_doc (problem description with RMSE and R² thresholds); Acceptance: `"RMSE" in problem_definition_doc` and `"R²" in problem_definition_doc` and `problem_definition_doc["RMSE"]<25000`.
+      Conduct semantic analysis of variables to interpret their meaning and assess potential relevance to target price. Artifacts: variable_analysis_report (semantic and correlation summary); Acceptance: `variable_analysis_report["status"]=="completed"` and `len(variable_analysis_report["variables"])>5`.
     </goal>
     <verified_artifacts>
-      <variable name="problem_definition_doc">Structured dictionary defining target, metrics, and PCS rationale, type: dict, must contain threshold and metric details.</variable>
+      <variable name="variable_analysis_report">Structured JSON report containing variable-level semantics, type, correlation with target variable, and missing rate summary.</variable>
     </verified_artifacts>
     <required_variables>
-      <variable name="data_summary_report">Schema summary for selecting target and features, source: previous step.</variable>
+      <variable name="df_raw">Loaded housing dataset from prior step.</variable>
+      <variable name="data_structure_document">Dataset schema description.</variable>
     </required_variables>
     <pcs_considerations>
-      <predictability>Clarifies measurable outcomes supporting fair validation and generalization.</predictability>
-      <computability>Standardizes evaluation metrics for reproducible model scoring.</computability>
-      <stability>Anchors the objective within defined performance boundaries to avoid overfitting drift.</stability>
+      <predictability>Identifies variables with potential predictive power and ensures semantic clarity for modeling.</predictability>
+      <computability>Automated variable inspection methods (dtype checks, correlation computation) ensure consistent reproducibility.</computability>
+      <stability>Detects noisy or unstable variables that may cause model performance fluctuation.</stability>
     </pcs_considerations>
   </step>
 
-  <step id="set_constraints" title="Establish PCS Criteria">
+  <step id="establish_observation_unit" title="Establish Observation Unit and Relevance">
     <goal>
-      Document PCS-aligned data and model constraints including validation splits, random seeds, and reproducibility scope. Artifacts: pcs_criteria_doc (JSON or dict); Acceptance: `"predictability" in pcs_criteria_doc` and `"computability" in pcs_criteria_doc` and `"stability" in pcs_criteria_doc`.
+      Identify the observation unit (e.g., individual houses) and verify its representativeness and completeness for predictive modeling. Artifacts: observation_unit_report (structure of observation unit, distribution stats); Acceptance: `observation_unit_report["unique_id_ratio"]>0.9` and `observation_unit_report["representative"]==True`.
     </goal>
     <verified_artifacts>
-      <variable name="pcs_criteria_doc">Formal PCS constraint record including parameters, type: dict, must include all three PCS dimensions.</variable>
+      <variable name="observation_unit_report">JSON report summarizing observation unit definition, unique identifier field, and data representativeness metrics.</variable>
     </verified_artifacts>
     <required_variables>
-      <variable name="problem_definition_doc">Problem description providing metric baselines, source: previous step.</variable>
+      <variable name="df_raw">Loaded housing dataset.</variable>
     </required_variables>
     <pcs_considerations>
-      <predictability>Documents validation consistency ensuring results generalize beyond this dataset.</predictability>
-      <computability>Captures deterministic experiment configuration for reproducibility.</computability>
-      <stability>Defines acceptable variation range across resampling and feature subsets.</stability>
+      <predictability>Ensures each observation represents a valid data unit for generalization.</predictability>
+      <computability>Standardizes indexing and observation representation to simplify data manipulation.</computability>
+      <stability>Confirms dataset completeness and avoids biases from duplicated or missing identifiers.</stability>
     </pcs_considerations>
   </step>
 
-  <step id="draft_workflow_plan" title="Design Workflow Roadmap">
+  <step id="generate_pcs_hypothesis" title="Generate PCS Hypothesis Framework">
     <goal>
-      Outline the full data science pipeline stages with inputs, outputs, and responsible components. Artifacts: workflow_plan (ordered dict with all seven stages and milestones); Acceptance: `len(workflow_plan.keys())==7` and `"data_preparation" in workflow_plan`.
+      Formulate PCS-aligned hypotheses connecting data characteristics to testable predictability, computability, and stability aspects. Artifacts: pcs_hypothesis_framework (structured hypothesis documentation); Acceptance: `len(pcs_hypothesis_framework["hypotheses"])>=3`.
     </goal>
     <verified_artifacts>
-      <variable name="workflow_plan">Dictionary describing sequential stages, type: OrderedDict, must list all stages with input/output dependencies.</variable>
+      <variable name="pcs_hypothesis_framework">Document listing testable hypotheses linking data quality and feature relevance to PCS components, type: dict, must contain at least three hypotheses.</variable>
     </verified_artifacts>
     <required_variables>
-      <variable name="pcs_criteria_doc">PCS-aligned guidelines for defining workflow consistency, source: previous step.</variable>
+      <variable name="data_structure_document">Dataset schema description.</variable>
+      <variable name="variable_analysis_report">Semantic and correlation analysis report.</variable>
+      <variable name="observation_unit_report">Observation unit report.</variable>
     </required_variables>
     <pcs_considerations>
-      <predictability>Maintains consistent workflow sequence enabling cross-run comparability.</predictability>
-      <computability>Specifies stage boundaries and artifact flow to enable deterministic execution.</computability>
-      <stability>Promotes reproducible transitions across stages minimizing cumulative error propagation.</stability>
-    </pcs_considerations>
-  </step>
-
-  <step id="validate_stage_outputs" title="Validate Defined Artifacts">
-    <goal>
-      Verify existence, type, and content validity of df_raw, problem_definition_doc, and workflow_plan. Artifacts: validation_report (dict of artifact checks); Acceptance: `all(validation_report.values())==True`.
-    </goal>
-    <verified_artifacts>
-      <variable name="validation_report">Artifact existence and consistency record, type: dict, must return True for all checks.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="df_raw">Raw dataset, source: previous step.</variable>
-      <variable name="problem_definition_doc">Defined prediction problem, source: previous step.</variable>
-      <variable name="workflow_plan">Workflow roadmap, source: previous step.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Ensures data and plans align to intended prediction objectives.</predictability>
-      <computability>Automates validation checks for consistent reproducibility validation.</computability>
-      <stability>Detects mismatched artifacts early to prevent unstable downstream execution.</stability>
-    </pcs_considerations>
-  </step>
-
-  <step id="finalize_documentation" title="Compile Problem Definition Package">
-    <goal>
-      Combine all verified artifacts into a single PCS-compliant documentation bundle. Artifacts: problem_package (zip or dict containing df_raw, problem_definition_doc, workflow_plan); Acceptance: `"df_raw" in problem_package` and `"workflow_plan" in problem_package`.
-    </goal>
-    <verified_artifacts>
-      <variable name="problem_package">Comprehensive package consolidating all definition artifacts, type: dict or zip, must include validated components and metadata.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="df_raw">Dataset artifact, source: previous step.</variable>
-      <variable name="problem_definition_doc">Problem statement artifact, source: previous step.</variable>
-      <variable name="workflow_plan">Workflow structure artifact, source: previous step.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Creates a unified baseline for replicable predictive modeling.</predictability>
-      <computability>Encapsulates version-controlled artifacts for transparent reproducibility.</computability>
-      <stability>Guarantees downstream consistency by freezing verified inputs and configurations.</stability>
+      <predictability>Defines measurable factors that influence model generalization performance.</predictability>
+      <computability>Specifies standardized experimental paths for reproducible validation.</computability>
+      <stability>Guides robustness assessment and sensitivity evaluation during later experiments.</stability>
     </pcs_considerations>
   </step>
 
   <focus>
-  1. Sequentially execute steps from dataset loading to final packaging.  
-  2. Log all intermediate artifacts for traceability and reproducibility.  
-  3. Maintain strict PCS adherence by recording seeds, file paths, and validation summaries.  
-  4. Store final outputs under version-controlled directory for reuse by downstream stages.
+    1. Begin with verifying dataset presence and loading integrity.
+    2. Explore structure and metadata systematically to confirm field-level consistency.
+    3. Conduct semantic mapping and correlation analysis to align features with target.
+    4. Define observation unit to ensure the dataset reflects correct sampling granularity.
+    5. Summarize results into a PCS hypothesis document linking observed data characteristics to veridicality standards.
   </focus>
 
   <goals>
-  Refine the current stage goal as: "Define and verify the complete problem setup for house price prediction, ensuring PCS-aligned artifacts (df_raw, problem_definition_doc, workflow_plan) are validated and traceable for downstream reproducibility."
+    Reinforce the goal of ensuring verified data existence and readiness by producing reproducible artifacts and PCS-based data understanding reports that establish the foundation for subsequent modeling stages.
   </goals>
 </steps>

@@ -1,0 +1,54 @@
+================================================================================
+BEHAVIOR DE.2.2: DATA TYPE AND FORMAT ANALYSIS
+================================================================================
+
+GOAL: Determine data types for all variables and identify mixed types, format anomalies, and conversion requirements.
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.2.2.1: Identify Data Types
+  Determine data type for each variable
+  - Classify as numeric (continuous/discrete), categorical, text, temporal, boolean
+  - Document inferred and actual data types
+  - Identify type mismatches between schema and data
+
+ACTION DE.2.2.2: Detect Mixed and Anomalous Types
+  Identify mixed data types and format irregularities
+  - Detect fields with multiple data types
+  - Identify format inconsistencies (e.g., date formats, number formats)
+  - Document encoding issues and special characters
+  - Note numeric values stored as strings
+
+ACTION DE.2.2.3: Assess Type Conversion Needs
+  Evaluate necessity and feasibility of type conversions
+  - Identify variables requiring type conversion
+  - Assess data loss risk from conversions
+  - Document recommended conversion strategies
+  - Note any blocking type issues
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_type_report (field types, mixed types, conversion needs, format issues)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Create table: Column Name | Inferred Type | Actual Type | Issues | Recommendation
+- Document all type inconsistencies with examples
+- Specify conversion strategies for problematic types
+- Highlight blocking issues requiring immediate attention
+- Persist type analysis under ./outputs/stage_1_data_existence/step_2/
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- data_type_report lists all columns with complete type information
+- Mixed types and format anomalies identified with examples
+- Conversion recommendations provided for all type issues
+- Critical type problems flagged for resolution

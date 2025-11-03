@@ -60,7 +60,7 @@ Observation 是 POMDP 框架中的核心数据结构，包含 Planner 维护的�
   "completed": [
     {
       "stage_id": "data_loading",
-      "goal": "加载 Ames Housing 数据集并完成基本验证",
+      "goal": "加载  Housing 数据集并完成基本验证",
       "actions_taken": [
         "读取 train.csv 和 test.csv",
         "合并数据集",
@@ -189,7 +189,7 @@ Observation 是 POMDP 框架中的核心数据结构，包含 Planner 维护的�
 
 ```json
 "goals": {
-  "stage": "完成 Ames Housing 数据集的全面清洗...",
+  "stage": "完成  Housing 数据集的全面清洗...",
   "step": "系统化处理数据集中的所有缺失值...",
   "behavior": "执行高缺失率特征的语义填充..."
 }
@@ -393,7 +393,7 @@ del df_working  # 避免误用
 
 ```json
 "notebook": {
-  "title": "Ames Housing Price Prediction - Data Cleaning",
+  "title": " Housing Price Prediction - Data Cleaning",
   "cell_count": 45,
   "last_cell_type": "code",
   "last_output": "{'high_missing': [...], ...}"

@@ -14,7 +14,7 @@ class VariableSemanticAnalysis(BaseAction):
     Understand the business meaning and actual significance of each variable
 
     Steps (from docs):
-    1. Variable Semantic Mapping - map variable names to business concepts
+    1. Variable Semantic Mapping - map variable n to business concepts
     2. Variable Quality Assessment - evaluate variable value rationality
     3. Domain Knowledge Verification - confirm variable interpretation with domain experts
     """
@@ -55,7 +55,7 @@ You are performing Section 3: Variable Semantic Analysis.
 ## Your Objectives (from VDS principles):
 
 ### 1. Variable Semantic Mapping
-- Establish correspondence between variable names and business concepts
+- Establish correspondence between variable n and business concepts
 - Identify measurement units and scales for each variable
 - Understand business context and usage scenarios for variables
 

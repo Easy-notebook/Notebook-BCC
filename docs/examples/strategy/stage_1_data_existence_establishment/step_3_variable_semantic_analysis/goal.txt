@@ -1,0 +1,37 @@
+================================================================================
+STEP DE.3: VARIABLE SEMANTIC ANALYSIS
+================================================================================
+
+GOAL: Understand variable business meaning and validate with domain experts
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_variable_semantic_mapping.txt
+   - Map variable n to business concepts
+2. behavior_2_variable_quality_assessment.txt
+   - Assess variable value reasonableness and validity
+3. behavior_3_domain_knowledge_validation.txt
+   - Validate variable interpretation with domain experts
+
+4. behavior_4_validation_and_acceptance.txt
+   - Validate step completeness and acceptance criteria
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- variable_semantic_map
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All variables mapped to business concepts
+- All artifacts complete and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

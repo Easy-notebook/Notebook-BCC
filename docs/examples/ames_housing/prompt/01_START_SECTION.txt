@@ -61,14 +61,27 @@ base on current background you can change the former stage goal,write it here
 [USER PROMPT]
 # Current Stage Context
 **the goal of all**:
-- To develop a robust house price prediction model using the Housing dataset. - Encountered challenge: ensure accuracy and stability while meeting PCS reproducibility standards. - Learned importance of artifact verification, metric thresholds, and traceable data-to-deployment lineage.
+- To develop a robust house price prediction model using the  Housing dataset following an 8-stage PCS-compliant data science lifecycle.
+- Encountered challenge: ensure accuracy (RMSE < 25000, R² > 0.85) and stability while meeting PCS reproducibility standards.
+- Learned importance of artifact verification, metric thresholds, data existence validation, and traceable data-to-deployment lineage.
+
 **the goal of current stage**:
-Define the data science objective for predicting house prices using the Housing dataset, ensuring PCS alignment. Artifacts: df_raw (loaded dataset), problem_definition_doc (problem statement and PCS criteria), workflow_plan (execution roadmap); Acceptance: df_raw.shape[0] > 0, all three artifacts created with valid content fields.
-<verified_artifacts> 
-<variable name="df_raw">Raw dataset loaded from housing.csv, verified shape and non-empty structure.</variable> 
-<variable name="problem_definition_doc">Contains problem statement, metrics RMSE&lt;25000, R²&gt;0.85, and PCS considerations.</variable> 
-<variable name="workflow_plan">Dictionary specifying all seven stages and milestones.</variable> 
-</verified_artifacts> 
+Stage ID: data_existence_establishment
+Stage Title: Data Existence Establishment
+Goal: Establish and verify the existence, structure, and relevance of the housing dataset to ensure readiness for predictive modeling. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: `os.path.exists("./assets/housing.csv")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.
+
+<verified_artifacts>
+<variable name="data_existence_report">Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics.</variable>
+<variable name="data_structure_document">Schema of the dataset, describing each column, type, and potential target variable.</variable>
+<variable name="variable_analysis_report">Variable-level semantic mapping and correlation summary with the target (price).</variable>
+<variable name="pcs_hypothesis_framework">Hypothesis document linking data characteristics to PCS testability requirements.</variable>
+</verified_artifacts>
+
+<required_variables>
+<variable name="user_submit_files">Raw housing dataset file path: ./assets/housing.csv</variable>
+<variable name="user_problem">Build a house price prediction model based on the  Housing dataset, RMSE < 25000, R² > 0.85, compliant with PCS standards</variable>
+</required_variables>
+
 ** Some thing you maybe known:
 "user_problem": "Build a house price prediction model based on the Housing dataset, RMSE < 25000, R² > 0.85, compliant with PCS standards",
 "user_submit_files": ["./assets/housing.csv"]
@@ -76,39 +89,113 @@ Define the data science objective for predicting house prices using the Housing 
 ---
 
 [USER PROMPT]
-# DSLC Step Catalog (reference only; do not alter the step IDs)
-## data_preparation
+# DSLC Step Catalog (reference only; adapt to current stage context)
+## stage_1_data_existence_establishment
 
-1) step_1_data_collection_and_inventory
-   - Goal: 获取并登记数据来源与版本，完成初步盘点与可访问性验证
-   - Verified Artifacts: data_source_register, data_collection_log, data_inventory_report
-   - Acceptance: 日志/盘点均生成且非空；行列数一致
+## Stage Goal
+Establish the foundation of data existence through systematic data discovery, structure analysis, and relevance assessment to ensure data can support project objectives.
 
-2) step_2_data_quality_audit
-   - Goal: 建立完整性/一致性/类型与 schema 的质量审计基线
-   - Verified Artifacts: integrity_check_plan, quality_audit_report, automated_validation_scripts
-   - Acceptance: 计划与报告非空；脚本可运行并输出通过/失败摘要
+## Core Activities
 
-3) step_3_missing_value_handling
-   - Goal: 分析缺失模式并实施填充/删除策略
-   - Verified Artifacts: missing_summary, imputation_plan, df_imputed
-   - Acceptance: df_imputed 无缺失（或按业务豁免清单）
+### Data Collection and Inventory
+- Execute data collection strategy based on Chapter 0 planning
+- Verify reliability of data acquisition channels
+- Establish data version control and traceability mechanisms
+- Complete initial data inventory (rows, columns, file size)
+- Verify data completeness and accessibility
+- Establish data catalog and metadata records
 
-4) step_4_outlier_detection_and_treatment
-   - Goal: 识别异常与极端值并合理处理
-   - Verified Artifacts: outlier_detection_report, outlier_treatment_plan, df_outlier_processed
-   - Acceptance: 异常指标显著下降
+### Data Structure Discovery
+- Analyze data hierarchy and organizational structure
+- Identify primary keys, foreign keys, and index fields
+- Discover relationships between data tables
+- Determine data types (numeric, categorical, text, temporal)
+- Identify mixed data types and anomalous formats
+- Explore data distribution characteristics (mean, std, quantiles)
 
-5) step_5_dataset_finalization
-   - Goal: 产出 df_cleaned、质量报告、处理流程文档
-   - Verified Artifacts: df_cleaned, data_quality_report, processing_pipeline_doc
-   - Acceptance: df_cleaned 无缺失；报告覆盖关键处理
+### Variable Semantic Analysis
+- Map variable n to business concepts
+- Identify measurement units and scales
+- Understand business context and usage scenarios
+- Assess variable value reasonableness and validity
+- Verify variable interpretation accuracy with domain experts
+- Obtain expert opinions on variable importance
+
+### Observation Unit Identification
+- Identify basic observation units (individuals, events, time points)
+- Determine unique identifiers for observation units
+- Analyze observation unit representativeness and completeness
+- Identify temporal span and sampling frequency
+- Analyze time series continuity and consistency
+- Identify geographic or spatial distribution
+
+### Variable Relevance Assessment
+- Analyze correlation between variables and target variable
+- Identify potential predictive variables
+- Assess multicollinearity among variables
+- Establish variable priority ranking
+- Verify statistical relevance aligns with business logic
+
+### PCS Hypothesis Generation
+- Generate testable hypotheses based on PCS framework
+- Design experimental schemes for hypothesis validation
+- Identify factors affecting predictability and stability
+
+## PCS Framework Integration
+
+### Predictability
+- Data sufficiency verification: Ensure data volume and quality support reliable prediction
+- Generalization capability assessment: Analyze data representativeness and coverage
+- Predictive variable identification: Systematically identify variables with predictive power
+
+### Computability
+- Data processability: Assess computational friendliness of data format and structure
+- Resource requirement assessment: Evaluate computational resource needs for data processing
+- Reproducibility guarantee: Establish standardized data processing workflows
+
+### Stability
+- Data sensitivity analysis: Identify critical features sensitive to data changes
+- Robustness assessment: Evaluate potential impact of data quality issues on results
+- Consistency verification: Verify data consistency across temporal and spatial dimensions
+
+## Output Deliverables
+
+1. **Data Existence Report**
+   - Data inventory checklist
+   - Data quality assessment
+   - Data completeness verification
+
+2. **Data Structure Documentation**
+   - Data dictionary and metadata
+   - Variable semantic interpretation
+   - Data relationship mapping
+
+3. **Variable Analysis Report**
+   - Variable importance ranking
+   - Correlation analysis results
+   - Business logic verification
+
+4. **PCS Hypothesis Framework**
+   - List of testable hypotheses
+   - Validation experiment design
+   - Expected result ranges
+
+## Quality Checklist
+
+- [ ] All required data successfully obtained and verified
+- [ ] Data structure and relationships clearly mapped
+- [ ] Variable semantics confirmed by domain experts
+- [ ] Observation unit definition clear and consistent
+- [ ] Variable correlation analysis complete and reliable
+- [ ] PCS hypotheses specific and testable
+- [ ] Data quality issues identified and documented
+
 ---
 
 Key Principles
 
-1. Do not alter step names: The step IDs are fixed
-2. Clear goals: Each step must have a measurable objective
+1. Do not alter step names: The step IDs are fixed and correspond to the strategy directory structure
+2. Clear goals: Each step must have a measurable objective aligned with data existence establishment
 3. Definite artifacts: All outputs must be explicitly named and typed
 4. Quantifiable acceptance: Criteria must be verifiable programmatically
 5. PCS integration: Every step must consider Predictability, Computability, and Stability

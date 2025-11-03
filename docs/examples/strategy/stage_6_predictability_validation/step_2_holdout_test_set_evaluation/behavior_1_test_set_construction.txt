@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.2.1: CONSTRUCT INDEPENDENT TEST SET
+================================================================================
+
+GOAL: Construct independent test set
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.2.1.1: Execute Primary Task
+  Construct independent test set
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- test_set_construction_results
+- test_set_construction_documentation
+  

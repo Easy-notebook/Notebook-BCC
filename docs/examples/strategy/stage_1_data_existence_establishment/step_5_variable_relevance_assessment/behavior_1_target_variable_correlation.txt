@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DE.5.1: ANALYZE CORRELATION BETWEEN VARIABLES AND TARGET
+================================================================================
+
+GOAL: Analyze correlation between variables and target
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.5.1.1: Execute Primary Task
+  Analyze correlation between variables and target
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DE.5.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- target_variable_correlation_results
+- target_variable_correlation_documentation
+  

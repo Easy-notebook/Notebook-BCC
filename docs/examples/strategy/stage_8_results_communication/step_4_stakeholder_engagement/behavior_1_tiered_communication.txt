@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.4.1: EXECUTE TIERED COMMUNICATION STRATEGY
+================================================================================
+
+GOAL: Execute tiered communication strategy
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.4.1.1: Execute Primary Task
+  Execute tiered communication strategy
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.4.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- tiered_communication_results
+- tiered_communication_documentation
+  

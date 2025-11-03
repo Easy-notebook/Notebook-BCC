@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.4.4: EXTRACT BUSINESS-RELEVANT INSIGHTS
+================================================================================
+
+GOAL: Extract business-relevant insights
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.4.4.1: Execute Primary Task
+  Extract business-relevant insights
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.4.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- business_insight_extraction_results
+- business_insight_extraction_documentation
+  

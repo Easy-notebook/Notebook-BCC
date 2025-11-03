@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.2.1: EXTRACT AND QUANTIFY CORE VALUE
+================================================================================
+
+GOAL: Extract and quantify core value
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.2.1.1: Execute Primary Task
+  Extract and quantify core value
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- core_value_extraction_results
+- core_value_extraction_documentation
+  

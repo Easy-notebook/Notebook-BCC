@@ -15,7 +15,7 @@ def generate_exploratory_data_sequence_step1(
     # 分支1：待办事项为空
     if step_template.event("start"):
         step_template.new_section("Data preview") \
-                     .add_text("read the first 5 rows of the CSV file and extract the variable names and data preview") \
+                     .add_text("read the first 5 rows of the CSV file and extract the variable n and data preview") \
                      .add_code(
                          f'''import pandas as pd
 # Correcting the file path by wrapping it in quotes.

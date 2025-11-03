@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.3.3: DETECT AND TREAT OUTLIERS
+================================================================================
+
+GOAL: Detect and treat outliers
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.3.3.1: Execute Primary Task
+  Detect and treat outliers
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.3.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- outlier_detection_and_treatment_results
+- outlier_detection_and_treatment_documentation
+  

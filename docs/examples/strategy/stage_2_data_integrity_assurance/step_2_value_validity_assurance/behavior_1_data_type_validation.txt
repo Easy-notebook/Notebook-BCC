@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.2.1: VALIDATE DATA TYPE CORRECTNESS
+================================================================================
+
+GOAL: Validate data type correctness
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.2.1.1: Execute Primary Task
+  Validate data type correctness
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_type_validation_results
+- data_type_validation_documentation
+  

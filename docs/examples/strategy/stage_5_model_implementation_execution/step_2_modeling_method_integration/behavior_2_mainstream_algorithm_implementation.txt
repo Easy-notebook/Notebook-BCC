@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MI.2.2: IMPLEMENT MAINSTREAM ALGORITHMS
+================================================================================
+
+GOAL: Implement mainstream algorithms
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MI.2.2.1: Execute Primary Task
+  Implement mainstream algorithms
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MI.2.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- mainstream_algorithm_implementation_results
+- mainstream_algorithm_implementation_documentation
+  

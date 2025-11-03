@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR SA.2.1: ANALYZE HYPERPARAMETER SENSITIVITY
+================================================================================
+
+GOAL: Analyze hyperparameter sensitivity
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION SA.2.1.1: Execute Primary Task
+  Analyze hyperparameter sensitivity
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION SA.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- hyperparameter_sensitivity_results
+- hyperparameter_sensitivity_documentation
+  

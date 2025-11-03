@@ -1,0 +1,52 @@
+================================================================================
+BEHAVIOR DE.3.4: VALIDATION AND ACCEPTANCE
+================================================================================
+
+GOAL: Validate all step activities meet acceptance criteria and align with PCS framework.
+
+RECOMMENDED AGENT: PCS-Agent
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.3.4.1: Artifact Completeness Check
+  Verify all required artifacts are generated and complete
+  - Confirm all artifacts from behaviors exist and non-empty
+  - Verify artifact content quality and completeness
+  - Check artifact format and structure correctness
+
+ACTION DE.3.4.2: Acceptance Criteria Validation
+  Validate all acceptance criteria are met
+  - Review each acceptance criterion from step goal.txt
+  - Mark each criterion as PASS/FAIL with evidence
+  - Document any gaps or issues requiring resolution
+
+ACTION DE.3.4.3: PCS Framework Alignment
+  Verify alignment with PCS framework requirements
+  - Predictability: Confirm support for reliable prediction
+  - Computability: Verify reproducibility and efficiency
+  - Stability: Validate robustness and consistency
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- step_validation_report (pass/fail status, recommendations)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Create checklist of all acceptance criteria
+- Mark each criterion as PASS/FAIL with supporting evidence
+- Document issues and remediation plans for FAIL items
+- Provide clear recommendation: PROCEED or REWORK
+- Persist validation report under ./outputs/stage_*/step_*/
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- step_validation_report exists with complete evaluation
+- All critical acceptance criteria marked as PASS
+- PCS framework alignment confirmed
+- Clear recommendation provided with rationale

@@ -1,0 +1,53 @@
+================================================================================
+BEHAVIOR DE.2.1: SCHEMA AND RELATIONSHIP ANALYSIS
+================================================================================
+
+GOAL: Analyze data schema, hierarchical structure, and identify relationships between data entities.
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.2.1.1: Analyze Data Schema
+  Analyze hierarchical structure and schema organization
+  - Identify table structures and entity relationships
+  - Map data organization and nesting levels
+  - Document schema complexity and depth
+
+ACTION DE.2.1.2: Identify Keys and Indexes
+  Identify primary keys, foreign keys, and index fields
+  - Detect unique identifiers for each entity
+  - Identify foreign key relationships between tables
+  - Document index fields and their purposes
+  - Verify referential integrity
+
+ACTION DE.2.1.3: Discover Table Relationships
+  Map connections and dependencies between data tables
+  - Identify one-to-one, one-to-many, many-to-many relationships
+  - Document join keys and connection patterns
+  - Create entity-relationship diagram or mapping
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_schema_document (schema structure, keys, indexes, relationships)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Document complete schema structure with table n and hierarchies
+- List all primary keys and foreign keys with data types
+- Create visual or textual relationship mapping
+- Note any schema irregularities or inconsistencies
+- Persist schema documentation under ./outputs/stage_1_data_existence/step_2/
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- data_schema_document includes complete table structure
+- All primary and foreign keys identified and documented
+- Table relationships clearly mapped and explained
+- Schema documentation sufficient for downstream processing

@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.2.3: PRIORITIZE ANALYSIS QUESTIONS BY IMPORTANCE
+================================================================================
+
+GOAL: Prioritize analysis questions by importance
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.2.3.1: Execute Primary Task
+  Prioritize analysis questions by importance
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.2.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- analysis_prioritization_results
+- analysis_prioritization_documentation
+  

@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.1.4: CREATE REPRODUCIBILITY GUIDE
+================================================================================
+
+GOAL: Create reproducibility guide
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.1.4.1: Execute Primary Task
+  Create reproducibility guide
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.1.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- reproducibility_guide_results
+- reproducibility_guide_documentation
+  

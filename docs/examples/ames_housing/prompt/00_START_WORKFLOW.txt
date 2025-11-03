@@ -55,197 +55,252 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 # Some DSLC stages are provided for reference. You MUST keep the 6 DSLC stage IDs below. Re-divide steps according to the user's problem and uploaded files. Each stage must have 1 clear goal and concrete, verifiable artifacts with executable acceptance.
 
-1. data_preparation / Data Preparation
-   Goal: Establish data existence foundation and ensure data integrity, accuracy, and consistency to build a high-quality analysis-ready dataset.
+## Stage 1: Data Existence Establishment
 
-   Core Activities:
+**Goal**: Establish the foundation of data existence through systematic data discovery, structure analysis, and relevance assessment to ensure data can support project objectives.
 
-   * Data structure discovery (types, distributions, schema)
-   * Quality audit (dimensions/indexes, value validity, business rules)
-   * Missing value handling (patterns → imputation plan → execution)
-   * Outlier detection and treatment
-   * Finalization + pipeline docs (df_cleaned, data_quality_report, processing_pipeline_doc)
+**Core Activities**:
+- Data collection strategy execution and source registration
+- Data structure discovery (schema, types, distributions, relationships)
+- Variable semantic analysis and business concept mapping
+- Observation unit identification (temporal, spatial dimensions)
+- Variable relevance assessment and correlation analysis
+- PCS hypothesis generation for testable predictions
 
-   Artifacts:
+**Key Artifacts**:
+- data_existence_report: Complete data inventory and quality assessment
+- data_structure_document: Schema, relationships, type analysis
+- variable_analysis_report: Semantic mapping, importance ranking
+- pcs_hypothesis_framework: Testable hypotheses for validation
 
-   * df_cleaned: DataFrame (cleaned data; no missing values; correct dtypes)
-   * data_quality_report: dict (records missing handling, outlier treatment, dtype/index fixes)
-   * processing_pipeline_doc: str (steps/parameters, seeds, versions, reproducibility notes)
+**Acceptance**:
+- All required data successfully obtained and verified
+- Data structure and relationships clearly mapped
+- Variable semantics confirmed by domain experts
+- PCS hypotheses specific and testable
 
-   Acceptance:
-
-   * df_cleaned.isnull().sum().sum() == 0
-   * dtypes/indexes validated (numeric/categorical correct; unique keys honored)
-   * processing_pipeline_doc contains steps, seeds, and library versions
-
-   PCS Application:
-
-   * Computability: Establish reproducible data processing pipeline
-   * Stability: Document all transformations for sensitivity analysis
-
----
-
-2. data_analysis / Data Analysis
-   Goal: Deeply understand data distribution, patterns, and characteristics; identify relationships between features and the target variable; provide insights for feature engineering and modeling.
-
-   Core Activities:
-
-   * Univariate analysis (distributions, statistics)
-   * Bivariate correlation analysis
-   * Multivariate analysis (DR/clustering; interaction hypotheses)
-   * Target analysis (transform needs; business constraints)
-
-   Artifacts:
-
-   * eda_summary: dict (stats per variable)
-   * correlation_matrix: DataFrame
-   * distribution_analysis: dict (target distribution; transform plan)
-   * ./outputs/eda/ (folder with visualizations)
-
-   Acceptance:
-
-   * correlation_matrix exists with full variable coverage
-   * Top-5 features with strongest |correlation| to target listed
-   * ./outputs/eda/ contains generated charts
-
-   PCS Application:
-
-   * Predictability: Identify features with strong predictive power
-   * Stability: Analyze feature robustness across data subsets
+**PCS Application**:
+- Predictability: Verify data sufficiency for reliable prediction
+- Computability: Assess data format computational friendliness
+- Stability: Identify features sensitive to data changes
 
 ---
 
-3. model_selection / Model Selection
-   Goal: Evaluate the applicability of multiple modeling methods, establish baseline models as comparison benchmarks, and select the most suitable model strategy.
+## Stage 2: Data Integrity Assurance
 
-   Core Activities:
+**Goal**: Ensure data integrity, accuracy, and consistency through comprehensive validation, cleaning, and completeness restoration to build analysis-ready datasets.
 
-   * Modeling strategy assessment (linear/tree/ensemble/deep; feasibility)
-   * Baseline model training (e.g., Linear/Ridge/Lasso/Tree)
-   * Model comparison (RMSE, R², runtime; CV means/variance)
-   * Selection decision (performance, interpretability, stability, cost)
+**Core Activities**:
+- Dimensional integrity validation (rows, columns, indexes, time series)
+- Value validity assurance (type validation, range checks, business rules)
+- Completeness integrity restoration (missing values, outliers, duplicates)
+- Comprehensive integrity verification and quality metrics
 
-   Artifacts:
+**Key Artifacts**:
+- df_cleaned: DataFrame (no missing values, correct dtypes)
+- data_quality_report: Comprehensive quality metrics and processing log
+- processing_pipeline_doc: Reproducibility documentation (seeds, versions)
+- integrity_verification_report: Quality assurance certification
 
-   * baseline_models: dict
-   * model_comparison_report: DataFrame (RMSE/R²/MAE + time; CV mean/std)
-   * selected_model_name: str
-   * model_selection_rationale: str (evidence across PCS)
+**Acceptance**:
+- df_cleaned.isnull().sum().sum() == 0
+- All dtypes/indexes validated and correct
+- Processing pipeline fully documented and reproducible
+- Quality metrics meet predefined standards
 
-   Acceptance:
-
-   * At least 3 different models tested (diverse families)
-   * Baseline RMSE < 30000 (rough benchmark, project-specific)
-   * selected_model_name finalized
-   * model_selection_rationale explains selection rationale
-
-   PCS Application:
-
-   * Predictability: Compare generalization across models via cross-validation
-   * Computability: Consider computational cost and implementation feasibility
-   * Stability: Evaluate model robustness to hyperparameter changes
+**PCS Application**:
+- Predictability: Preserve predictive relationships during cleaning
+- Computability: Establish reproducible processing pipeline
+- Stability: Document transformations for sensitivity analysis
 
 ---
 
-4. model_training / Model Training
-   Goal: Train and optimize the selected model, perform hyperparameter tuning, and generate the final production-ready model.
+## Stage 3: Exploratory Data Analysis
 
-   Core Activities:
+**Goal**: Deeply understand data patterns, distributions, and relationships through systematic exploratory analysis to provide insights for modeling strategy.
 
-   * Refined feature engineering (scaling, encoding, interactions)
-   * Model training (train using best practices)
-   * Hyperparameter tuning (grid search or Bayesian optimization)
-   * Cross-validation (k-fold validation to ensure generalization)
-   * Model persistence (save trained model)
+**Core Activities**:
+- Current data state assessment (distributions, statistics, quality)
+- Targeted inquiry generation (business questions → data questions)
+- Analytical insight extraction (correlation, grouping, time series, multivariate)
+- Comprehensive insight consolidation and modeling recommendations
 
-   Artifacts:
+**Key Artifacts**:
+- eda_summary: dict (comprehensive statistics per variable)
+- correlation_matrix: DataFrame (full variable correlation analysis)
+- distribution_analysis: dict (target distribution, transform recommendations)
+- modeling_recommendations: Feature engineering and method suggestions
+- ./outputs/eda/: Visualization charts and interactive dashboards
 
-   * final_model: object (trained model)
-   * hyperparameter_tuning_report: dict (hyperparameter tuning report: search space, best params, CV results)
-   * best_params: dict (optimal hyperparameters)
-   * training_history: dict (training process record: loss curves, validation curves)
-   * ./models/model.pkl: file (saved model file)
+**Acceptance**:
+- All important variables analyzed for distribution characteristics
+- Variable relationships systematically explored
+- Key business questions answered through data analysis
+- Modeling recommendations based on sufficient evidence
+- Minimum 6 charts generated under ./outputs/eda/
 
-   Acceptance:
-
-   * final_model exists and is usable
-   * ./models/model.pkl exists and size > 0; load test passes
-   * best_params recorded
-   * training_history documents training process
-
-   PCS Application:
-
-   * Computability: Ensure reproducible training with fixed random seeds
-   * Stability: Use cross-validation to assess training stability
+**PCS Application**:
+- Predictability: Identify features with strong predictive power
+- Computability: Ensure analysis processes are reproducible
+- Stability: Analyze feature robustness across data subsets
 
 ---
 
-5. model_evaluation / Model Evaluation
-   Goal: Validate model predictability (generalization capability), assess model stability (robustness to perturbations), and ensure the model meets PCS standards.
+## Stage 4: Methodology Strategy Formulation
 
-   Core Activities:
+**Goal**: Formulate comprehensive modeling strategy including feature engineering, model selection, and evaluation frameworks based on data understanding and business requirements.
 
-   * Test set evaluation (RMSE/R²/MAE)
-   * Cross-validation (5-fold CV; record mean and std)
-   * Residual analysis (distribution, heteroscedasticity)
-   * PCS validation:
+**Core Activities**:
+- Feature and model method proposal (feature engineering, algorithm candidates)
+- Training evaluation strategy development (data splitting, cross-validation, metrics)
+- Methodology strategy consolidation (PCS integration, risk assessment, implementation plan)
 
-     * Predictability: Test set performance, generalization gap
-     * Computability: Reproducibility verification
-     * Stability: Perturbation analysis, sensitivity testing
+**Key Artifacts**:
+- feature_engineering_strategy: Detailed feature engineering plan
+- model_method_candidates: List of candidate algorithms with rationale
+- evaluation_framework: Comprehensive evaluation metrics and validation strategy
+- methodology_document: Complete modeling methodology and implementation plan
 
-   Artifacts:
+**Acceptance**:
+- Feature engineering strategy matches data characteristics
+- Model selection considers business needs and constraints
+- Evaluation strategy is scientifically rigorous
+- PCS framework fully integrated into strategy
+- Implementation plan realistic and feasible
 
-   * test_rmse: float (threshold project-dependent; e.g., < 25000)
-   * test_r2: float (e.g., > 0.85)
-   * cv_scores: ndarray (5-fold scores)
-   * cv_mean: float
-   * cv_std: float (tight variance indicates stability)
-   * model_performance_report: dict (comprehensive performance report summarizing all metrics)
-   * residual_analysis: dict (residual analysis results: distribution, heteroscedasticity tests)
-   * pcs_validation_report: dict (PCS validation report covering Predictability, Computability, Stability)
-
-   Acceptance:
-
-   * test_rmse < target_threshold AND test_r2 > target_threshold AND cv_std < target_threshold
-   * All three conditions must be simultaneously satisfied
-
-   PCS Application:
-
-   * Predictability: Validate on held-out test set, analyze generalization gap
-   * Computability: Verify reproducibility with fixed seeds
-   * Stability: Conduct perturbation analysis (data subsampling, feature perturbation)
+**PCS Application**:
+- Predictability: Prioritize methods with strong generalization capability
+- Computability: Ensure selected methods are implementable
+- Stability: Choose methods robust to data perturbations
 
 ---
 
-6. model_deployment / Model Deployment
-   Goal: Generate final predictions, create model documentation and usage instructions, and prepare for results communication and delivery.
+## Stage 5: Model Implementation Execution
 
-   Core Activities:
+**Goal**: Execute modeling strategy through systematic feature engineering, model training, and optimization to build production-ready predictive models.
 
-   * Test/production prediction (generate predictions using final_model)
-   * Result export (save predictions as CSV)
-   * Model documentation (create model card: performance, usage, limitations)
-   * Deployment preparation (usage examples, API interface documentation)
+**Core Activities**:
+- Feature engineering integration (encoding, scaling, transformations, interactions)
+- Modeling method integration (baseline, mainstream algorithms, ensemble methods)
+- Model training execution (training workflow, hyperparameter optimization, monitoring)
 
-   Artifacts:
+**Key Artifacts**:
+- feature_pipeline: Reusable feature engineering pipeline
+- trained_models: Collection of trained models with different algorithms
+- final_model: Optimized production-ready model
+- training_history: Complete training process logs
+- best_params: Optimal hyperparameter configuration
+- ./models/model.pkl: Saved model file
 
-   * predictions: ndarray (prediction results)
-   * ./outputs/predictions.csv: file (prediction results file, for Ames must contain Id and SalePrice columns)
-   * deployment_report: dict (deployment instructions and usage examples)
-   * model_card: str (model card in markdown format, including performance metrics, usage instructions, limitations)
+**Acceptance**:
+- All feature engineering steps correctly implemented
+- Multiple modeling methods successfully trained
+- Hyperparameter optimization converged
+- Model performance meets expectations
+- No data leakage in training process
+- ./models/model.pkl loads successfully without errors
 
-   Acceptance:
+**PCS Application**:
+- Predictability: Strict validation prevents data leakage
+- Computability: Ensure reproducibility with fixed seeds
+- Stability: Test model robustness to hyperparameter changes
 
-   * len(predictions) == test/submit set size
-   * ./outputs/predictions.csv exists and row count matches; required columns present
-   * model_card contains performance metrics, usage instructions, and limitations
+---
 
-   PCS Application:
+## Stage 6: Predictability Validation
 
-   * Predictability: Document expected performance on new data
-   * Computability: Provide clear deployment instructions and dependencies
-   * Stability: Document known limitations and edge cases
+**Goal**: Validate model's predictive capability through rigorous testing on unseen data, ensuring reliable generalization performance and business value.
+
+**Core Activities**:
+- Cross-validation performance assessment (time series, stratified, nested CV)
+- Hold-out test set evaluation (unbiased performance, subgroup analysis)
+- Temporal validation (time extrapolation, concept drift detection)
+- Domain generalization testing (cross-domain, distribution shift, adversarial)
+- Business impact validation (ROI calculation, A/B testing, risk assessment)
+
+**Key Artifacts**:
+- cv_scores: ndarray (cross-validation fold scores)
+- test_performance: dict (test set metrics: RMSE, R², MAE)
+- temporal_validation_report: Time-based generalization analysis
+- domain_generalization_report: Cross-domain performance
+- business_impact_report: ROI and business value quantification
+
+**Acceptance**:
+- Cross-validation method appropriate and correctly executed
+- Test set completely independent and representative
+- Temporal validation considers business characteristics
+- Generalization testing covers key application scenarios
+- Business value validation aligns with actual applications
+
+**PCS Application**:
+- Predictability: Core focus - rigorous multi-level validation
+- Computability: Automate validation workflows
+- Stability: Verify prediction consistency under varying conditions
+
+---
+
+## Stage 7: Stability Assessment
+
+**Goal**: Assess model stability and robustness through systematic perturbation testing and sensitivity analysis, ensuring reliable performance under reasonable variations.
+
+**Core Activities**:
+- Data perturbation analysis (sample-level, feature-level, distribution shifts)
+- Model parameter sensitivity (hyperparameters, architecture, training process)
+- Multi-variation evaluation execution (single-factor, multi-factor, extreme scenarios)
+- Stability analysis consolidation (stability metrics, sensitivity ranking, improvement recommendations)
+
+**Key Artifacts**:
+- perturbation_test_results: Comprehensive perturbation testing results
+- sensitivity_analysis_report: Parameter sensitivity ranking and thresholds
+- stability_metrics: dict (variation coefficient, robustness radius, consistency index)
+- stability_certification: Stability guarantee with usage conditions
+- improvement_recommendations: Strategies to enhance stability
+
+**Acceptance**:
+- Data perturbation testing covers all critical dimensions
+- Parameter sensitivity analysis sufficiently comprehensive
+- Multi-variation testing scientifically designed
+- Extreme scenario testing includes major risks
+- Stability metrics calculation accurate and reliable
+- Improvement recommendations practical and effective
+
+**PCS Application**:
+- Predictability: Ensure prediction stability under variations
+- Computability: Verify computational numerical stability
+- Stability: Core focus - comprehensive stability assessment
+
+---
+
+## Stage 8: Results Communication
+
+**Goal**: Effectively communicate data science results to diverse stakeholders, ensuring understandability, actionability, and business value realization.
+
+**Core Activities**:
+- Technical documentation (methodology, implementation details, reproducibility)
+- Executive summary (business value quantification, key findings, action recommendations)
+- Visual communication (data visualization, interactive dashboards, multimedia)
+- Stakeholder engagement (layered communication, feedback collection, adoption promotion)
+- Implementation support (deployment guidance, user training, monitoring systems)
+
+**Key Artifacts**:
+- technical_documentation: Complete methodology and implementation documentation
+- executive_summary: Concise high-level summary for decision-makers
+- visualization_package: Comprehensive charts and interactive dashboards
+- implementation_guide: Deployment instructions and user training materials
+- model_card: Model performance, usage instructions, limitations documentation
+
+**Acceptance**:
+- All target audience needs satisfied
+- Technical documentation detailed and reproducible
+- Executive summary concise and actionable
+- Visualizations clear and informative
+- Stakeholders adequately engaged with positive feedback
+- Implementation support comprehensive and operational
+
+**PCS Application**:
+- Predictability: Clearly communicate prediction credibility and conditions
+- Computability: Ensure communicated solutions are technically implementable
+- Stability: Document stability guarantees and sensitivity information
 
 ---
 

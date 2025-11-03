@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.3.2: EXECUTE MISSING VALUE TREATMENT STRATEGIES
+================================================================================
+
+GOAL: Execute missing value treatment strategies
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.3.2.1: Execute Primary Task
+  Execute missing value treatment strategies
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.3.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- missing_value_treatment_results
+- missing_value_treatment_documentation
+  

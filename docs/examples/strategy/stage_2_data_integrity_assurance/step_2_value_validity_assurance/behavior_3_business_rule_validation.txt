@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.2.3: APPLY BUSINESS RULES FOR VALIDATION
+================================================================================
+
+GOAL: Apply business rules for validation
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.2.3.1: Execute Primary Task
+  Apply business rules for validation
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.2.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- business_rule_validation_results
+- business_rule_validation_documentation
+  

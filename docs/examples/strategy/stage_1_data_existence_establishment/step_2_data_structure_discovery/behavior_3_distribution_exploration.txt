@@ -1,0 +1,57 @@
+================================================================================
+BEHAVIOR DE.2.3: DISTRIBUTION EXPLORATION
+================================================================================
+
+GOAL: Explore and document data distribution characteristics, calculate basic statistics, and identify outlier patterns.
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.2.3.1: Calculate Basic Statistics
+  Compute descriptive statistics for all numeric variables
+  - Calculate mean, median, standard deviation
+  - Compute quantiles (min, 25%, 50%, 75%, max)
+  - Calculate range and interquartile range
+  - Compute coefficient of variation
+
+ACTION DE.2.3.2: Analyze Distribution Characteristics
+  Identify distribution shapes and patterns
+  - Assess normality (visual and statistical tests)
+  - Identify skewness (left/right skewed) and kurtosis
+  - Detect multimodal distributions
+  - Document distribution types for each variable
+
+ACTION DE.2.3.3: Identify Outliers and Extreme Values
+  Detect and document outliers using statistical methods
+  - Apply IQR method (1.5 * IQR beyond Q1/Q3)
+  - Calculate z-scores (values beyond 3 standard deviations)
+  - Identify extreme values in tails of distribution
+  - Document outlier frequency and severity
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- distribution_summary (statistics, distribution types, outlier analysis)
+- distribution_plots (histograms, boxplots, Q-Q plots)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Generate statistics table with all descriptive measures
+- Create visualizations: histograms, box plots, Q-Q plots for normality
+- Document distribution characteristics for each numeric variable
+- Report outlier counts and percentages using multiple methods
+- Persist distributions under ./outputs/stage_1_data_existence/step_2/
+- Save all plots as PNG/PDF for documentation
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- distribution_summary contains complete statistics for all numeric variables
+- Distribution shapes characterized (normal, skewed, bimodal, etc.)
+- Outliers identified using at least two statistical methods
+- Distribution visualizations created and saved for key variables

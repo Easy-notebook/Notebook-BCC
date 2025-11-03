@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.1.2: ESTABLISH MODEL METHOD CANDIDATE SET
+================================================================================
+
+GOAL: Establish model method candidate set
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.1.2.1: Execute Primary Task
+  Establish model method candidate set
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.1.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- model_candidate_selection_results
+- model_candidate_selection_documentation
+  

@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.2.1: DESIGN DATA SPLIT AND VALIDATION STRATEGY
+================================================================================
+
+GOAL: Design data split and validation strategy
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.2.1.1: Execute Primary Task
+  Design data split and validation strategy
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_split_strategy_results
+- data_split_strategy_documentation
+  

@@ -1,0 +1,42 @@
+================================================================================
+STEP RC.3: VISUAL COMMUNICATION
+================================================================================
+
+GOAL: Complete visual communication with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_data_visualization_design.txt
+   - Design effective data visualizations
+2. behavior_2_results_presentation_optimization.txt
+   - Optimize results presentation
+3. behavior_3_audience_customization.txt
+   - Customize for different audiences
+4. behavior_4_multimedia_integration.txt
+   - Integrate multimedia elements
+
+5. behavior_5_validation_and_acceptance.txt
+   - Validate step completeness and acceptance criteria
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_visualization_design_results
+- results_presentation_optimization_results
+- audience_customization_results
+- multimedia_integration_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

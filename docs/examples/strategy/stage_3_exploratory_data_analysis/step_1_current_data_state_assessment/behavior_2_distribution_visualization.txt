@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.1.2: VISUALIZE DATA DISTRIBUTIONS
+================================================================================
+
+GOAL: Visualize data distributions
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.1.2.1: Execute Primary Task
+  Visualize data distributions
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.1.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- distribution_visualization_results
+- distribution_visualization_documentation
+  

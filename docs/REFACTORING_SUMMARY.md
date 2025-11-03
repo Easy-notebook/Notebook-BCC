@@ -268,7 +268,7 @@ if progress_update:
 ## Benefits
 
 1. **Clear Separation**: Generating vs Planning responsibilities are distinct
-2. **Semantic Correctness**: Focus as variable names makes sense
+2. **Semantic Correctness**: Focus as variable n makes sense
 3. **Hierarchical Tracking**: Three-level focus enables fine-grained control
 4. **Simplified Context**: Removed redundant and confusing fields
 5. **Extensible Design**: Easy to add new actions or focus levels

@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.3.3: CONDUCT MULTIVARIATE STATISTICAL ANALYSIS
+================================================================================
+
+GOAL: Conduct multivariate statistical analysis
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.3.3.1: Execute Primary Task
+  Conduct multivariate statistical analysis
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.3.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- multivariate_statistical_analysis_results
+- multivariate_statistical_analysis_documentation
+  

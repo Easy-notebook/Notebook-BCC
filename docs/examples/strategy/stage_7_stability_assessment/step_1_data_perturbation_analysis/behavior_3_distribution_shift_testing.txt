@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR SA.1.3: TEST DISTRIBUTION SHIFT SCENARIOS
+================================================================================
+
+GOAL: Test distribution shift scenarios
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION SA.1.3.1: Execute Primary Task
+  Test distribution shift scenarios
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION SA.1.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- distribution_shift_testing_results
+- distribution_shift_testing_documentation
+  

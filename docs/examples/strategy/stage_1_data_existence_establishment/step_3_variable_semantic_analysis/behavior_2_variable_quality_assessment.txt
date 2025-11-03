@@ -1,0 +1,47 @@
+================================================================================
+BEHAVIOR DE.3.2: ASSESS VARIABLE VALUE REASONABLENESS AND IDENTIFY QUALITY ISSUES
+================================================================================
+
+GOAL: Assess variable value reasonableness and identify quality issues
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.3.2.1: Assess Value Reasonableness
+  Evaluate variable values for validity
+  - Check if values fall within expected ranges
+  - Identify potential encoding errors or data entry issues
+  - Validate categorical variable valid values
+
+ACTION DE.3.2.2: Identify Quality Issues
+  Document variable quality problems
+  - Flag variables with suspicious value patterns
+  - Identify inconsistencies with business logic
+  - Document variables requiring expert review
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- variable_quality_report
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operations with variable/file names
+- Ensure deterministic seeds and document parameters
+- Produce/update specified artifacts
+- Use consistent naming conventions
+- Persist outputs under ./outputs/stage_3_*/step_3/
+- Ensure all operations are reproducible
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- All specified artifacts exist and are non-empty
+- Artifacts contain required information and meet quality standards
+- Operations documented and reproducible
+- PCS framework considerations addressed

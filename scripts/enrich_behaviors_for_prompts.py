@@ -57,7 +57,7 @@ def append_task_templates(behavior_path: Path, step_outputs, step_acceptance):
             "\n================================================================================\n"
             "TASK TEMPLATE:\n"
             "================================================================================\n"
-            "- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)\n"
+            "- Describe exact operation with variable/file n (e.g., df_raw, ./outputs/eda/...)\n"
             "- Ensure deterministic seeds and document parameters\n"
             "- " + "\n- ".join(tasks) + "\n"
         )

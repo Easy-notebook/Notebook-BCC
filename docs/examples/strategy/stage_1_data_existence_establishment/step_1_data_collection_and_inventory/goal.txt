@@ -1,0 +1,41 @@
+================================================================================
+STEP DE.1: DATA COLLECTION AND INVENTORY
+================================================================================
+
+STAGE: data_existence_establishment
+GOAL: Execute data collection strategy, verify data acquisition channels, and complete initial data inventory to establish data existence foundation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure data volume and quality sufficient for reliable prediction.
+- Computability: Establish reproducible data acquisition and processing workflows.
+- Stability: Verify data consistency and establish traceability mechanisms.
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_data_collection_strategy.txt
+   - Execute data collection strategy based on planning
+
+2. behavior_2_initial_inventory_and_access_check.txt
+   - Complete initial data inventory and verify accessibility
+
+3. behavior_3_validation_and_acceptance.txt
+   - Validate data collection completeness and quality
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_source_register
+- data_collection_log
+- data_inventory_report
+- data_catalog_metadata
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- data_source_register contains all data sources with verification status
+- data_collection_log documents complete acquisition process
+- data_inventory_report includes: row count, column count, file size, data types
+- data_catalog_metadata includes data dictionary and field descriptions
+- All required data successfully obtained and accessible
+- Data version control mechanism established
