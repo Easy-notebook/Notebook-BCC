@@ -1,0 +1,48 @@
+================================================================================
+BEHAVIOR 5.3.4: ENSEMBLE METHOD IMPLEMENTATION
+================================================================================
+
+GOAL: 实现集成学习方法提升性能
+
+RECOMMENDED AGENT: Model-Agent
+  - 该 behavior 涉及实现Bagging、Boosting、Stacking集成方法
+  - Model-Agent 擅长实现集成学习算法、评估模型多样性
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION 5.3.4.1: Implement Bagging Ensembles
+  实现Bagging集成
+  - 随机森林: 特征和样本随机抽样
+  - Extra Trees: 随机阈值选择
+  - Bagging回归器/分类器
+  - 调优基学习器数量
+
+ACTION 5.3.4.2: Implement Boosting Ensembles
+  实现Boosting集成
+  - AdaBoost: 自适应提升
+  - Gradient Boosting: 梯度提升
+  - XGBoost/LightGBM: 极端梯度提升
+  - 调优学习率和迭代次数
+
+ACTION 5.3.4.3: Implement Stacking Ensembles
+  实现Stacking集成
+  - 两层堆叠: 基学习器+元学习器
+  - 多样化基学习器: 不同类型模型组合
+  - 交叉验证堆叠: 避免过拟合
+  - 元学习器选择和调优
+
+ACTION 5.3.4.4: Evaluate Model Diversity
+  评估模型多样性
+  - 计算预测相关性
+  - 分析错误多样性
+  - 选择互补模型
+  - 优化集成权重
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- ensemble_models: 集成模型和组合策略
+- ensemble_performance_report: 集成性能评估报告
+- model_diversity_analysis: 模型多样性分析

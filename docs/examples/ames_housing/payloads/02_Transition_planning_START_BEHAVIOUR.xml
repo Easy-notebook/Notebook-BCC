@@ -1,27 +1,20 @@
 <behavior id="load_dataset_b1" step_id="load_dataset">
-  <agent>CodeExecutor</agent>
-  <task>
-    Execute the following in the notebook:
-    1. Import pandas as pd and os
-    2. Verify file exists at './assets/housing.csv' using os.path.exists()
-    3. Load the CSV file using pd.read_csv('./assets/housing.csv') into variable 'df_raw'
-    4. Print df_raw.shape to show dimensions
-    5. Print df_raw.dtypes to show column types
-    6. Print df_raw.head() to preview first 5 rows
-    7. Verify: df_raw is a DataFrame, has rows (shape[0] > 0), has multiple columns (len(columns) > 1)
-
-    Store the loaded DataFrame in variable 'df_raw' for use in subsequent steps.
-  </task>
+  <agent>DefineAgent</agent>
+  <task>Use pandas to load the dataset from the provided file_path into a DataFrame named df_raw. Ensure the CSV has valid headers, consistent column types, and no structural issues. Store df_raw in memory for downstream processing.</task>
   <inputs>
-    <variable name="file_path">./assets/housing.csv</variable>
+    <variable name="file_path">./assets/ames_housing.csv</variable>
   </inputs>
+  <effects>False</effects>
   <outputs>
-    <artifact name="df_raw">pandas.DataFrame containing raw housing data with all original columns and rows</artifact>
+    <artifact name="df_raw">Raw DataFrame loaded from housing.csv, type: pandas.DataFrame, must be non-empty with valid numeric and categorical columns.</artifact>
   </outputs>
   <acceptance>
-    <criterion>os.path.exists("./assets/housing.csv") == True</criterion>
-    <criterion>isinstance(df_raw, pd.DataFrame) == True</criterion>
+    <criterion>os.path.exists("./assets/ames_housing.csv")==True</criterion>
     <criterion>df_raw.shape[0] > 0</criterion>
     <criterion>len(df_raw.columns) > 1</criterion>
   </acceptance>
+  <whathappened>
+    <overview>The current stage focuses on defining and verifying dataset existence and structure to ensure the problem definition is grounded on valid data.</overview>
+    <background>No prior execution effects were detected; this is the initial data loading step of the problem_definition stage.</background>
+  </whathappened>
 </behavior>

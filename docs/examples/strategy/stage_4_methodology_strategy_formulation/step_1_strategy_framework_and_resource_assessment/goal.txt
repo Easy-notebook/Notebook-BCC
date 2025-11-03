@@ -1,0 +1,31 @@
+================================================================================
+STEP 4.1: STRATEGY FRAMEWORK AND RESOURCE ASSESSMENT (策略框架与资源评估)
+================================================================================
+
+STAGE: Methodology Strategy Formulation
+GOAL: 建立策略制定框架并评估可用资源与约束
+
+PCS CONSIDERATIONS:
+- Predictability: 确保策略优先考虑模型泛化能力
+- Computability: 评估策略的实施可行性和资源需求
+- Stability: 设计鲁棒的方法选择和验证框架
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_strategy_formulation_framework_establishment.txt
+   - 建立系统化的方法策略制定框架
+
+2. behavior_2_resource_and_constraint_assessment.txt
+   - 全面评估可用资源和实际约束
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- strategy_framework_document: 策略制定框架文档
+- integrated_requirements_matrix: 整合需求矩阵
+- method_selection_criteria: 方法选择标准
+- validation_mechanism_design: 验证机制设计
+- resource_assessment_report: 资源评估报告
+- constraint_analysis_document: 约束分析文档
+- feasibility_evaluation: 可行性评估

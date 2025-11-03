@@ -55,37 +55,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 # Some decomposed stages are provided for reference, but you need to re-divide them according to the user’s problem and uploaded file. Each stage must have a clear goal and a definite artifact. Use the following strategy and do not alter the stage names.
 
-1. problem_definition / Problem Definition
-   Goal: Collaborate with domain experts to reformulate vague domain problems into clear data science problems and develop a comprehensive project execution plan.
-
-   Core Activities:
-
-   * Problem clarification and refinement (understand business needs, define measurable objectives)
-   * Data availability assessment (evaluate data resources quality and availability)
-   * Project scope definition (identify boundaries, constraints, and risks)
-   * Success criteria definition (establish quantified metrics and validation strategies)
-   * PCS framework integration (plan validation, feasibility, and stability testing)
-
-   Artifacts:
-
-   * df_raw: DataFrame (loaded raw dataset)
-   * problem_definition_doc: dict/str (project definition document containing problem statement, objectives, success criteria)
-   * workflow_plan: dict (execution plan with timeline, resources, risk mitigation)
-
-   Acceptance:
-
-   * df_raw successfully loaded with correct shape
-   * problem_definition_doc contains problem statement, objectives, and PCS evaluation framework
-
-   PCS Application:
-
-   * Predictability: Plan validation strategy upfront
-   * Computability: Assess resource requirements and technical feasibility
-   * Stability: Design sensitivity analysis framework
-
----
-
-2. data_preparation / Data Preparation
+1. data_preparation / Data Preparation
    Goal: Establish data existence foundation and ensure data integrity, accuracy, and consistency to build a high-quality analysis-ready dataset.
 
    Core Activities:
@@ -115,7 +85,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 ---
 
-3. data_analysis / Data Analysis
+2. data_analysis / Data Analysis
    Goal: Deeply understand data distribution, patterns, and characteristics; identify relationships between features and the target variable; provide insights for feature engineering and modeling.
 
    Core Activities:
@@ -147,7 +117,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 ---
 
-4. model_selection / Model Selection
+3. model_selection / Model Selection
    Goal: Evaluate the applicability of multiple modeling methods, establish baseline models as comparison benchmarks, and select the most suitable model strategy.
 
    Core Activities:
@@ -179,7 +149,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 ---
 
-5. model_training / Model Training
+4. model_training / Model Training
    Goal: Train and optimize the selected model, perform hyperparameter tuning, and generate the final production-ready model.
 
    Core Activities:
@@ -212,7 +182,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 ---
 
-6. model_evaluation / Model Evaluation
+5. model_evaluation / Model Evaluation
    Goal: Validate model predictability (generalization capability), assess model stability (robustness to perturbations), and ensure the model meets PCS standards.
 
    Core Activities:
@@ -250,7 +220,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 ---
 
-7. model_deployment / Model Deployment
+6. model_deployment / Model Deployment
    Goal: Generate final predictions, create model documentation and usage instructions, and prepare for results communication and delivery.
 
    Core Activities:
@@ -288,5 +258,21 @@ Key Principles
 3. Definite artifacts: All outputs must be explicitly named and typed
 4. Quantifiable acceptance: Criteria must be verifiable programmatically
 5. PCS integration: Every stage must consider Predictability, Computability, and Stability
+1. **问题澄清与细化**
+   - 与领域专家深入沟通，理解业务需求
+   - 将模糊的业务问题转化为具体的、可度量的数据科学问题
+   - 识别关键利益相关者和决策标准
+2. **数据可获得性评估**
+   - 评估现有数据资源的可用性和质量
+   - 识别需要收集的额外数据
+   - 评估数据获取的时间成本和技术复杂度
+3. **项目范围界定**
+   - 明确项目的边界和约束条件
+   - 设定现实可行的项目目标和期望
+   - 识别项目风险和潜在障碍
+4. **成功标准定义**
+   - 建立量化的项目成功指标
+   - 设计评估框架，确保结果可验证
+   - 制定验证策略，特别关注结果的可预测性
 
 Optional Guard/Extensions (insert as needed)

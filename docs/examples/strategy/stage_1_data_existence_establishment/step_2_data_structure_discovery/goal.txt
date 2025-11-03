@@ -1,0 +1,32 @@
+================================================================================
+STEP 1.2: DATA STRUCTURE DISCOVERY (数据结构发现)
+================================================================================
+
+STAGE: Data Existence Establishment
+GOAL: 深入理解数据的内部结构和组织方式
+
+PCS CONSIDERATIONS:
+- Predictability: 识别数据结构中影响预测的关键特征
+- Computability: 评估数据结构的计算友好性
+- Stability: 分析数据结构的稳定性和一致性
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_data_pattern_recognition.txt
+   - 分析数据的层次结构和关系
+
+2. behavior_2_data_type_analysis.txt
+   - 确定和评估每个变量的数据类型
+
+3. behavior_3_data_distribution_preliminary_analysis.txt
+   - 初步分析数据的分布特征
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_structure_diagram: 数据结构关系图
+- data_type_mapping: 变量数据类型映射表
+- statistical_summary: 基本统计摘要报告
+- distribution_analysis: 数据分布分析结果
+- outlier_detection_report: 异常值检测报告

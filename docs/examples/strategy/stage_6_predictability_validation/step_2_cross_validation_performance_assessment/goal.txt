@@ -1,0 +1,36 @@
+================================================================================
+STEP 6.2: CROSS-VALIDATION PERFORMANCE ASSESSMENT (交叉验证性能评估)
+================================================================================
+
+STAGE: Predictability Validation
+GOAL: 通过严格的交叉验证评估模型的内在预测能力
+
+PCS CONSIDERATIONS:
+- Predictability: 使用合适的交叉验证策略防止过拟合（核心）
+- Computability: 优化交叉验证的计算效率
+- Stability: 评估交叉验证结果的稳定性和一致性
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_time_series_cross_validation.txt
+   - 执行时间序列相关的交叉验证（如适用）
+
+2. behavior_2_stratified_cross_validation.txt
+   - 执行保持数据分布的交叉验证
+
+3. behavior_3_special_scenario_validation.txt
+   - 处理特殊数据场景的交叉验证
+
+4. behavior_4_validation_metrics_calculation.txt
+   - 计算全面的交叉验证性能指标
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- cv_performance_results: 交叉验证性能结果详细记录
+- stability_analysis_report: 稳定性分析报告
+- consistency_metrics: 一致性指标计算结果
+- confidence_intervals: 性能指标的置信区间
+- cv_visualization: 交叉验证结果可视化图表
+- performance_distribution: 性能分布统计和分析

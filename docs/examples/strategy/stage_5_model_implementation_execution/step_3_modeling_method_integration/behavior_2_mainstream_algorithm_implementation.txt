@@ -1,0 +1,48 @@
+================================================================================
+BEHAVIOR 5.3.2: MAINSTREAM ALGORITHM IMPLEMENTATION
+================================================================================
+
+GOAL: 实现多种主流机器学习算法
+
+RECOMMENDED AGENT: Model-Agent
+  - 该 behavior 涉及实现线性模型、树模型、实例学习、概率模型
+  - Model-Agent 擅长实现各类机器学习算法、调优超参数
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION 5.3.2.1: Implement Linear Models
+  实现线性模型族
+  - 线性回归: OLS, Ridge, LASSO, ElasticNet
+  - 逻辑回归: 标准、正则化逻辑回归
+  - 广义线性模型: Poisson, Gamma回归
+  - 调优正则化参数
+
+ACTION 5.3.2.2: Implement Tree-Based Models
+  实现树模型族
+  - 单树: 决策树、回归树
+  - 集成树: 随机森林、Extra Trees
+  - 梯度提升: XGBoost, LightGBM, CatBoost
+  - 调优树的深度和数量
+
+ACTION 5.3.2.3: Implement Instance-Based Models
+  实现实例学习模型
+  - K近邻: 标准KNN、加权KNN
+  - 支持向量机: SVC, SVR
+  - 核方法: 多项式核、RBF核
+  - 调优邻居数和核参数
+
+ACTION 5.3.2.4: Implement Probabilistic Models
+  实现概率模型
+  - 朴素贝叶斯: 高斯、多项式、伯努利
+  - 高斯混合: GMM、贝叶斯混合
+  - 其他概率模型(如适用)
+  - 验证概率校准
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- mainstream_model_collection: 主流算法模型集合
+- model_performance_comparison: 模型性能对比报告
+- hyperparameter_configurations: 超参数配置记录

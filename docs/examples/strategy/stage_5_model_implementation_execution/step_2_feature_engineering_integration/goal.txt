@@ -1,0 +1,36 @@
+================================================================================
+STEP 5.2: FEATURE ENGINEERING INTEGRATION (特征工程集成)
+================================================================================
+
+STAGE: Model Implementation Execution
+GOAL: 执行全面的特征工程，创建高质量的建模特征
+
+PCS CONSIDERATIONS:
+- Predictability: 防止数据泄露，确保特征工程的正确性
+- Computability: 建立高效的特征处理管道
+- Stability: 验证特征工程对数据扰动的稳定性
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_basic_feature_processing.txt
+   - 执行基础的特征处理和转换
+
+2. behavior_2_advanced_feature_creation.txt
+   - 创建高级衍生特征和交互特征
+
+3. behavior_3_domain_specific_features.txt
+   - 构建领域特定的专业特征
+
+4. behavior_4_feature_selection_and_dimensionality_reduction.txt
+   - 选择最优特征子集并降低特征维度
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- feature_engineering_pipeline: 完整的特征工程处理管道
+- feature_catalog: 特征目录和描述文档
+- feature_importance_ranking: 特征重要性排序结果
+- feature_selection_report: 特征选择过程和结果报告
+- transformation_parameters: 特征转换的参数记录
+- leakage_prevention_checklist: 数据泄露防止检查清单

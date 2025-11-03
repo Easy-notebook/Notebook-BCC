@@ -1,0 +1,44 @@
+================================================================================
+STEP 8.3: EXECUTIVE SUMMARY (执行摘要)
+================================================================================
+
+STAGE: Results Communication
+GOAL: 为高级管理者提供简洁、有力的执行摘要
+
+PCS CONSIDERATIONS:
+- Predictability: 清晰传达预测价值和可信度
+- Computability: 说明实施可行性和资源需求
+- Stability: 强调结果的稳定性和可靠性
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_core_value_extraction.txt
+   - 提炼核心业务价值
+
+2. behavior_2_key_findings_summary.txt
+   - 总结关键发现
+
+3. behavior_3_implementation_roadmap.txt
+   - 规划实施路径
+
+4. behavior_4_risk_and_limitation_statement.txt
+   - 说明风险和限制
+
+5. behavior_5_executive_summary_consolidation.txt
+   - 整合执行摘要内容
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- executive_summary: 高管执行摘要（1-2页）
+- business_value_quantification: 业务价值量化报告
+- roi_analysis: ROI和财务分析
+- key_findings_summary: 关键发现总结
+- action_recommendations: 行动建议清单
+- implementation_roadmap: 实施路线图
+- phased_implementation_plan: 分阶段实施计划
+- resource_requirements: 资源需求说明
+- success_metrics: 成功指标定义
+- risk_mitigation_plan: 风险缓解计划
+- one_page_summary: 单页概要（可选）

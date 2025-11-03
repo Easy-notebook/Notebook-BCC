@@ -1,0 +1,38 @@
+================================================================================
+STEP 6.5: DOMAIN GENERALIZATION TESTING (领域泛化测试)
+================================================================================
+
+STAGE: Predictability Validation
+GOAL: 测试模型在不同但相关领域的泛化能力
+
+PCS CONSIDERATIONS:
+- Predictability: 验证预测能力的跨域泛化性（核心）
+- Computability: 设计高效的跨域测试流程
+- Stability: 评估模型在不同域的稳定性
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_cross_domain_data_validation.txt
+   - 在不同域的数据上验证模型性能
+
+2. behavior_2_distribution_shift_testing.txt
+   - 测试模型对分布偏移的鲁棒性
+
+3. behavior_3_adversarial_testing.txt
+   - 通过对抗性测试评估模型鲁棒性
+
+4. behavior_4_generalization_analysis_consolidation.txt
+   - 整合泛化测试结果
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- cross_domain_validation_results: 跨域验证结果和分析
+- geographic_generalization_report: 地理泛化测试报告
+- population_fairness_analysis: 人群公平性分析报告
+- distribution_shift_analysis: 分布偏移影响分析
+- adversarial_robustness_report: 对抗鲁棒性测试报告
+- generalization_boundary_definition: 泛化边界定义文档
+- domain_adaptation_strategy: 域适应策略和建议
+- generalization_summary_report: 泛化能力综合评估报告

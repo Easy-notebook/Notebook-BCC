@@ -1,0 +1,41 @@
+================================================================================
+STEP 7.2: DATA PERTURBATION ANALYSIS (数据扰动分析)
+================================================================================
+
+STAGE: Stability Assessment
+GOAL: 通过各种数据扰动测试模型的数据稳定性
+
+PCS CONSIDERATIONS:
+- Predictability: 评估数据变化对预测能力的影响
+- Computability: 高效执行大量扰动测试
+- Stability: 量化模型对数据扰动的稳定性（核心）
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_sample_level_perturbation.txt
+   - 执行样本级别的扰动测试
+
+2. behavior_2_feature_level_perturbation.txt
+   - 执行特征级别的扰动测试
+
+3. behavior_3_distribution_shift_testing.txt
+   - 测试数据分布偏移的影响
+
+4. behavior_4_temporal_perturbation.txt
+   - 执行时间相关的扰动测试
+
+5. behavior_5_data_perturbation_consolidation.txt
+   - 整合数据扰动测试结果
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- sample_perturbation_results: 样本级扰动测试结果
+- feature_perturbation_results: 特征级扰动测试结果
+- distribution_shift_analysis: 分布偏移影响分析
+- temporal_perturbation_results: 时间扰动测试结果
+- data_stability_metrics: 数据稳定性量化指标
+- perturbation_threshold_map: 扰动阈值标定图
+- data_stability_report: 数据稳定性综合报告
+- sensitivity_ranking: 扰动敏感性排序和分析

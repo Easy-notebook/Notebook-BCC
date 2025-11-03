@@ -1,0 +1,32 @@
+================================================================================
+STEP 1.5: VARIABLE RELEVANCE ASSESSMENT (变量相关性评估)
+================================================================================
+
+STAGE: Data Existence Establishment
+GOAL: 评估变量与项目目标的相关性和重要性
+
+PCS CONSIDERATIONS:
+- Predictability: 识别具有高预测能力的变量
+- Computability: 优先选择计算高效的相关性度量方法
+- Stability: 评估相关性在不同数据子集上的稳定性
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_target_variable_correlation_analysis.txt
+   - 分析各变量与目标变量的相关性
+
+2. behavior_2_feature_importance_preliminary_assessment.txt
+   - 使用统计方法评估变量重要性
+
+3. behavior_3_business_logic_verification.txt
+   - 验证统计相关性与业务逻辑的一致性
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- correlation_matrix: 变量相关性矩阵
+- feature_importance_ranking: 特征重要性排名表
+- multicollinearity_report: 多重共线性分析报告
+- predictive_variables_list: 预测性变量清单
+- business_logic_verification: 业务逻辑验证记录
