@@ -1,0 +1,41 @@
+================================================================================
+BEHAVIOR DP.3.1: MISSING PATTERN ANALYSIS (缺失模式分析)
+================================================================================
+
+GOAL: 分析缺失比例/相关性/机制（MCAR/MAR/MNAR）
+
+RECOMMENDED AGENT: Explore-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 生成缺失热图与变量缺失排序
+- 识别群组化缺失与共现模式
+- 判断缺失机制并提出策略建议
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- missing_summary
+- imputation_plan (初稿)
+
+================================================================================
+DSLC HOOKS:
+================================================================================
+- Planning First → /planning
+- Generating → /generating
+- Feedback → /planning
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: missing_summary, imputation_plan, df_imputed
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - `df_imputed.isnull().sum().sum()==0` 或 满足“剩余缺失列清单+业务豁免”
+- - imputation_plan 记录变量级策略与参数
+

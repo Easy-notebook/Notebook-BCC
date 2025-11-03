@@ -1,0 +1,42 @@
+# model_training Step Catalog
+
+## step_1_feature_engineering_pipeline
+
+Goal: 构建可复用的特征工程流水线，防止泄露
+
+Verified Artifacts:
+- feature_pipeline
+- feature_catalog
+Acceptance:
+- - 管道在训练/验证分离下工作；无目标泄露
+
+## step_2_training_workflow_execution
+
+Goal: 执行标准化训练流程并记录资源与日志
+
+Verified Artifacts:
+- trained_models
+- training_logs
+Acceptance:
+- - 训练日志完整、模型可加载
+
+## step_3_hyperparameter_optimization
+
+Goal: 使用系统化搜索优化性能并控制过拟合
+
+Verified Artifacts:
+- optimization_report
+- best_params
+Acceptance:
+- - 输出搜索空间、最佳配置与CV结果
+
+## step_4_model_persistence
+
+Goal: 持久化最终模型与依赖，提供可加载与版本信息
+
+Verified Artifacts:
+- final_model
+- ./models/model.pkl
+- persistence_manifest
+Acceptance:
+- - `os.path.exists('./models/model.pkl')==True` 且可加载

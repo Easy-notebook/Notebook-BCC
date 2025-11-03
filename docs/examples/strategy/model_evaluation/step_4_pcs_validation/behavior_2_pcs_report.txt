@@ -1,0 +1,31 @@
+================================================================================
+BEHAVIOR ME.4.2: PCS REPORT (PCS 报告)
+================================================================================
+
+GOAL: 形成覆盖 P/C/S 三维的综合验证报告
+
+RECOMMENDED AGENT: Evaluate-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 汇总 Predictability/Computability/Stability 证据
+- 形成达标结论与改进建议
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- pcs_validation_report
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: perturbation_results, pcs_validation_report
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - 输出扰动设计、结果与稳定性结论
+

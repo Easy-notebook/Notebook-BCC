@@ -1,0 +1,34 @@
+================================================================================
+BEHAVIOR DP.4.2: OUTLIER TREATMENT (异常处理)
+================================================================================
+
+GOAL: 采用裁剪/变换/纠正策略处理异常
+
+RECOMMENDED AGENT: Explore-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 裁剪/Winsorize/变换（对数/Box-Cox）
+- 纠正显著录入错误（需保留证据）
+- 记录策略对分布与模型的影响
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- outlier_treatment_plan
+- df_outlier_processed
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: outlier_detection_report, outlier_treatment_plan, df_outlier_processed
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - outlier_detection_report、outlier_treatment_plan 已生成
+- - df_outlier_processed 的异常指标（如 Z 分数>3 的点）显著减少
+

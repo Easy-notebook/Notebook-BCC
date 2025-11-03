@@ -53,30 +53,30 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 ["user_problem", "user_submit_files"]
 
-# Some decomposed stages are provided for reference, but you need to re-divide them according to the user’s problem and uploaded file. Each stage must have a clear goal and a definite artifact. Use the following strategy and do not alter the stage names.
+# Some DSLC stages are provided for reference. You MUST keep the 6 DSLC stage IDs below. Re-divide steps according to the user's problem and uploaded files. Each stage must have 1 clear goal and concrete, verifiable artifacts with executable acceptance.
 
 1. data_preparation / Data Preparation
    Goal: Establish data existence foundation and ensure data integrity, accuracy, and consistency to build a high-quality analysis-ready dataset.
 
    Core Activities:
 
-   * Data structure discovery (analyze hierarchical structure, data types, distribution)
-   * Variable semantic analysis (understand business meaning, measurement units)
-   * Dimensional integrity validation (verify dimensions, indexes, time series)
-   * Value validity assurance (data type, value range, business rule validation)
-   * Missing value handling (identify patterns, select imputation strategies)
-   * Outlier detection (statistical methods, domain knowledge validation)
+   * Data structure discovery (types, distributions, schema)
+   * Quality audit (dimensions/indexes, value validity, business rules)
+   * Missing value handling (patterns → imputation plan → execution)
+   * Outlier detection and treatment
+   * Finalization + pipeline docs (df_cleaned, data_quality_report, processing_pipeline_doc)
 
    Artifacts:
 
-   * df_cleaned: DataFrame (cleaned data with no missing values, correct dtypes)
-   * data_quality_report: dict (data quality report recording missing value handling, outlier treatment, type conversions)
+   * df_cleaned: DataFrame (cleaned data; no missing values; correct dtypes)
+   * data_quality_report: dict (records missing handling, outlier treatment, dtype/index fixes)
+   * processing_pipeline_doc: str (steps/parameters, seeds, versions, reproducibility notes)
 
    Acceptance:
 
    * df_cleaned.isnull().sum().sum() == 0
-   * df_cleaned dtypes are reasonable (numeric and categorical types correct)
-   * data_quality_report documents all cleaning operations
+   * dtypes/indexes validated (numeric/categorical correct; unique keys honored)
+   * processing_pipeline_doc contains steps, seeds, and library versions
 
    PCS Application:
 
@@ -90,25 +90,23 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Core Activities:
 
-   * Univariate analysis (distribution characteristics, statistical descriptions)
-   * Bivariate analysis (correlations, associations)
-   * Multivariate analysis (feature interactions, dimensionality reduction visualization)
-   * Target variable analysis (distribution characteristics, transformation needs)
-   * Preliminary feature importance assessment (correlation coefficients, mutual information)
+   * Univariate analysis (distributions, statistics)
+   * Bivariate correlation analysis
+   * Multivariate analysis (DR/clustering; interaction hypotheses)
+   * Target analysis (transform needs; business constraints)
 
    Artifacts:
 
-   * eda_summary: dict (basic statistical summary: mean, std, quantiles, etc.)
-   * correlation_matrix: DataFrame (feature correlation matrix)
-   * distribution_analysis: dict (target variable distribution analysis, log transformation recommendations)
-   * feature_importance_preliminary: dict (preliminary feature importance ranking)
-   * ./outputs/eda_visualizations.png: file (EDA visualization charts)
+   * eda_summary: dict (stats per variable)
+   * correlation_matrix: DataFrame
+   * distribution_analysis: dict (target distribution; transform plan)
+   * ./outputs/eda/ (folder with visualizations)
 
    Acceptance:
 
-   * correlation_matrix exists and is complete
-   * Top-5 features most correlated with target identified
-   * ./outputs/eda_visualizations.png file generated
+   * correlation_matrix exists with full variable coverage
+   * Top-5 features with strongest |correlation| to target listed
+   * ./outputs/eda/ contains generated charts
 
    PCS Application:
 
@@ -122,22 +120,22 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Core Activities:
 
-   * Modeling strategy assessment (evaluate algorithm suitability: linear, tree-based, ensemble)
-   * Baseline model training (LinearRegression, Ridge, Lasso, etc.)
-   * Model comparison analysis (RMSE, R², training time comparison)
-   * Model selection decision (based on performance, interpretability, complexity)
+   * Modeling strategy assessment (linear/tree/ensemble/deep; feasibility)
+   * Baseline model training (e.g., Linear/Ridge/Lasso/Tree)
+   * Model comparison (RMSE, R², runtime; CV means/variance)
+   * Selection decision (performance, interpretability, stability, cost)
 
    Artifacts:
 
-   * baseline_models: dict (baseline model dictionary {model_name: model_object})
-   * model_comparison_report: DataFrame (model comparison report: RMSE, R², MAE, training time)
-   * selected_model_name: str (name of the selected best model)
-   * model_selection_rationale: str (rationale and justification for model selection)
+   * baseline_models: dict
+   * model_comparison_report: DataFrame (RMSE/R²/MAE + time; CV mean/std)
+   * selected_model_name: str
+   * model_selection_rationale: str (evidence across PCS)
 
    Acceptance:
 
-   * At least 3 different models tested
-   * Baseline RMSE < 30000 (rough benchmark)
+   * At least 3 different models tested (diverse families)
+   * Baseline RMSE < 30000 (rough benchmark, project-specific)
    * selected_model_name finalized
    * model_selection_rationale explains selection rationale
 
@@ -154,7 +152,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Core Activities:
 
-   * Refined feature engineering (feature scaling, encoding, interaction terms)
+   * Refined feature engineering (scaling, encoding, interactions)
    * Model training (train using best practices)
    * Hyperparameter tuning (grid search or Bayesian optimization)
    * Cross-validation (k-fold validation to ensure generalization)
@@ -162,7 +160,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Artifacts:
 
-   * final_model: object (trained model object)
+   * final_model: object (trained model)
    * hyperparameter_tuning_report: dict (hyperparameter tuning report: search space, best params, CV results)
    * best_params: dict (optimal hyperparameters)
    * training_history: dict (training process record: loss curves, validation curves)
@@ -170,8 +168,8 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Acceptance:
 
-   * final_model object exists and is usable
-   * ./models/model.pkl file size > 0
+   * final_model exists and is usable
+   * ./models/model.pkl exists and size > 0; load test passes
    * best_params recorded
    * training_history documents training process
 
@@ -187,9 +185,9 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Core Activities:
 
-   * Test set evaluation (calculate RMSE, R², MAE metrics)
-   * Cross-validation (5-fold CV to assess stability)
-   * Residual analysis (check residual distribution, heteroscedasticity)
+   * Test set evaluation (RMSE/R²/MAE)
+   * Cross-validation (5-fold CV; record mean and std)
+   * Residual analysis (distribution, heteroscedasticity)
    * PCS validation:
 
      * Predictability: Test set performance, generalization gap
@@ -198,18 +196,18 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Artifacts:
 
-   * test_rmse: float (test set RMSE, must be < 25000)
-   * test_r2: float (test set R², must be > 0.85)
-   * cv_scores: ndarray (5-fold cross-validation scores)
-   * cv_mean: float (CV mean score)
-   * cv_std: float (CV standard deviation, must be < 3000 to ensure stability)
+   * test_rmse: float (threshold project-dependent; e.g., < 25000)
+   * test_r2: float (e.g., > 0.85)
+   * cv_scores: ndarray (5-fold scores)
+   * cv_mean: float
+   * cv_std: float (tight variance indicates stability)
    * model_performance_report: dict (comprehensive performance report summarizing all metrics)
    * residual_analysis: dict (residual analysis results: distribution, heteroscedasticity tests)
    * pcs_validation_report: dict (PCS validation report covering Predictability, Computability, Stability)
 
    Acceptance:
 
-   * test_rmse < 25000 AND test_r2 > 0.85 AND cv_std < 3000
+   * test_rmse < target_threshold AND test_r2 > target_threshold AND cv_std < target_threshold
    * All three conditions must be simultaneously satisfied
 
    PCS Application:
@@ -225,22 +223,22 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
    Core Activities:
 
-   * Test set prediction (generate predictions using final_model)
+   * Test/production prediction (generate predictions using final_model)
    * Result export (save predictions as CSV)
    * Model documentation (create model card: performance, usage, limitations)
    * Deployment preparation (usage examples, API interface documentation)
 
    Artifacts:
 
-   * predictions: ndarray (test set prediction results)
-   * ./outputs/predictions.csv: file (prediction results file, must contain Id and SalePrice columns)
+   * predictions: ndarray (prediction results)
+   * ./outputs/predictions.csv: file (prediction results file, for Ames must contain Id and SalePrice columns)
    * deployment_report: dict (deployment instructions and usage examples)
    * model_card: str (model card in markdown format, including performance metrics, usage instructions, limitations)
 
    Acceptance:
 
-   * len(predictions) == test set size
-   * ./outputs/predictions.csv exists and row count matches
+   * len(predictions) == test/submit set size
+   * ./outputs/predictions.csv exists and row count matches; required columns present
    * model_card contains performance metrics, usage instructions, and limitations
 
    PCS Application:
@@ -253,7 +251,7 @@ Output valid XML only. The only permitted structure and attributes are: <stages>
 
 Key Principles
 
-1. Do not alter stage names: The 7 stage IDs are fixed
+1. Do not alter stage names: The 6 DSLC stage IDs are fixed
 2. Clear goals: Each stage must have a measurable objective
 3. Definite artifacts: All outputs must be explicitly named and typed
 4. Quantifiable acceptance: Criteria must be verifiable programmatically

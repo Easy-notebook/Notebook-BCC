@@ -76,128 +76,33 @@ Define the data science objective for predicting house prices using the Housing 
 ---
 
 [USER PROMPT]
-# Some decomposed steps are provided for reference, but you need to re-divide them according to the user’s problem and uploaded file. Each step must have a clear goal and a definite artifact. Use the following strategy and do not alter the step names.
-### Section 1: Workflow Initialization (工作流初始化)
+# DSLC Step Catalog (reference only; do not alter the step IDs)
+## data_preparation
 
-**目标**: 建立数据存在性验证的系统化流程
+1) step_1_data_collection_and_inventory
+   - Goal: 获取并登记数据来源与版本，完成初步盘点与可访问性验证
+   - Verified Artifacts: data_source_register, data_collection_log, data_inventory_report
+   - Acceptance: 日志/盘点均生成且非空；行列数一致
 
-**具体步骤**:
+2) step_2_data_quality_audit
+   - Goal: 建立完整性/一致性/类型与 schema 的质量审计基线
+   - Verified Artifacts: integrity_check_plan, quality_audit_report, automated_validation_scripts
+   - Acceptance: 计划与报告非空；脚本可运行并输出通过/失败摘要
 
-1. **数据收集策略执行**
+3) step_3_missing_value_handling
+   - Goal: 分析缺失模式并实施填充/删除策略
+   - Verified Artifacts: missing_summary, imputation_plan, df_imputed
+   - Acceptance: df_imputed 无缺失（或按业务豁免清单）
 
-   - 根据Chapter 0的规划收集所需数据
-   - 验证数据获取渠道的可靠性
-   - 建立数据版本控制和追溯机制
-2. **初步数据盘点**
+4) step_4_outlier_detection_and_treatment
+   - Goal: 识别异常与极端值并合理处理
+   - Verified Artifacts: outlier_detection_report, outlier_treatment_plan, df_outlier_processed
+   - Acceptance: 异常指标显著下降
 
-   - 统计数据集的基本信息（行数、列数、文件大小）
-   - 验证数据完整性和可访问性
-   - 建立数据目录和元数据记录
-
-### Section 2: Data Structure Discovery (数据结构发现)
-
-**目标**: 深入理解数据的内部结构和组织方式
-
-**具体步骤**:
-
-1. **数据模式识别**
-
-   - 分析数据的层次结构和关系
-   - 识别主键、外键和索引字段
-   - 发现数据表之间的连接关系
-2. **数据类型分析**
-
-   - 确定每个变量的数据类型（数值、分类、文本、时间等）
-   - 识别混合数据类型和异常格式
-   - 评估数据类型转换的必要性
-3. **数据分布初探**
-
-   - 计算基本统计指标（均值、标准差、分位数）
-   - 识别数据分布特征（正态、偏态、多模态）
-   - 发现异常值和极端值模式
-
-### Section 3: Variable Semantic Analysis (变量语义分析)
-
-**目标**: 理解每个变量的业务含义和实际意义
-
-**具体步骤**:
-
-1. **变量语义映射**
-
-   - 建立变量名与业务概念的对应关系
-   - 识别变量的测量单位和尺度
-   - 理解变量的业务上下文和使用场景
-2. **变量质量评估**
-
-   - 评估变量值的合理性和有效性
-   - 识别可能的编码错误或数据录入问题
-   - 验证变量取值范围的合理性
-3. **领域知识验证**
-
-   - 与领域专家确认变量解释的准确性
-   - 获得关于变量重要性的专家意见
-   - 理解变量间的业务逻辑关系
-
-### Section 4: Observation Unit Identification (观测单元识别)
-
-**目标**: 明确数据的观测单元和分析粒度
-
-**具体步骤**:
-
-1. **观测单元定义**
-
-   - 识别数据中的基本观测单元（个体、事件、时间点等）
-   - 确定观测单元的唯一性标识
-   - 分析观测单元的代表性和完整性
-2. **时间维度分析**
-
-   - 识别数据的时间跨度和采集频率
-   - 分析时间序列的连续性和一致性
-   - 评估时间相关的偏见和限制
-3. **空间维度分析**
-
-   - 识别数据的地理或空间分布
-   - 分析空间采样的均匀性和代表性
-   - 评估空间相关的偏见和限制
-
-### Section 5: Variable Relevance Assessment (变量相关性评估)
-
-**目标**: 评估变量与项目目标的相关性和重要性
-
-**具体步骤**:
-
-1. **目标变量关联分析**
-
-   - 分析各变量与目标变量的相关性
-   - 识别潜在的预测性变量
-   - 评估变量间的多重共线性
-2. **特征重要性初评**
-
-   - 使用统计方法评估变量重要性
-   - 识别冗余和不相关的变量
-   - 建立变量优先级排序
-3. **业务逻辑验证**
-
-   - 验证统计相关性与业务逻辑的一致性
-   - 识别虚假相关和因果关系混淆
-   - 获得领域专家对变量重要性的确认
-
-### Section 6: PCS Hypothesis Generation (PCS假设生成)
-
-**目标**: 基于PCS框架生成可测试的假设
-
-**具体步骤**:
-
-1. **可预测性假设**
-
-   - 基于变量相关性生成预测性假设
-   - 设计假设验证的实验方案
-   - 识别影响预测性的关键因素
-2. **稳定性假设**
-
-   - 识别可能影响结果稳定性的因素
-   - 设计敏感性分析的测试方案
-   - 规划数据扰动实验
+5) step_5_dataset_finalization
+   - Goal: 产出 df_cleaned、质量报告、处理流程文档
+   - Verified Artifacts: df_cleaned, data_quality_report, processing_pipeline_doc
+   - Acceptance: df_cleaned 无缺失；报告覆盖关键处理
 ---
 
 Key Principles

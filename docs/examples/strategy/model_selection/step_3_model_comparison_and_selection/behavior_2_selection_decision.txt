@@ -1,0 +1,32 @@
+================================================================================
+BEHAVIOR MS.3.2: SELECTION DECISION (选择决策)
+================================================================================
+
+GOAL: 结合性能/成本/稳定性做出模型选择并给出论据
+
+RECOMMENDED AGENT: Model-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 汇总对比结果与风险
+- 形成 selected_model_name 与 rationale
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- selected_model_name
+- model_selection_rationale
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: model_comparison_report, selected_model_name, model_selection_rationale
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - 测试 ≥3 个模型；输出 selected_model_name 与充分理由
+

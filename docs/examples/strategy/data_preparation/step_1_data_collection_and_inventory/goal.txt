@@ -1,0 +1,43 @@
+================================================================================
+STEP DP.1: DATA COLLECTION AND INVENTORY (数据收集与盘点)
+================================================================================
+
+STAGE: data_preparation
+GOAL: 获取并登记数据来源与版本，完成初步盘点与可访问性验证
+
+PCS CONSIDERATIONS:
+- Predictability: 确保收集的数据具有潜在预测信号
+- Computability: 数据格式、体量与权限满足处理与计算约束
+- Stability: 建立追溯与版本控制以保证可重复
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_data_collection_strategy.txt
+   - 明确来源/接口/刷新策略并完成获取
+
+2. behavior_2_initial_inventory_and_access_check.txt
+   - 盘点规模/结构/可访问性与合规性
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_source_register: 数据来源与接口登记
+- data_collection_log: 采集与导入日志（含时间戳/版本）
+- data_inventory_report: 初步盘点报告（行列数/大小/基本结构）
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- data_source_register, data_collection_log, data_inventory_report 均已生成且非空
+- data_inventory_report 记录的行列数与实际加载一致
+
+================================================================================
+DSLC ALIGNMENT:
+================================================================================
+- Primary Agent: Explore-Agent
+- Supporting Agents: Define-Agent, PCS-Agent（监督）
+- DSLC Hooks:
+  - Planning First: POST /planning（进入 Step/Behavior 前）
+  - Action Generation: POST /generating（执行行为时）
+  - Feedback Loop: POST /planning（行为完成后目标检查）

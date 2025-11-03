@@ -1,0 +1,37 @@
+================================================================================
+STEP DP.4: OUTLIER DETECTION AND TREATMENT (异常检测与处理)
+================================================================================
+
+STAGE: data_preparation
+GOAL: 识别异常与极端值并进行合理处理，避免破坏预测关系
+
+PCS CONSIDERATIONS:
+- Predictability: 防止异常主导模型学习
+- Computability: 处理策略可复现与可解释
+- Stability: 调整在扰动下稳定
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_outlier_detection.txt
+2. behavior_2_outlier_treatment.txt
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- outlier_detection_report
+- outlier_treatment_plan
+- df_outlier_processed
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- outlier_detection_report、outlier_treatment_plan 已生成
+- df_outlier_processed 的异常指标（如 Z 分数>3 的点）显著减少
+
+================================================================================
+DSLC ALIGNMENT:
+================================================================================
+- Primary Agent: Explore-Agent
+- Supporting Agents: PCS-Agent（监督）
+- DSLC Hooks: Planning / Generating / Feedback

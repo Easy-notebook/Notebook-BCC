@@ -1,0 +1,43 @@
+================================================================================
+STEP DP.2: DATA QUALITY AUDIT (数据质量审计)
+================================================================================
+
+STAGE: data_preparation
+GOAL: 建立完整性/一致性/类型与 schema 的质量审计基线
+
+PCS CONSIDERATIONS:
+- Predictability: 清洗不破坏关键预测关系
+- Computability: 审计流程可重复、可自动化
+- Stability: 对合理扰动鲁棒
+
+================================================================================
+BEHAVIORS IN THIS STEP:
+================================================================================
+1. behavior_1_integrity_checks.txt
+   - 维度完整性、索引/外键、记录一致性
+
+2. behavior_2_type_and_schema_validation.txt
+   - 类型/范围/正则与 schema 验证
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- integrity_check_plan
+- quality_audit_report
+- automated_validation_scripts
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- integrity_check_plan 与 quality_audit_report 均已生成且非空
+- 自动化校验脚本可运行并输出通过/失败摘要
+
+================================================================================
+DSLC ALIGNMENT:
+================================================================================
+- Primary Agent: Explore-Agent
+- Supporting Agents: PCS-Agent（监督）
+- DSLC Hooks:
+  - Planning First: POST /planning
+  - Action Generation: POST /generating
+  - Feedback Loop: POST /planning

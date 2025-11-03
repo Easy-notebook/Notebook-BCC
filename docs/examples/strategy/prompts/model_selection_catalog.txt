@@ -1,0 +1,32 @@
+# model_selection Step Catalog
+
+## step_1_baseline_models
+
+Goal: 训练一组简洁、稳定、可解释的基线模型作为对照
+
+Verified Artifacts:
+- baseline_models
+- baseline_metrics
+Acceptance:
+- - 至少 2–3 个不同类型的基线训练与评估完成
+
+## step_2_algorithm_suitability_assessment
+
+Goal: 根据数据特征/业务约束评估主流算法适配度
+
+Verified Artifacts:
+- candidate_models
+- suitability_report
+Acceptance:
+- - 给出 ≥2 类不同算法的适配分析与取舍理由
+
+## step_3_model_comparison_and_selection
+
+Goal: 统一评估候选模型并给出选择结论与理由
+
+Verified Artifacts:
+- model_comparison_report
+- selected_model_name
+- model_selection_rationale
+Acceptance:
+- - 测试 ≥3 个模型；输出 selected_model_name 与充分理由

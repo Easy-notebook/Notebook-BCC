@@ -1,0 +1,42 @@
+# model_evaluation Step Catalog
+
+## step_1_cross_validation_assessment
+
+Goal: 通过合适的交叉验证方案评估泛化性能
+
+Verified Artifacts:
+- cv_plan
+- cv_results
+- metric_summary
+Acceptance:
+- - 输出均值/方差与置信估计；记录随机种子
+
+## step_2_holdout_test_evaluation
+
+Goal: 在未见数据上评估并量化泛化差距
+
+Verified Artifacts:
+- holdout_results
+- error_analysis
+Acceptance:
+- - 输出主要指标（RMSE/R²/MAE）与误差分布
+
+## step_3_residual_and_error_analysis
+
+Goal: 深入诊断残差/误差结构与偏差，提出改进方向
+
+Verified Artifacts:
+- residual_analysis
+- improvement_hypotheses
+Acceptance:
+- - 输出异方差/自相关/偏度等诊断与建议
+
+## step_4_pcs_validation
+
+Goal: 进行可预测性/可计算性/稳定性的综合验证（含扰动实验）
+
+Verified Artifacts:
+- perturbation_results
+- pcs_validation_report
+Acceptance:
+- - 输出扰动设计、结果与稳定性结论

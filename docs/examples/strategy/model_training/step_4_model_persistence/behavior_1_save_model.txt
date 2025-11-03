@@ -1,0 +1,33 @@
+================================================================================
+BEHAVIOR MT.4.1: SAVE MODEL (保存模型)
+================================================================================
+
+GOAL: 序列化保存模型与依赖版本信息
+
+RECOMMENDED AGENT: Model-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 保存模型与必要的预处理对象
+- 记录依赖版本与加载示例
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- final_model
+- ./models/model.pkl
+- persistence_manifest
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: final_model, ./models/model.pkl, persistence_manifest
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - `os.path.exists('./models/model.pkl')==True` 且可加载
+

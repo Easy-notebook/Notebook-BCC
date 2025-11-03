@@ -1,0 +1,31 @@
+================================================================================
+BEHAVIOR ME.3.1: RESIDUAL DIAGNOSTICS (残差诊断)
+================================================================================
+
+GOAL: 检查残差分布、异方差与自相关
+
+RECOMMENDED AGENT: Evaluate-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 残差正态性与偏度/峰度
+- Breusch-Pagan/White 等异方差检验
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- residual_analysis
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: residual_analysis, improvement_hypotheses
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - 输出异方差/自相关/偏度等诊断与建议
+

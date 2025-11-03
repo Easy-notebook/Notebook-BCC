@@ -1,0 +1,32 @@
+================================================================================
+BEHAVIOR DP.5.4: SAVE CLEANED DATASET (保存清洁数据集)
+================================================================================
+
+GOAL: 将 df_cleaned 保存为 ./outputs/df_cleaned.csv，便于后续复用
+
+RECOMMENDED AGENT: Explore-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DP.5.4.1: Ensure Output Dir
+  创建 ./outputs/ 目录（存在则忽略）
+
+ACTION DP.5.4.2: Save CSV
+  将 df_cleaned 保存为 ./outputs/df_cleaned.csv（包含 header，utf-8）
+
+ACTION DP.5.4.3: Log Persistence
+  在 processing_pipeline_doc 增记保存路径与行列数
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- processing_pipeline_doc (更新：包含 df_cleaned 持久化信息)
+
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Task: Save df_cleaned → ./outputs/df_cleaned.csv; update processing_pipeline_doc
+- Acceptance:
+  - os.path.exists('./outputs/df_cleaned.csv')==True

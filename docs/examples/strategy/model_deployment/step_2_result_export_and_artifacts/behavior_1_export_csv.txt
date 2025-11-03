@@ -1,0 +1,31 @@
+================================================================================
+BEHAVIOR MD.2.1: EXPORT CSV (导出CSV)
+================================================================================
+
+GOAL: 将预测结果导出为 CSV（含必要列/格式）
+
+RECOMMENDED AGENT: Define-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 生成 ./outputs/predictions.csv
+- 校验列名/行数/编码
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- ./outputs/predictions.csv
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: ./outputs/predictions.csv, deployment_artifacts
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - `os.path.exists('./outputs/predictions.csv')==True` 且行数与测试集一致
+

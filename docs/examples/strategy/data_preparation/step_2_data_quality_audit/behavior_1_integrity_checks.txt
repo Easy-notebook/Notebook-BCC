@@ -1,0 +1,41 @@
+================================================================================
+BEHAVIOR DP.2.1: INTEGRITY CHECKS (完整性检查)
+================================================================================
+
+GOAL: 维度/索引/记录级完整性校验与报告
+
+RECOMMENDED AGENT: Explore-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 主键/唯一性/外键约束检查
+- 记录一致性（跨表/跨时间）
+- 孤立记录与引用完整性
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- integrity_check_plan
+- quality_audit_report
+
+================================================================================
+DSLC HOOKS:
+================================================================================
+- Planning First → /planning
+- Generating → /generating
+- Feedback → /planning
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: integrity_check_plan, quality_audit_report, automated_validation_scripts
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - integrity_check_plan 与 quality_audit_report 均已生成且非空
+- - 自动化校验脚本可运行并输出通过/失败摘要
+

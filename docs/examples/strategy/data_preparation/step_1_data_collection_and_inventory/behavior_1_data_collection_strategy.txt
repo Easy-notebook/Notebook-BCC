@@ -1,0 +1,48 @@
+================================================================================
+BEHAVIOR DP.1.1: DATA COLLECTION STRATEGY (数据收集策略执行)
+================================================================================
+
+GOAL: 明确来源/接口/刷新策略并完成数据获取
+
+RECOMMENDED AGENT: Explore-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DP.1.1.1: Enumerate Sources and Access
+  列举候选来源、接口与权限
+  - 标注批/流、权限与刷新频率
+  - 记录合规与敏感性标签
+
+ACTION DP.1.1.2: Acquire and Log
+  实施数据获取并记录操作日志
+  - 记录时间戳、来源、参数与校验摘要
+  - 生成 data_collection_log
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_source_register
+- data_collection_log
+
+================================================================================
+DSLC HOOKS:
+================================================================================
+- Planning First → /planning
+- Generating → /generating
+- Feedback → /planning
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: data_source_register, data_collection_log, data_inventory_report
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - data_source_register, data_collection_log, data_inventory_report 均已生成且非空
+- - data_inventory_report 记录的行列数与实际加载一致
+

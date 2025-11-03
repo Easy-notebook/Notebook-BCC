@@ -45,9 +45,9 @@ Key Rules
 [USER PROMPT]
 
 Current Section Context
-ID: problem_definition
-Title: Problem Definition
-Goal: 建立数据存在性基础，通过系统化的数据发现、结构分析和相关性评估，确保数据能够支撑项目目标的实现。
+ID: data_preparation
+Title: Data Preparation
+Goal: 建立高质量、可复现的分析就绪数据集（df_cleaned），并产出可编程校验的质量报告与处理文档。
 
 
 ⸻
@@ -99,8 +99,8 @@ Effects:
   [],
 }
 
-Stage: problem_definition
-Stage Goal: Define the prediction goal, dataset scope, and evaluation metrics.
+Stage: data_preparation
+Stage Goal: Establish data existence and integrity foundation; produce df_cleaned and quality/report artifacts with programmable acceptance.
 
 ⸻
 
@@ -116,7 +116,7 @@ Current step “load_dataset”:
 	•	Required Capability: Execute Python code using pandas and os libraries
 	•	Output: In-memory DataFrame variable
 
-→ Select Define-Agent
+→ Select Explore-Agent
 
 2. Other Scenario Examples
 

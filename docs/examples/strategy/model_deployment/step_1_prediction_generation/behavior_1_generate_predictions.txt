@@ -1,0 +1,31 @@
+================================================================================
+BEHAVIOR MD.1.1: GENERATE PREDICTIONS (生成预测)
+================================================================================
+
+GOAL: 载入模型并生成预测数组
+
+RECOMMENDED AGENT: Model-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 加载 final_model 与前处理
+- 生成并缓存 predictions
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- predictions
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: predictions, prediction_summary
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - predictions 维度与测试集一致；无缺失/NaN
+

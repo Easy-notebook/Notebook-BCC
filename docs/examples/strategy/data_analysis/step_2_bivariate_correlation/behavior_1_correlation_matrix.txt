@@ -1,0 +1,37 @@
+================================================================================
+BEHAVIOR DA.2.1: CORRELATION MATRIX (相关性矩阵)
+================================================================================
+
+GOAL: 计算相关性矩阵并输出排名
+
+RECOMMENDED AGENT: Explore-Agent (PCS-Agent 监督)
+
+================================================================================
+ACTIONS:
+================================================================================
+- 计算皮尔逊/斯皮尔曼相关
+- 导出与目标变量的 Top-N 列表
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- correlation_matrix
+- top_correlated_variables
+
+================================================================================
+DSLC HOOKS:
+================================================================================
+- Planning / Generating / Feedback
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operation with variable/file names (e.g., df_raw, ./outputs/eda/...)
+- Ensure deterministic seeds and document parameters
+- Produce/Update artifacts: correlation_matrix, relationship_plots, top_correlated_variables
+- Use variables from state (e.g., df_raw/df_cleaned) when available
+- Persist figures under ./outputs/<stage>/<step>/ if applicable
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- - correlation_matrix 维度与变量数一致；top_correlated_variables 非空
+
