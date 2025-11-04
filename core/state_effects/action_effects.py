@@ -95,10 +95,9 @@ def effect_action_completed(state_machine, payload: Any = None):
                 behavior_feedback=behavior_feedback
             )
 
-            # Apply context updates
-            if 'context_update' in feedback_response:
-                from core.state_effects.behavior_effects import _apply_context_update
-                _apply_context_update(state_machine, feedback_response['context_update'])
+            # Apply context updates using workflow_updater
+            from utils.workflow_updater import workflow_updater
+            workflow_updater.update_from_response(state_machine, feedback_response)
 
             # Planning API confirms behavior can be completed
             state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)
