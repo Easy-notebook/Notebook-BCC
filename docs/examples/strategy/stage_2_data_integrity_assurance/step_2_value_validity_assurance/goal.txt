@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_data_type_validation.txt
+1. behavior_1_data_type_validation -> Explore Agent
    - Validate data type correctness
-2. behavior_2_value_range_verification.txt
+
+2. behavior_2_value_range_verification -> Explore Agent
    - Verify value ranges are reasonable
-3. behavior_3_business_rule_validation.txt
+
+3. behavior_3_business_rule_validation -> Explore Agent
    - Apply business rules for validation
-4. behavior_4_format_standardization.txt
+
+4. behavior_4_format_standardization -> Explore Agent
    - Standardize data formats and encodings
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

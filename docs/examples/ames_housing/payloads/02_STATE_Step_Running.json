@@ -3,7 +3,7 @@
     "location": {
       "current": {
         "stage_id": "data_existence_establishment",
-        "step_id": "load_and_verify_dataset",
+        "step_id": "data_collection_inventory",
         "behavior_id": null,
         "behavior_iteration": null
       },
@@ -92,7 +92,7 @@
                 "test_performance": "Performance metrics dict including RMSE, R², and MAE on unseen data.",
                 "temporal_validation_report": "Time-based performance analysis ensuring stability.",
                 "domain_generalization_report": "Cross-domain performance and robustness testing results.",
-                "business_impact_report": "Summary of predictive model's business impact (ROI, decisions)."
+                "business_impact_report": "Summary of predictive model’s business impact (ROI, decisions)."
               },
               "required_variables": {
                 "final_model": "Trained model for evaluation.",
@@ -135,10 +135,18 @@
           "focus": "RMSE < 25000; R² > 0.85; CV folds ≥ 5; PCS compliance verified at all stages; stability variation_coefficient < 0.05; reproducibility logs complete; all artifacts saved deterministically under ./outputs and ./models/.",
           "current_outputs": {
             "expected": [
-              {"data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics."},
-              {"data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable."},
-              {"variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price)."},
-              {"pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."}
+              {
+                "data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics."
+              },
+              {
+                "data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable."
+              },
+              {
+                "variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price)."
+              },
+              {
+                "pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."
+              }
             ],
             "produced": [],
             "in_progress": []
@@ -147,96 +155,95 @@
         "steps": {
           "completed": [],
           "current": {
-            "step_id": "load_and_verify_dataset",
-            "title": "Load and Verify Housing Dataset",
-            "goal": "Load the raw housing dataset from the submitted file and verify its existence, shape, and column structure. Artifacts: df_raw (pandas DataFrame of housing data), data_existence_report (summary of file validity, rows, columns); Acceptance: `os.path.exists(\"./assets/housing.csv\")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.",
+            "step_id": "data_collection_inventory",
+            "title": "Data Collection and Inventory",
+            "goal": "Collect and validate the housing dataset to confirm accessibility, completeness, and version traceability. Artifacts: data_existence_report; Acceptance: `os.path.exists(\"./assets/housing.csv\")==True` and `os.path.getsize(\"./assets/housing.csv\")>0`.",
             "verified_artifacts": {
-              "df_raw": "Raw DataFrame containing the housing dataset, type: pandas.DataFrame, must be non-empty and structured with at least 6 valid columns.",
-              "data_existence_report": "JSON/text report describing file path, file size, number of rows/columns, and missing values summary."
+              "data_existence_report": "Comprehensive record confirming dataset presence, file metadata (size, timestamp), and accessibility path, type: report (JSON/Markdown), quality: must match provided file path and be accessible."
             },
             "required_variables": {
-              "user_submit_files": "Path to the housing dataset file, from user submission."
+              "user_submit_files": "Raw dataset file paths, source: user submission.",
+              "user_problem": "Defines project scope and modeling objective, source: global context."
             },
             "pcs_considerations": {
-              "predictability": "Ensures consistent and validated data input, reducing variability between runs.",
-              "computability": "File loading process uses deterministic encoding and consistent library versions to guarantee reproducibility.",
-              "stability": "Verifies schema completeness and structure to prevent downstream instability from missing or malformed data."
+              "predictability": "Ensures the dataset is consistently sourced and representative of the intended domain for generalizable predictions.",
+              "computability": "Standardizes file loading path and encoding for deterministic reproducibility.",
+              "stability": "Validates dataset integrity to prevent downstream errors or broken references."
             }
           },
           "remaining": [
             {
-              "step_id": "analyze_data_structure",
-              "title": "Analyze Data Structure and Schema",
-              "goal": "Examine the internal structure of df_raw including data types, missing values, and unique identifiers to generate a schema document. Artifacts: data_structure_document (metadata and schema mapping); Acceptance: `len(data_structure_document[\"columns\"])==len(df_raw.columns)` and `all([\"dtype\" in c for c in data_structure_document[\"columns\"]])`.",
+              "step_id": "data_structure_discovery",
+              "title": "Data Structure Discovery",
+              "goal": "Identify the dataset’s schema, variable names, and types to ensure readiness for analysis. Artifacts: data_structure_document; Acceptance: `len(df_raw.columns)>5` and `df_raw.dtypes.notnull().all()==True`.",
               "verified_artifacts": {
-                "data_structure_document": "Dictionary describing dataset schema: column names, data types, null counts, and inferred primary key, type: dict, must align with df_raw."
+                "data_structure_document": "Schema summary describing each column name, type, and nullability, type: structured document (JSON/CSV), quality: all column names non-null and typed."
               },
               "required_variables": {
-                "df_raw": "Loaded housing dataset from previous step."
+                "df_raw": "Loaded housing dataset as DataFrame, source: previous step output."
               },
               "pcs_considerations": {
-                "predictability": "Ensures feature consistency and supports reliable variable mapping for modeling.",
-                "computability": "Schema captured in reproducible structured format for automated processing.",
-                "stability": "Prevents silent schema drift and missing variable errors during later computation."
+                "predictability": "Establishes consistent schema understanding to ensure features are consistently interpreted.",
+                "computability": "Enforces reproducible schema parsing and deterministic data type inference.",
+                "stability": "Detects inconsistent or malformed columns that may affect downstream model performance."
               }
             },
             {
-              "step_id": "perform_variable_semantic_analysis",
-              "title": "Perform Variable Semantic Analysis",
-              "goal": "Conduct semantic analysis of variables to interpret their meaning and assess potential relevance to target price. Artifacts: variable_analysis_report (semantic and correlation summary); Acceptance: `variable_analysis_report[\"status\"]==\"completed\"` and `len(variable_analysis_report[\"variables\"])>5`.",
+              "step_id": "variable_semantic_analysis",
+              "title": "Variable Semantic Analysis",
+              "goal": "Map variables to semantic meanings and validate against domain understanding. Artifacts: variable_analysis_report; Acceptance: `len(variable_analysis_report['valid_variables'])>5` and `all('price' in variable_analysis_report['target_candidates'])==True`.",
               "verified_artifacts": {
-                "variable_analysis_report": "Structured JSON report containing variable-level semantics, type, correlation with target variable, and missing rate summary."
+                "variable_analysis_report": "Detailed mapping of each variable to its semantic meaning, units, and relevance, type: report (DataFrame or JSON), quality: includes target and key predictors."
               },
               "required_variables": {
-                "df_raw": "Loaded housing dataset from prior step.",
-                "data_structure_document": "Dataset schema description."
+                "data_structure_document": "Schema of the dataset, source: previous step output."
               },
               "pcs_considerations": {
-                "predictability": "Identifies variables with potential predictive power and ensures semantic clarity for modeling.",
-                "computability": "Automated variable inspection methods (dtype checks, correlation computation) ensure consistent reproducibility.",
-                "stability": "Detects noisy or unstable variables that may cause model performance fluctuation."
+                "predictability": "Ensures meaningful variables are used, improving interpretability and model generalization.",
+                "computability": "Defines structured mapping to facilitate automated feature handling.",
+                "stability": "Prevents instability from misinterpreted or inconsistent variable definitions."
               }
             },
             {
-              "step_id": "establish_observation_unit",
-              "title": "Establish Observation Unit and Relevance",
-              "goal": "Identify the observation unit (e.g., individual houses) and verify its representativeness and completeness for predictive modeling. Artifacts: observation_unit_report (structure of observation unit, distribution stats); Acceptance: `observation_unit_report[\"unique_id_ratio\"]>0.9` and `observation_unit_report[\"representative\"]==True`.",
+              "step_id": "variable_relevance_assessment",
+              "title": "Variable Relevance Assessment",
+              "goal": "Assess statistical relevance of variables to the target to guide feature selection. Artifacts: variable_analysis_report (updated with correlation metrics); Acceptance: `abs(variable_analysis_report['corr_with_target']).mean()>0.1`.",
               "verified_artifacts": {
-                "observation_unit_report": "JSON report summarizing observation unit definition, unique identifier field, and data representativeness metrics."
+                "variable_analysis_report": "Expanded variable analysis report including correlation with target variable, type: numeric summary, quality: all correlations computed successfully."
               },
               "required_variables": {
-                "df_raw": "Loaded housing dataset."
+                "df_raw": "Loaded housing dataset as DataFrame, source: data_collection_inventory output.",
+                "variable_analysis_report": "Initial variable semantic mapping, source: previous step."
               },
               "pcs_considerations": {
-                "predictability": "Ensures each observation represents a valid data unit for generalization.",
-                "computability": "Standardizes indexing and observation representation to simplify data manipulation.",
-                "stability": "Confirms dataset completeness and avoids biases from duplicated or missing identifiers."
+                "predictability": "Quantifies relationships ensuring variable selection supports robust prediction.",
+                "computability": "Uses standardized correlation computation for reproducible analysis.",
+                "stability": "Evaluates multi-collinearity and ensures variable relationships remain consistent under data perturbation."
               }
             },
             {
-              "step_id": "generate_pcs_hypothesis",
-              "title": "Generate PCS Hypothesis Framework",
-              "goal": "Formulate PCS-aligned hypotheses connecting data characteristics to testable predictability, computability, and stability aspects. Artifacts: pcs_hypothesis_framework (structured hypothesis documentation); Acceptance: `len(pcs_hypothesis_framework[\"hypotheses\"])>=3`.",
+              "step_id": "pcs_hypothesis_generation",
+              "title": "PCS Hypothesis Generation",
+              "goal": "Formulate PCS hypotheses linking data characteristics to predictability, computability, and stability tests. Artifacts: pcs_hypothesis_framework; Acceptance: `len(pcs_hypothesis_framework['hypotheses'])>=3`.",
               "verified_artifacts": {
-                "pcs_hypothesis_framework": "Document listing testable hypotheses linking data quality and feature relevance to PCS components, type: dict, must contain at least three hypotheses."
+                "pcs_hypothesis_framework": "Structured list of PCS hypotheses connecting data factors to predictive outcomes, type: structured text or JSON, quality: covers all three PCS dimensions."
               },
               "required_variables": {
-                "data_structure_document": "Dataset schema description.",
-                "variable_analysis_report": "Semantic and correlation analysis report.",
-                "observation_unit_report": "Observation unit report."
+                "variable_analysis_report": "Finalized variable-level summary, source: previous step output."
               },
               "pcs_considerations": {
-                "predictability": "Defines measurable factors that influence model generalization performance.",
-                "computability": "Specifies standardized experimental paths for reproducible validation.",
-                "stability": "Guides robustness assessment and sensitivity evaluation during later experiments."
+                "predictability": "Defines testable hypotheses on feature predictability and model generalization.",
+                "computability": "Specifies reproducible experimental setups for PCS validation.",
+                "stability": "Frames robustness tests to verify performance under data and parameter variations."
               }
             }
           ],
-          "focus": "1. Begin with verifying dataset presence and loading integrity. 2. Explore structure and metadata systematically to confirm field-level consistency. 3. Conduct semantic mapping and correlation analysis to align features with target. 4. Define observation unit to ensure the dataset reflects correct sampling granularity. 5. Summarize results into a PCS hypothesis document linking observed data characteristics to veridicality standards.",
+          "focus": "\n    The execution of this stage should begin with verifying dataset existence and metadata integrity, then proceed to schema discovery and semantic understanding. Variable-level analyses should identify key predictors and correlations before constructing PCS hypotheses to formalize testable expectations for the model’s behavior and stability. Document all intermediate artifacts and ensure each step passes acceptance criteria before progressing.\n  ",
           "current_outputs": {
             "expected": [
-              {"df_raw": "Raw DataFrame containing the housing dataset, type: pandas.DataFrame, must be non-empty and structured with at least 6 valid columns."},
-              {"data_existence_report": "JSON/text report describing file path, file size, number of rows/columns, and missing values summary."}
+              {
+                "data_existence_report": "Comprehensive record confirming dataset presence, file metadata (size, timestamp), and accessibility path, type: report (JSON/Markdown), quality: must match provided file path and be accessible."
+              }
             ],
             "produced": [],
             "in_progress": []
@@ -254,12 +261,12 @@
           }
         }
       },
-      "goals": "Refine the current stage goal as: \"Establish and verify the existence, structure, and relevance of the housing dataset through systematic data discovery, structure analysis, semantic mapping, observation unit identification, and PCS hypothesis generation to ensure readiness for predictive modeling.\" Current step: Load the raw housing dataset from the submitted file and verify its existence, shape, and column structure (df_raw, data_existence_report) for reproducible analysis."
+      "goals": "\n    Refine the stage goal as: To systematically verify the existence, structure, and semantics of the housing dataset, ensuring traceable, interpretable, and PCS-aligned foundations for predictive modeling.\n  "
     }
   },
   "state": {
     "variables": {
-      "user_problem": "基于 Ames Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+      "user_problem": "基于  Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
       "user_submit_files": [
         "./assets/housing.csv"
       ]
@@ -276,8 +283,8 @@
     },
     "FSM": {
       "state": "STEP_RUNNING",
-      "last_transition": "START_SECTION",
-      "timestamp": "2025-11-03T12:05:00.000Z"
+      "last_transition": "START_STEP",
+      "timestamp": "2025-11-04T02:54:07.042Z"
     }
   }
 }

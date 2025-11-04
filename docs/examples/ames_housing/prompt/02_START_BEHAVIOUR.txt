@@ -16,7 +16,7 @@ Output Format (XML only)
 
 <behavior id="{step_id}_b1" step_id="{step_id}">
   <agent>AgentName</agent>
-  <task>Specific instructions</task>
+  <task behavior_id="{behavior_id}">Specific instructions</task>
   <inputs>
     <variable name="name">value</variable>
   </inputs>
@@ -44,10 +44,10 @@ Key Rules
 
 [USER PROMPT]
 
-Current Section Context
-ID: data_preparation
-Title: Data Preparation
-Goal: 建立高质量、可复现的分析就绪数据集（df_cleaned），并产出可编程校验的质量报告与处理文档。
+Current Stage Context
+ID: data_existence_establishment
+Title: Data Existence Establishment
+Goal: Establish and verify the existence, structure, and relevance of the housing dataset to ensure readiness for predictive modeling. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: `os.path.exists("./assets/housing.csv")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.
 
 
 ⸻
@@ -56,30 +56,29 @@ Goal: 建立高质量、可复现的分析就绪数据集（df_cleaned），并�
 
 Current Step Context
 
-ID: load_dataset
-Title: Load Housing Dataset
+ID: data_collection_inventory
+Title: Data Collection and Inventory
 
 Goal:
-Load the housing.csv file into a DataFrame, ensuring valid structure, no missing headers, and consistent data types.
-Artifacts: df_raw (pandas DataFrame loaded from CSV)
-Acceptance: os.path.exists("./assets/housing.csv")==True and df_raw.shape[0]>0 and len(df_raw.columns)>1
+Collect and validate the housing dataset to confirm accessibility, completeness, and version traceability. Artifacts: data_existence_report; Acceptance: `os.path.exists("./assets/housing.csv")==True` and `os.path.getsize("./assets/housing.csv")>0`.
 
 Verified Artifacts (must produce):
 
 <verified_artifacts>
-  <variable name="df_raw">Raw DataFrame loaded from housing.csv, type: pandas.DataFrame, must be non-empty with valid numeric and categorical columns.</variable>
+  <variable name="data_existence_report">Comprehensive record confirming dataset presence, file metadata (size, timestamp), and accessibility path, type: report (JSON/Markdown), quality: must match provided file path and be accessible.</variable>
 </verified_artifacts>
 
 Required Variables (available):
 
 <required_variables>
-  <variable name="file_path">Path to housing.csv, source: user_submit_files.</variable>
+  <variable name="user_submit_files">Raw dataset file paths, source: user submission.</variable>
+  <variable name="user_problem">Defines project scope and modeling objective, source: global context.</variable>
 </required_variables>
 
 PCS Considerations:
-	•	Predictability: Ensures consistent dataset input for fair generalization and comparison across experiments.
-	•	Computability: Use deterministic read parameters (encoding, dtype inference) to ensure reproducible loading.
-	•	Stability: Verify data completeness and consistent schema to prevent downstream instability.
+	•	Predictability: Ensures the dataset is consistently sourced and representative of the intended domain for generalizable predictions.
+	•	Computability: Standardizes file loading path and encoding for deterministic reproducibility.
+	•	Stability: Validates dataset integrity to prevent downstream errors or broken references.
 
 ⸻
 [USER PROMPT]
@@ -89,7 +88,7 @@ Current State
 Variables:
 
 {
-  "user_problem": "Build a housing price prediction model based on the Housing dataset, with RMSE < 25000 and R² > 0.85, following PCS standards.",
+  "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
   "user_submit_files": ["./assets/housing.csv"]
 }
 
@@ -99,8 +98,50 @@ Effects:
   [],
 }
 
-Stage: data_preparation
-Stage Goal: Establish data existence and integrity foundation; produce df_cleaned and quality/report artifacts with programmable acceptance.
+Stage: data_existence_establishment
+Stage Goal: Establish and verify the existence, structure, and relevance of the housing dataset to ensure readiness for predictive modeling.
+================================================================================
+STEP DE.1: DATA COLLECTION AND INVENTORY
+================================================================================
+
+STAGE: data_existence_establishment
+GOAL: Execute data collection strategy, verify data acquisition channels, and complete initial data inventory to establish data existence foundation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure data volume and quality sufficient for reliable prediction.
+- Computability: Establish reproducible data acquisition and processing workflows.
+- Stability: Verify data consistency and establish traceability mechanisms.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_data_collection_strategy -> Define Agent
+   - Execute data collection strategy based on planning
+
+2. behavior_2_initial_inventory_and_access_check -> Explore Agent
+   - Complete initial data inventory and verify accessibility 
+
+3. behavior_3_validation_and_acceptance.txt -> Define Agent
+   - Validate data collection completeness and quality
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_source_register
+- data_collection_log
+- data_inventory_report
+- data_catalog_metadata
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- data_source_register contains all data sources with verification status
+- data_collection_log documents complete acquisition process
+- data_inventory_report includes: row count, column count, file size, data types
+- data_catalog_metadata includes data dictionary and field descriptions
+- All required data successfully obtained and accessible
+- Data version control mechanism established
+
 
 ⸻
 
@@ -108,15 +149,7 @@ Stage Goal: Establish data existence and integrity foundation; produce df_cleane
 
 Agent Selection Strategy
 
-1. Analyze Task Nature
 
-Current step “load_dataset”:
-	•	Objective: Load a CSV file from the file system into a pandas DataFrame
-	•	Task Type: Data operation (file I/O + data structure creation)
-	•	Required Capability: Execute Python code using pandas and os libraries
-	•	Output: In-memory DataFrame variable
-
-→ Select Explore-Agent
 
 2. Other Scenario Examples
 
@@ -124,5 +157,7 @@ Scenario	Appropriate Agent
 define_problem (define problem objective)	PlanningAnalyst
 validate_artifacts (validate generated outputs)	QualityValidator
 create_model_card (generate documentation)	DocumentationWriter
+analyze_data_structure (schema analysis)	Explore-Agent
+perform_semantic_analysis (correlation analysis)	Explore-Agent
 
 ⸻

@@ -95,7 +95,7 @@ Goal: Establish and verify the existence, structure, and relevance of the housin
 ## Stage Goal
 Establish the foundation of data existence through systematic data discovery, structure analysis, and relevance assessment to ensure data can support project objectives.
 
-## Core Activities
+## Core Steps(if you want to call it activities, must give the correct name)
 
 ### Data Collection and Inventory
 - Execute data collection strategy based on Chapter 0 planning

@@ -4,7 +4,7 @@ BEHAVIOR DE.1.3: VALIDATION AND ACCEPTANCE
 
 GOAL: Validate all data collection and inventory activities meet acceptance criteria and establish data existence foundation.
 
-RECOMMENDED AGENT: PCS-Agent
+RECOMMENDED AGENT: Define-Agent
 
 ================================================================================
 ACTIONS:

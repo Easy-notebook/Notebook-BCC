@@ -10,17 +10,19 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_predictability_hypothesis.txt
+1. behavior_1_predictability_hypothesis -> Explore Agent
    - Generate testable predictability hypotheses
-2. behavior_2_stability_hypothesis.txt
+
+2. behavior_2_stability_hypothesis -> Explore Agent
    - Generate stability and robustness hypotheses
-3. behavior_3_hypothesis_validation_design.txt
+
+3. behavior_3_hypothesis_validation_design -> Explore Agent
    - Design experimental schemes for hypothesis validation
 
-4. behavior_4_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

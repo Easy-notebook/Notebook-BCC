@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_data_split_strategy.txt
+1. behavior_1_data_split_strategy -> Explore Agent
    - Design data split and validation strategy
-2. behavior_2_cross_validation_design.txt
+
+2. behavior_2_cross_validation_design -> Explore Agent
    - Design cross-validation strategy
-3. behavior_3_evaluation_metrics_definition.txt
+
+3. behavior_3_evaluation_metrics_definition -> Explore Agent
    - Define comprehensive evaluation metrics
-4. behavior_4_hyperparameter_optimization_strategy.txt
+
+4. behavior_4_hyperparameter_optimization_strategy -> Explore Agent
    - Design hyperparameter optimization approach
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

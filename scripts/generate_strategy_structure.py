@@ -154,7 +154,7 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
 {behavior_list}
 

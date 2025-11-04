@@ -10,17 +10,19 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_variable_semantic_mapping.txt
-   - Map variable n to business concepts
-2. behavior_2_variable_quality_assessment.txt
-   - Assess variable value reasonableness and validity
-3. behavior_3_domain_knowledge_validation.txt
-   - Validate variable interpretation with domain experts
+1. behavior_1_variable_semantic_mapping -> Explore Agent
+   - Map variable n to business concepts and identify measurement units
 
-4. behavior_4_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+2. behavior_2_variable_quality_assessment -> Explore Agent
+   - Assess variable value reasonableness and identify quality issues
+
+3. behavior_3_domain_knowledge_validation -> Explore Agent
+   - Validate variable interpretation accuracy with domain experts
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

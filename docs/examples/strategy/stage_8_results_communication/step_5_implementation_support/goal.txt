@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_deployment_guidance.txt
+1. behavior_1_deployment_guidance -> Explore Agent
    - Provide deployment guidance
-2. behavior_2_user_training.txt
+
+2. behavior_2_user_training -> Explore Agent
    - Conduct user training
-3. behavior_3_monitoring_system_establishment.txt
+
+3. behavior_3_monitoring_system_establishment -> Explore Agent
    - Establish monitoring systems
-4. behavior_4_continuous_optimization.txt
+
+4. behavior_4_continuous_optimization -> Explore Agent
    - Support continuous optimization
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

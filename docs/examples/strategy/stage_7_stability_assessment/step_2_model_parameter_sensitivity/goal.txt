@@ -10,17 +10,19 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_hyperparameter_sensitivity.txt
+1. behavior_1_hyperparameter_sensitivity -> Explore Agent
    - Analyze hyperparameter sensitivity
-2. behavior_2_model_architecture_stability.txt
+
+2. behavior_2_model_architecture_stability -> Explore Agent
    - Test model architecture variations
-3. behavior_3_training_process_stability.txt
+
+3. behavior_3_training_process_stability -> Explore Agent
    - Assess training process stability
 
-4. behavior_4_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

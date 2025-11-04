@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_stability_metrics_calculation.txt
+1. behavior_1_stability_metrics_calculation -> Explore Agent
    - Calculate comprehensive stability metrics
-2. behavior_2_sensitivity_analysis_summary.txt
+
+2. behavior_2_sensitivity_analysis_summary -> Explore Agent
    - Summarize sensitivity analysis results
-3. behavior_3_stability_pattern_identification.txt
+
+3. behavior_3_stability_pattern_identification -> Explore Agent
    - Identify stability patterns
-4. behavior_4_improvement_recommendations.txt
+
+4. behavior_4_improvement_recommendations -> Explore Agent
    - Provide stability improvement recommendations
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

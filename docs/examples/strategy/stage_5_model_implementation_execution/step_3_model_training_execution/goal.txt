@@ -10,17 +10,19 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_training_workflow_execution.txt
+1. behavior_1_training_workflow_execution -> Explore Agent
    - Execute model training workflows
-2. behavior_2_hyperparameter_optimization.txt
+
+2. behavior_2_hyperparameter_optimization -> Explore Agent
    - Optimize model hyperparameters
-3. behavior_3_training_monitoring_diagnosis.txt
+
+3. behavior_3_training_monitoring_diagnosis -> Explore Agent
    - Monitor and diagnose training process
 
-4. behavior_4_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

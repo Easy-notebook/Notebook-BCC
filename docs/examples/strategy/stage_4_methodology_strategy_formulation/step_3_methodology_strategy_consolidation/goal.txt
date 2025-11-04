@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_strategy_integration.txt
+1. behavior_1_strategy_integration -> Explore Agent
    - Integrate all strategy components
-2. behavior_2_pcs_framework_integration.txt
+
+2. behavior_2_pcs_framework_integration -> Explore Agent
    - Integrate PCS framework requirements
-3. behavior_3_risk_assessment_mitigation.txt
+
+3. behavior_3_risk_assessment_mitigation -> Explore Agent
    - Assess risks and define mitigation strategies
-4. behavior_4_implementation_plan.txt
+
+4. behavior_4_implementation_plan -> Explore Agent
    - Develop detailed implementation plan
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

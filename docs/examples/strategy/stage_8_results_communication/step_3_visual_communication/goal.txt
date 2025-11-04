@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_data_visualization_design.txt
+1. behavior_1_data_visualization_design -> Explore Agent
    - Design effective data visualizations
-2. behavior_2_results_presentation_optimization.txt
+
+2. behavior_2_results_presentation_optimization -> Explore Agent
    - Optimize results presentation
-3. behavior_3_audience_customization.txt
+
+3. behavior_3_audience_customization -> Explore Agent
    - Customize for different audiences
-4. behavior_4_multimedia_integration.txt
+
+4. behavior_4_multimedia_integration -> Explore Agent
    - Integrate multimedia elements
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

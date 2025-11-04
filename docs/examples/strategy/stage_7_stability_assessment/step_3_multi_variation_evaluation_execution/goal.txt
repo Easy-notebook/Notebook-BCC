@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_single_factor_variation.txt
+1. behavior_1_single_factor_variation -> Explore Agent
    - Conduct single-factor variation tests
-2. behavior_2_multi_factor_interaction.txt
+
+2. behavior_2_multi_factor_interaction -> Explore Agent
    - Analyze multi-factor interactions
-3. behavior_3_extreme_scenario_testing.txt
+
+3. behavior_3_extreme_scenario_testing -> Explore Agent
    - Test extreme scenarios
-4. behavior_4_monte_carlo_simulation.txt
+
+4. behavior_4_monte_carlo_simulation -> Explore Agent
    - Perform Monte Carlo simulations
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

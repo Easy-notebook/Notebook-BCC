@@ -10,17 +10,19 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_business_question_translation.txt
+1. behavior_1_business_question_translation -> Explore Agent
    - Translate business problems to data questions
-2. behavior_2_exploratory_question_design.txt
+
+2. behavior_2_exploratory_question_design -> Explore Agent
    - Design specific exploratory questions
-3. behavior_3_analysis_prioritization.txt
+
+3. behavior_3_analysis_prioritization -> Explore Agent
    - Prioritize analysis questions by importance
 
-4. behavior_4_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

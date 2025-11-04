@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_tiered_communication.txt
+1. behavior_1_tiered_communication -> Explore Agent
    - Execute tiered communication strategy
-2. behavior_2_feedback_collection.txt
+
+2. behavior_2_feedback_collection -> Explore Agent
    - Collect and process stakeholder feedback
-3. behavior_3_adoption_facilitation.txt
+
+3. behavior_3_adoption_facilitation -> Explore Agent
    - Facilitate results adoption
-4. behavior_4_relationship_maintenance.txt
+
+4. behavior_4_relationship_maintenance -> Explore Agent
    - Maintain long-term relationships
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

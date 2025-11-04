@@ -11,16 +11,16 @@ PCS CONSIDERATIONS:
 - Stability: Verify data consistency and establish traceability mechanisms.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_data_collection_strategy.txt
-   - Execute data collection strategy based on planning
+1. behavior_1_data_collection_strategy -> Explore Agent
+   - Execute data collection strategy based on project planning and verify data acquisition channel reliability
 
-2. behavior_2_initial_inventory_and_access_check.txt
-   - Complete initial data inventory and verify accessibility
+2. behavior_2_initial_inventory_and_access_check -> Explore Agent
+   - Complete initial data inventory with basic statistics and verify data completeness and accessibility
 
-3. behavior_3_validation_and_acceptance.txt
-   - Validate data collection completeness and quality
+3. behavior_3_validation_and_acceptance -> Define Agent
+   - Validate all data collection and inventory activities meet acceptance criteria and establish data existence foundation
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

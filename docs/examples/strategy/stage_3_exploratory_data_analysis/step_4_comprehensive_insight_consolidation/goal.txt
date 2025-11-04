@@ -10,19 +10,22 @@ PCS CONSIDERATIONS:
 - Stability: Ensure robustness under reasonable perturbations.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_key_findings_summary.txt
+1. behavior_1_key_findings_summary -> Explore Agent
    - Summarize key discoveries and patterns
-2. behavior_2_hypothesis_validation.txt
+
+2. behavior_2_hypothesis_validation -> Explore Agent
    - Validate initial hypotheses
-3. behavior_3_modeling_recommendations.txt
+
+3. behavior_3_modeling_recommendations -> Explore Agent
    - Provide recommendations for modeling
-4. behavior_4_business_insight_extraction.txt
+
+4. behavior_4_business_insight_extraction -> Explore Agent
    - Extract business-relevant insights
 
-5. behavior_5_validation_and_acceptance.txt
-   - Validate step completeness and acceptance criteria
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

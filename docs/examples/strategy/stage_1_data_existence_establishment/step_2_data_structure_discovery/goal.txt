@@ -11,19 +11,19 @@ PCS CONSIDERATIONS:
 - Stability: Assess structural consistency and identify sensitivity to structure changes.
 
 ================================================================================
-BEHAVIORS IN THIS STEP:
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
 ================================================================================
-1. behavior_1_schema_and_relationship_analysis.txt
-   - Analyze data schema, hierarchy, and table relationships
+1. behavior_1_schema_and_relationship_analysis -> Explore Agent
+   - Analyze data schema, hierarchical structure, and identify relationships between data entities
 
-2. behavior_2_data_type_and_format_analysis.txt
-   - Determine data types and identify format issues
+2. behavior_2_data_type_and_format_analysis -> Explore Agent
+   - Determine data types for all variables and identify mixed types, format anomalies, and conversion requirements
 
-3. behavior_3_distribution_exploration.txt
-   - Explore data distribution characteristics and patterns
+3. behavior_3_distribution_exploration -> Explore Agent
+   - Explore and document data distribution characteristics, calculate basic statistics, and identify outlier patterns
 
-4. behavior_4_validation_and_acceptance.txt
-   - Validate data structure discovery completeness
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate data structure discovery completeness and alignment with acceptance criteria
 
 ================================================================================
 OVERALL OUTPUT ARTIFACTS:

@@ -92,7 +92,7 @@
                 "test_performance": "Performance metrics dict including RMSE, R², and MAE on unseen data.",
                 "temporal_validation_report": "Time-based performance analysis ensuring stability.",
                 "domain_generalization_report": "Cross-domain performance and robustness testing results.",
-                "business_impact_report": "Summary of predictive model's business impact (ROI, decisions)."
+                "business_impact_report": "Summary of predictive model’s business impact (ROI, decisions)."
               },
               "required_variables": {
                 "final_model": "Trained model for evaluation.",
@@ -135,10 +135,18 @@
           "focus": "RMSE < 25000; R² > 0.85; CV folds ≥ 5; PCS compliance verified at all stages; stability variation_coefficient < 0.05; reproducibility logs complete; all artifacts saved deterministically under ./outputs and ./models/.",
           "current_outputs": {
             "expected": [
-              {"data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics."},
-              {"data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable."},
-              {"variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price)."},
-              {"pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."}
+              {
+                "data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics."
+              },
+              {
+                "data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable."
+              },
+              {
+                "variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price)."
+              },
+              {
+                "pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."
+              }
             ],
             "produced": [],
             "in_progress": []
@@ -167,7 +175,7 @@
           }
         }
       },
-      "goals": "The user proposed the problem 'Build a house price prediction model based on the  Housing dataset, RMSE < 25000, R² > 0.85, compliant with PCS standards,' and uploaded the file './assets/housing.csv'. The workflow now follows an 8-stage PCS-compliant data science lifecycle: (1) Data Existence Establishment, (2) Data Integrity Assurance, (3) Exploratory Data Analysis, (4) Methodology Strategy Formulation, (5) Model Implementation Execution, (6) Predictability Validation, (7) Stability Assessment, (8) Results Communication. The current stage is 'data_existence_establishment,' with the goal of verifying data availability, understanding structure, analyzing variable relevance, and generating PCS testable hypotheses."
+      "goals": "The user proposed the problem 'Build a house price prediction model based on the Housing dataset, RMSE < 25000, R² > 0.85, compliant with PCS standards,' and uploaded the file './assets/housing.csv'. The workflow now follows an 8-stage PCS-compliant data science lifecycle: (1) Data Existence Establishment, (2) Data Integrity Assurance, (3) Exploratory Data Analysis, (4) Methodology Strategy Formulation, (5) Model Implementation Execution, (6) Predictability Validation, (7) Stability Assessment, (8) Results Communication. The current stage is 'data_existence_establishment,' with the goal of verifying data availability, understanding structure, analyzing variable relevance, and generating PCS testable hypotheses."
     }
   },
   "state": {
@@ -190,7 +198,7 @@
     "FSM": {
       "state": "STAGE_RUNNING",
       "last_transition": "START_WORKFLOW",
-      "timestamp": "2025-11-03T12:00:00.000Z"
+      "timestamp": "2025-11-04T02:54:07.042Z"
     }
   }
 }

@@ -1,20 +1,22 @@
-<behavior id="load_dataset_b1" step_id="load_dataset">
-  <agent>DefineAgent</agent>
-  <task>Use pandas to load the dataset from the provided file_path into a DataFrame named df_raw. Ensure the CSV has valid headers, consistent column types, and no structural issues. Store df_raw in memory for downstream processing.</task>
+<behavior id="data_collection_inventory_b1" step_id="data_collection_inventory">
+  <agent>ExploreAgent</agent>
+  <task behavior_id="behavior_2_initial_inventory_and_access_check">
+    Verify accessibility and completeness of the user-submitted housing dataset located at ./assets/housing.csv, record file metadata (size, timestamp), and generate a comprehensive data_existence_report including version traceability and validation results.
+  </task>
   <inputs>
-    <variable name="file_path">./assets/housing.csv</variable>
+    <variable name="user_problem">基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准</variable>
+    <variable name="user_submit_files">["./assets/housing.csv"]</variable>
   </inputs>
   <effects>False</effects>
   <outputs>
-    <artifact name="df_raw">Raw DataFrame loaded from housing.csv, type: pandas.DataFrame, must be non-empty with valid numeric and categorical columns.</artifact>
+    <artifact name="data_existence_report">Comprehensive record confirming dataset presence, file metadata (size, timestamp), and accessibility path, type: report (JSON/Markdown), quality: must match provided file path and be accessible.</artifact>
   </outputs>
   <acceptance>
     <criterion>os.path.exists("./assets/housing.csv")==True</criterion>
-    <criterion>df_raw.shape[0] > 0</criterion>
-    <criterion>len(df_raw.columns) > 1</criterion>
+    <criterion>os.path.getsize("./assets/housing.csv")>0</criterion>
   </acceptance>
   <whathappened>
-    <overview>The current stage focuses on defining and verifying dataset existence and structure to ensure the problem definition is grounded on valid data.</overview>
-    <background>No prior execution effects were detected; this is the initial data loading step of the problem_definition stage.</background>
+    <overview>The dataset existence stage has begun. The housing dataset was submitted by the user and now needs to be validated for accessibility, completeness, and traceability.</overview>
+    <background>No prior steps have been executed yet; this is the first verification step under data_existence_establishment.</background>
   </whathappened>
 </behavior>
