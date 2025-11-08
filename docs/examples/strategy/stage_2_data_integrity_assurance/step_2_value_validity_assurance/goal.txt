@@ -1,0 +1,45 @@
+================================================================================
+STEP DI.2: VALUE VALIDITY ASSURANCE
+================================================================================
+
+GOAL: Complete value validity assurance with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_data_type_validation -> Explore Agent
+   - Validate data type correctness
+
+2. behavior_2_value_range_verification -> Explore Agent
+   - Verify value ranges are reasonable
+
+3. behavior_3_business_rule_validation -> Explore Agent
+   - Apply business rules for validation
+
+4. behavior_4_format_standardization -> Explore Agent
+   - Standardize data formats and encodings
+
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_type_validation_results
+- value_range_verification_results
+- business_rule_validation_results
+- format_standardization_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

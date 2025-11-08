@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR SA.1.1: TEST SAMPLE-LEVEL PERTURBATIONS
+================================================================================
+
+GOAL: Test sample-level perturbations
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION SA.1.1.1: Execute Primary Task
+  Test sample-level perturbations
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION SA.1.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- sample_level_perturbation_results
+- sample_level_perturbation_documentation
+  

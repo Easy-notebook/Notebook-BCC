@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.4.1: ASSESS DATA CLEANING EFFECTIVENESS
+================================================================================
+
+GOAL: Assess data cleaning effectiveness
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.4.1.1: Execute Primary Task
+  Assess data cleaning effectiveness
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.4.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- processing_effect_assessment_results
+- processing_effect_assessment_documentation
+  

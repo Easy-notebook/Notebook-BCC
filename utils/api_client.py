@@ -11,6 +11,7 @@ import asyncio
 from typing import Dict, Any, List, AsyncIterator, Optional
 from .context_compressor import ContextCompressor
 from .api_logger import get_api_logger
+from .response_parser import response_parser
 from config import Config
 
 
@@ -55,26 +56,156 @@ class WorkflowAPIClient(ModernLogger):
         # ResourceWarnings are suppressed globally
         pass
 
+    async def send_reflecting(
+        self,
+        stage_id: str,
+        step_index: str,
+        state: Dict[str, Any],
+        notebook_id: Optional[str] = None,
+        behavior_feedback: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Send reflection to Reflecting API (/reflecting).
+
+        This is the Reflecting API call for *_COMPLETED states.
+        Used to reflect on completed stages/steps/behaviors and provide guidance for next actions.
+
+        Args:
+            stage_id: Current stage ID
+            step_index: Current step ID/index
+            state: Current workflow state/context (contains progress_info per OBSERVATION_PROTOCOL.md)
+            notebook_id: Optional notebook ID
+            behavior_feedback: Optional behavior execution feedback
+
+        Returns:
+            Reflecting API response containing:
+            - targetAchieved: bool - Whether goal is achieved
+            - transition: dict - Server control signals (continue_behaviors, target_achieved)
+            - context_update: dict - Updates to apply (variables, progress_update, etc.)
+        """
+        try:
+            # Compress state
+            compressed_state = self.compressor.compress_context(state)
+
+            # Extract progress information from state (new hierarchical format)
+            progress_info = state.get('progress_info')
+            fsm_info = state.get('FSM')
+
+            # Require progress_info (no backward compatibility)
+            if not progress_info:
+                raise ValueError("Missing required 'progress_info' in state. New POMDP protocol requires hierarchical progress information.")
+
+            # Build location with hierarchical progress structure
+            location = progress_info
+
+            # Build clean context (simplified format after refactoring)
+            clean_context = {
+                'variables': compressed_state.get('variables', {}),
+                'effects': compressed_state.get('effects', {'current': [], 'history': []}),
+                'notebook': compressed_state.get('notebook', {})
+            }
+
+            # Add FSM info to context
+            if fsm_info:
+                clean_context['FSM'] = fsm_info
+
+            # Build new payload structure (POMDP-compatible)
+            payload = {
+                'observation': {
+                    'location': location,
+                    'context': clean_context
+                },
+                'options': {
+                    'stream': False
+                }
+            }
+
+            # Add behavior_feedback if provided
+            if behavior_feedback:
+                payload['behavior_feedback'] = behavior_feedback
+
+            if notebook_id:
+                payload['notebook_id'] = notebook_id
+
+            # 📝 记录 API 调用详情到独立日志文件
+            log_file = self.api_logger.log_api_call(
+                api_url=Config.REFLECTING_API_URL,
+                method='POST',
+                payload=payload,
+                context_state=state,
+                extra_info={
+                    'api_type': 'reflecting',
+                    'stage_id': stage_id,
+                    'step_index': step_index,
+                    'notebook_id': notebook_id
+                }
+            )
+            if log_file:
+                self.info(f"[API] 调用日志已保存: {log_file}")
+
+            self.info(f"[API] Sending reflection for stage={stage_id}, step={step_index}")
+            self.debug(f"[API] Payload size: {len(json.dumps(payload))} chars")
+
+            # Send request
+            session = await self._get_session()
+            async with session.post(
+                Config.REFLECTING_API_URL,
+                json=payload,
+                headers={'Content-Type': 'application/json'}
+            ) as response:
+                response.raise_for_status()
+
+                # Check content type
+                content_type = response.headers.get('Content-Type', '')
+
+                if 'xml' in content_type or 'text' in content_type:
+                    # XML response - parse as workflow definition
+                    xml_text = await response.text()
+                    parsed = response_parser.parse_response(xml_text)
+                    self.info(f"[API] Reflection response type: {parsed['type']}")
+                    return parsed
+                else:
+                    # JSON response - standard format
+                    result = await response.json()
+                    self.info(f"[API] Reflection response: targetAchieved={result.get('targetAchieved')}")
+                    return result
+
+        except aiohttp.ClientError as e:
+            self.error(f"[API] Failed to send reflection: {e}")
+            raise Exception(f"Reflecting API error: {str(e)}")
+        except Exception as e:
+            self.error(f"[API] Unexpected error sending reflection: {e}", exc_info=True)
+            raise
+
     async def send_feedback(
         self,
         stage_id: str,
         step_index: str,
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
-        behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
+        behavior_feedback: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Send feedback to get next workflow command.
+        Send feedback to Planning API (/planning).
+
+        This is the Planning API call per STATE_MACHINE_PROTOCOL.md.
+        Used in two scenarios:
+        1. STAGE_RUNNING state: Check if stage goal is achieved (Planning First)
+        2. STEP_RUNNING state: Check if step goal is achieved (Planning First)
 
         Args:
             stage_id: Current stage ID
             step_index: Current step ID/index (will be renamed to step_id in future)
-            state: Current workflow state/context
+            state: Current workflow state/context (contains progress_info per OBSERVATION_PROTOCOL.md)
             notebook_id: Optional notebook ID
-            behavior_feedback: Optional behavior execution feedback
+            behavior_feedback: Optional behavior execution feedback (for scenario 2)
 
         Returns:
-            Feedback response containing next command
+            Planning API response containing:
+            - targetAchieved: bool - Whether goal is achieved
+            - transition: dict - Server control signals (continue_behaviors, target_achieved)
+            - context_update: dict - Updates to apply (variables, progress_update, etc.)
+            - context_filter: dict - (Optional) Filtering instructions for next Generating API call
         """
         try:
             # Compress state
@@ -148,10 +279,21 @@ class WorkflowAPIClient(ModernLogger):
                 headers={'Content-Type': 'application/json'}
             ) as response:
                 response.raise_for_status()
-                result = await response.json()
 
-                self.info(f"[API] Feedback response: targetAchieved={result.get('targetAchieved')}")
-                return result
+                # Check content type
+                content_type = response.headers.get('Content-Type', '')
+
+                if 'xml' in content_type or 'text' in content_type:
+                    # XML response - parse as workflow definition
+                    xml_text = await response.text()
+                    parsed = response_parser.parse_response(xml_text)
+                    self.info(f"[API] Planning response type: {parsed['type']}")
+                    return parsed
+                else:
+                    # JSON response - standard format
+                    result = await response.json()
+                    self.info(f"[API] Planning response: targetAchieved={result.get('targetAchieved')}")
+                    return result
 
         except aiohttp.ClientError as e:
             self.error(f"[API] Failed to send feedback: {e}")
@@ -169,17 +311,30 @@ class WorkflowAPIClient(ModernLogger):
         behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
     ) -> AsyncIterator[Dict[str, Any]]:
         """
-        Fetch actions for a behavior (streaming).
+        Fetch actions from Generating API (/generating).
+
+        This is the Generating API call per STATE_MACHINE_PROTOCOL.md.
+        Called in BEHAVIOR_RUNNING state after Planning API determines goal not achieved.
+
+        The Generating API:
+        - Receives filtered observation (may be affected by context_filter from Planning API)
+        - Returns a list of Actions to execute
+        - Actions can be streamed (recommended) or returned in batch
 
         Args:
             stage_id: Current stage ID
             step_index: Current step ID/index
-            state: Current workflow state/context
-            stream: Whether to use streaming
+            state: Current workflow state/context (contains progress_info per OBSERVATION_PROTOCOL.md)
+            stream: Whether to use streaming (True recommended)
             behavior_feedback: Optional behavior execution feedback
 
         Yields:
-            Action dictionaries
+            Action dictionaries per ACTION_PROTOCOL.md:
+            - add: Add content to notebook
+            - exec: Execute code cell
+            - is_thinking/finish_thinking: Show thinking process
+            - new_chapter/new_section: Create structure markers
+            - update_title: Update notebook title
         """
         try:
             # Compress state
@@ -281,6 +436,27 @@ class WorkflowAPIClient(ModernLogger):
         except Exception as e:
             self.error(f"[API] Unexpected error fetching actions: {e}", exc_info=True)
             raise
+
+    def send_reflecting_sync(
+        self,
+        stage_id: str,
+        step_index: str,
+        state: Dict[str, Any],
+        notebook_id: Optional[str] = None,
+        behavior_feedback: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Synchronous wrapper for send_reflecting."""
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If event loop is already running, we need to use run_in_executor
+            future = asyncio.ensure_future(
+                self.send_reflecting(stage_id, step_index, state, notebook_id, behavior_feedback)
+            )
+            return asyncio.get_event_loop().run_until_complete(future)
+        else:
+            return loop.run_until_complete(
+                self.send_reflecting(stage_id, step_index, state, notebook_id, behavior_feedback)
+            )
 
     def send_feedback_sync(
         self,

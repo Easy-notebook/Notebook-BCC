@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.4.1: VALIDATE ACROSS DIFFERENT DOMAINS
+================================================================================
+
+GOAL: Validate across different domains
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.4.1.1: Execute Primary Task
+  Validate across different domains
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.4.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- cross_domain_validation_results
+- cross_domain_validation_documentation
+  

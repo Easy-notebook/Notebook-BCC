@@ -1,0 +1,57 @@
+================================================================================
+BEHAVIOR DE.1.1: DATA COLLECTION STRATEGY EXECUTION
+================================================================================
+
+GOAL: Execute data collection strategy based on project planning and verify data acquisition channel reliability.
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.1.1.1: Execute Data Collection Plan
+  Execute data collection based on Chapter 0 planning
+  - Identify all required data sources and acquisition channels
+  - Verify data access permissions and authentication
+  - Execute data acquisition from approved sources
+  - Record data acquisition timestamps and parameters
+
+ACTION DE.1.1.2: Verify Channel Reliability
+  Verify reliability of data acquisition channels
+  - Test data source connectivity and stability
+  - Validate data completeness from each source
+  - Assess data refresh frequency and update mechanisms
+  - Document any access issues or limitations
+
+ACTION DE.1.1.3: Establish Version Control
+  Establish data version control and traceability
+  - Create versioned copies of raw data
+  - Record data provenance and lineage
+  - Establish naming conventions for data versions
+  - Document data transformation and processing history
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_source_register (source names, types, access methods, status)
+- data_collection_log (timestamps, sources, parameters, validation results)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- List all data sources with full paths and access methods
+- Document data acquisition parameters (e.g., date range, filters, credentials)
+- Record exact timestamps and data versions
+- Use consistent naming: raw_data_v1, data_collected_YYYYMMDD
+- Persist acquisition logs under ./outputs/stage_1_data_existence/step_1/
+- Ensure all acquisition steps are reproducible
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- data_source_register exists with entries for all required data sources
+- data_collection_log contains timestamps, source identifiers, row counts
+- All planned data sources successfully accessed and data acquired
+- Data version control mechanism documented and operational

@@ -1,0 +1,55 @@
+================================================================================
+BEHAVIOR DE.2.4: VALIDATION AND ACCEPTANCE
+================================================================================
+
+GOAL: Validate data structure discovery completeness and alignment with acceptance criteria.
+
+RECOMMENDED AGENT: PCS-Agent
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.2.4.1: Artifact Completeness Check
+  Verify all required artifacts generated and complete
+  - Confirm data_schema_document is comprehensive
+  - Confirm data_type_report covers all variables
+  - Confirm distribution_summary includes all numeric fields
+  - Verify distribution visualizations created
+
+ACTION DE.2.4.2: Data Structure Understanding Gate
+  Validate adequate understanding of data structure
+  - Confirm schema and relationships clearly documented
+  - Verify all data type issues identified
+  - Validate distribution characteristics analyzed
+  - Ensure findings sufficient for next steps
+
+ACTION DE.2.4.3: PCS Framework Alignment
+  Verify alignment with PCS framework
+  - Predictability: Confirm structure supports predictive modeling
+  - Computability: Verify structure enables efficient processing
+  - Stability: Validate structural consistency documented
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- step_validation_report (pass/fail status for all acceptance criteria)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Review all acceptance criteria from step goal.txt
+- Mark each criterion as PASS/FAIL with supporting evidence
+- Document any gaps or issues requiring resolution
+- Provide recommendation: PROCEED or REWORK
+- Persist validation report under ./outputs/stage_1_data_existence/step_2/
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- step_validation_report exists with complete evaluation
+- All critical acceptance criteria marked as PASS
+- Structural understanding sufficient for downstream work
+- PCS framework alignment confirmed
+- Clear recommendation with rationale provided

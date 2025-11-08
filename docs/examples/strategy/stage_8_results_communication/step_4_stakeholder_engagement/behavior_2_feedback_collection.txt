@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.4.2: COLLECT AND PROCESS STAKEHOLDER FEEDBACK
+================================================================================
+
+GOAL: Collect and process stakeholder feedback
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.4.2.1: Execute Primary Task
+  Collect and process stakeholder feedback
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.4.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- feedback_collection_results
+- feedback_collection_documentation
+  

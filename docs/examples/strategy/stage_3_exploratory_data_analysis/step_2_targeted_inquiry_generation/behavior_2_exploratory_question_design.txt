@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.2.2: DESIGN SPECIFIC EXPLORATORY QUESTIONS
+================================================================================
+
+GOAL: Design specific exploratory questions
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.2.2.1: Execute Primary Task
+  Design specific exploratory questions
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.2.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- exploratory_question_design_results
+- exploratory_question_design_documentation
+  

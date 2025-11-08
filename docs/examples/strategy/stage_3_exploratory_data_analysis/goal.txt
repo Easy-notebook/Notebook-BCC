@@ -1,0 +1,22 @@
+# Stage 3: Exploratory Data Analysis
+
+## Stage Goal
+Deeply understand data patterns, relationships, and characteristics through systematic exploratory analysis to provide insights and direction for subsequent modeling.
+
+## Core Activities
+- Calculate comprehensive descriptive statistics
+- Visualize data distributions and relationships
+- Execute correlation and group comparison analysis
+- Conduct multivariate statistical analysis
+- Extract business-relevant insights
+
+## PCS Framework Integration
+- Predictability: Identify features with strong predictive power
+- Computability: Ensure analysis processes are reproducible
+- Stability: Test finding robustness to data changes
+
+## Quality Checklist
+- [ ] All variables distribution analyzed
+- [ ] Variable relationships systematically explored
+- [ ] Statistical analysis methods appropriately selected
+- [ ] All analysis processes reproducible

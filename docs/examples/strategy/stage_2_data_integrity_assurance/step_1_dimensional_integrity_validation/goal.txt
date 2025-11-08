@@ -1,0 +1,41 @@
+================================================================================
+STEP DI.1: DIMENSIONAL INTEGRITY VALIDATION
+================================================================================
+
+GOAL: Complete dimensional integrity validation with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_dimension_consistency_check -> Explore Agent
+   - Verify data dimensions match expectations
+
+2. behavior_2_index_integrity_validation -> Explore Agent
+   - Validate primary/foreign key integrity
+
+3. behavior_3_time_series_completeness -> Explore Agent
+   - Check time series data continuity
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- dimension_consistency_check_results
+- index_integrity_validation_results
+- time_series_completeness_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

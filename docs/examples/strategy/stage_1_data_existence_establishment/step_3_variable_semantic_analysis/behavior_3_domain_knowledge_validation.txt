@@ -1,0 +1,47 @@
+================================================================================
+BEHAVIOR DE.3.3: VALIDATE VARIABLE INTERPRETATION ACCURACY WITH DOMAIN EXPERTS
+================================================================================
+
+GOAL: Validate variable interpretation accuracy with domain experts
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.3.3.1: Conduct Expert Review
+  Engage domain experts for validation
+  - Present variable interpretations to domain experts
+  - Obtain expert opinions on variable importance
+  - Clarify ambiguous or uncertain variable meanings
+
+ACTION DE.3.3.2: Document Expert Feedback
+  Record expert validation results
+  - Document expert-confirmed variable interpretations
+  - Record variable importance rankings from experts
+  - Note business logic relationships between variables
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- domain_expert_validation
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Describe exact operations with variable/file names
+- Ensure deterministic seeds and document parameters
+- Produce/update specified artifacts
+- Use consistent naming conventions
+- Persist outputs under ./outputs/stage_3_*/step_3/
+- Ensure all operations are reproducible
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- All specified artifacts exist and are non-empty
+- Artifacts contain required information and meet quality standards
+- Operations documented and reproducible
+- PCS framework considerations addressed

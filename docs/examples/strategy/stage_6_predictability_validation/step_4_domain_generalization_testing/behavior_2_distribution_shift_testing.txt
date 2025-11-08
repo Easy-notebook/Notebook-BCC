@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.4.2: TEST UNDER DISTRIBUTION SHIFTS
+================================================================================
+
+GOAL: Test under distribution shifts
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.4.2.1: Execute Primary Task
+  Test under distribution shifts
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.4.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- distribution_shift_testing_results
+- distribution_shift_testing_documentation
+  

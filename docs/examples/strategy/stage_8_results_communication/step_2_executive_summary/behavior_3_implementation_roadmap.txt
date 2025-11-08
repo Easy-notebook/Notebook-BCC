@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.2.3: PROVIDE IMPLEMENTATION ROADMAP
+================================================================================
+
+GOAL: Provide implementation roadmap
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.2.3.1: Execute Primary Task
+  Provide implementation roadmap
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.2.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- implementation_roadmap_results
+- implementation_roadmap_documentation
+  

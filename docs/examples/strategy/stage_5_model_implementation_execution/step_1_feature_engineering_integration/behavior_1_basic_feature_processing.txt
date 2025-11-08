@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MI.1.1: EXECUTE BASIC FEATURE PROCESSING AND ENCODING
+================================================================================
+
+GOAL: Execute basic feature processing and encoding
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MI.1.1.1: Execute Primary Task
+  Execute basic feature processing and encoding
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MI.1.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- basic_feature_processing_results
+- basic_feature_processing_documentation
+  

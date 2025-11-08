@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.3.1: VALIDATE TEMPORAL EXTRAPOLATION CAPABILITY
+================================================================================
+
+GOAL: Validate temporal extrapolation capability
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.3.1.1: Execute Primary Task
+  Validate temporal extrapolation capability
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.3.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- temporal_extrapolation_results
+- temporal_extrapolation_documentation
+  

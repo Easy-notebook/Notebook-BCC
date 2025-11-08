@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DE.5.2: EVALUATE VARIABLE IMPORTANCE USING STATISTICAL METHODS
+================================================================================
+
+GOAL: Evaluate variable importance using statistical methods
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.5.2.1: Execute Primary Task
+  Evaluate variable importance using statistical methods
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DE.5.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- feature_importance_evaluation_results
+- feature_importance_evaluation_documentation
+  

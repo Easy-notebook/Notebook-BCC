@@ -119,9 +119,14 @@ class ScriptStore(ModernLogger):
         registry.register_handler('set_effect_as_thinking', lambda step: handle_set_effect_thinking(self, step))
         registry.register_handler('update_last_text', lambda step: handle_update_last_text(self, step))
         registry.register_handler(ACTION_TYPES['UPDATE_TITLE'], lambda step: handle_update_title(self, step))
-        registry.register_handler(ACTION_TYPES['COMPLETE_STEP'], lambda step: handle_complete_step(self, step))
-        registry.register_handler(ACTION_TYPES['UPDATE_WORKFLOW'], lambda step: handle_update_workflow(self, step))
-        registry.register_handler(ACTION_TYPES['UPDATE_STEP_LIST'], lambda step: handle_update_step_list(self, step))
+        # NOTE: The following actions were removed and are now handled by Planning API:
+        # - COMPLETE_STEP → Planning API targetAchieved
+        # - UPDATE_WORKFLOW → context_update.workflow_update
+        # - UPDATE_STEP_LIST → context_update.stage_steps_update
+        # Commented out to avoid KeyError:
+        # registry.register_handler(ACTION_TYPES['COMPLETE_STEP'], lambda step: handle_complete_step(self, step))
+        # registry.register_handler(ACTION_TYPES['UPDATE_WORKFLOW'], lambda step: handle_update_workflow(self, step))
+        # registry.register_handler(ACTION_TYPES['UPDATE_STEP_LIST'], lambda step: handle_update_step_list(self, step))
 
     @classmethod
     def register_custom_action(cls, action_type: str, handler: ActionHandler) -> None:

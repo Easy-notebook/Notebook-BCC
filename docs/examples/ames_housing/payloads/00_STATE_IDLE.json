@@ -1,0 +1,69 @@
+{
+  "observation": {
+    "location": {
+      "current": {
+        "stage_id": null,
+        "step_id": null,
+        "behavior_id": null,
+        "behavior_iteration": null
+      },
+      "progress": {
+        "stages": {
+          "completed": [],
+          "current": null,
+          "remaining": [],
+          "focus": "",
+          "current_outputs": {
+            "expected": [],
+            "produced": [],
+            "in_progress": []
+          }
+        },
+        "steps": {
+          "completed": [],
+          "current": null,
+          "remaining": [],
+          "focus": "",
+          "current_outputs": {
+            "expected": [],
+            "produced": [],
+            "in_progress": []
+          }
+        },
+        "behaviors": {
+          "completed": [],
+          "current": null,
+          "iteration": null,
+          "focus": "",
+          "current_outputs": {
+            "expected": [],
+            "produced": [],
+            "in_progress": []
+          }
+        }
+      },
+      "goals": "用户提出了问题%user_problem%，上传了文件%user_submit_files%,需要对于用户的问题进行大目标拆分，以目标产物为导向，进行阶段拆分，每个阶段需要有明确的目标，并且需要有明确的目标产物"
+    }
+  },
+  "state": {
+    "variables": {
+      "user_problem": "基于  Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+      "user_submit_files": ["./assets/housing.csv"]
+    },
+    "effects": {
+      "current": [],
+      "history": []
+    },
+    "notebook": {
+      "title": null,
+      "cell_count": 0,
+      "last_cell_type": null,
+      "last_output": null
+    },
+    "FSM": {
+      "state": "IDLE",
+      "last_transition": null,
+      "timestamp": "2025-10-30T10:00:00.000Z"
+    }
+  }
+}

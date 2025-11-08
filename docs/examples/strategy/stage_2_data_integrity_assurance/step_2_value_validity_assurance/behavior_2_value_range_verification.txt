@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.2.2: VERIFY VALUE RANGES ARE REASONABLE
+================================================================================
+
+GOAL: Verify value ranges are reasonable
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.2.2.1: Execute Primary Task
+  Verify value ranges are reasonable
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.2.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- value_range_verification_results
+- value_range_verification_documentation
+  

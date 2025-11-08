@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.1.1: VERIFY DATA DIMENSIONS MATCH EXPECTATIONS
+================================================================================
+
+GOAL: Verify data dimensions match expectations
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.1.1.1: Execute Primary Task
+  Verify data dimensions match expectations
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.1.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- dimension_consistency_check_results
+- dimension_consistency_check_documentation
+  

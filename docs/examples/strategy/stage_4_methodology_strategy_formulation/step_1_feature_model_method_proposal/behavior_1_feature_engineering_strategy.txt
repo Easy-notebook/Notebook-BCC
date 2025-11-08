@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.1.1: DESIGN FEATURE ENGINEERING STRATEGY
+================================================================================
+
+GOAL: Design feature engineering strategy
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.1.1.1: Execute Primary Task
+  Design feature engineering strategy
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.1.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- feature_engineering_strategy_results
+- feature_engineering_strategy_documentation
+  

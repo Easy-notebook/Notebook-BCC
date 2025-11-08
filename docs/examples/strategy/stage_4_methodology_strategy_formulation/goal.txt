@@ -1,0 +1,22 @@
+# Stage 4: Methodology Strategy Formulation
+
+## Stage Goal
+Formulate comprehensive modeling strategy including feature engineering, model selection, and evaluation framework based on data understanding.
+
+## Core Activities
+- Design feature engineering strategy
+- Establish model method candidate set
+- Plan cross-validation and evaluation approach
+- Design hyperparameter optimization strategy
+- Develop implementation plan with risk mitigation
+
+## PCS Framework Integration
+- Predictability: Prioritize methods with good generalization
+- Computability: Ensure methods are implementable and efficient
+- Stability: Select robust methods and test sensitivity
+
+## Quality Checklist
+- [ ] Feature engineering strategy matches data
+- [ ] Model selection considers constraints
+- [ ] Evaluation strategy comprehensive
+- [ ] Implementation plan realistic

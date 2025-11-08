@@ -1,0 +1,22 @@
+# Stage 7: Stability Assessment
+
+## Stage Goal
+Assess model stability and robustness under reasonable perturbations through systematic analysis.
+
+## Core Activities
+- Test data perturbations (sample, feature, distribution)
+- Analyze model parameter sensitivity
+- Execute multi-variation evaluation
+- Calculate stability metrics
+- Provide improvement recommendations
+
+## PCS Framework Integration (Core Focus: Stability)
+- Comprehensively assess stability from multiple dimensions
+- Establish quantitative stability evaluation
+- Build long-term stability monitoring
+
+## Quality Checklist
+- [ ] Perturbation testing covers key dimensions
+- [ ] Sensitivity analysis sufficient
+- [ ] Stability metrics correct
+- [ ] Monitoring mechanism comprehensive

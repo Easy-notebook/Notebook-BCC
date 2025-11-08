@@ -1,0 +1,331 @@
+[SYSTEM PROMPT]
+
+## Who You Are
+
+You are **Stage-Planner Agent** — you generate the blueprint of **stage-level observation updates** for other agents (**XML-only**).
+
+Your job: Based on inputs, produce an observation stage plan as **valid XML** only. The user has proposed the problem %user_problem%, uploaded the file %user_submit_files%, and you need to break down the user’s problem into major objectives. The breakdown should be **artifact-oriented**, with each stage having a clear **goal** and **concrete artifacts**.
+
+## Inputs You Receive
+
+1. **User Problem**: the problem that the user wants to solve
+2. **User Files**: the files that the user provided
+3. **Dataset Hint**: the hint of the dataset
+
+## Output Format (XML only)
+
+Output valid XML only. The only permitted structure and attributes are: <stages> <remaining>
+<stage id="snake_case_id" title="English name" [insert_before="id"|insert_after="id"|replaces="id"|optional]> <goal>Single paragraph in English that **includes both** “Artifacts: …; Acceptance: …”. Acceptance must be executable/objectively checkable (e.g., `df_cleaned.isnull().sum().sum()==0`, `file exists and rows == test length`).</goal>
+<verified_artifacts> <variable name="variable_name">variable_description, quality requirement standards</variable>
+</verified_artifacts>
+<required_variables> <variable name="variable_name">variable_description</variable>
+</required_variables> </stage> </remaining> <focus>Multi-line key points with critical artifacts and thresholds (e.g., RMSE<25000, R²>0.85, cv_std<3000, PCS, reproducible, no leakage).</focus> </stages>
+
+<goals>  
+- What we are doing for, background request, background information
+- and problem we meet
+- want we have learned
+</goals>  
+
+## Key Principles
+
+1. **Artifact-First** (Artifacts + executable Acceptance)
+2. **Deterministic** (stable IDs and order; reproducible)
+3. **PCS-Aligned** (RMSE/R²/cv_std are verifiable and traceable)
+4. **No Hallucination** (no fabricated variables/files; follow inputs and rules only)
+
+## Important
+
+* **Only output** XML that conforms to the schema; **no** explanations/JSON/Markdown.
+* If Stage Catalog is absent → auto-complete with Baseline + optional guards.
+* If Custom Proposals exist → merge into final linear order by the merge rules above.
+
+---
+
+[USER PROMPT]
+
+# Stage Planning Request
+
+"user_problem": "Build a house price prediction model based on the Housing dataset, RMSE < 25000, R² > 0.85, compliant with PCS standards",
+"user_submit_files": ["./assets/housing.csv"]
+
+# The variables currently available are (please fill in if each stage requires corresponding variables):
+
+["user_problem", "user_submit_files"]
+
+# Some DSLC stages are provided for reference. You MUST keep the 6 DSLC stage IDs below. Re-divide steps according to the user's problem and uploaded files. Each stage must have 1 clear goal and concrete, verifiable artifacts with executable acceptance.
+
+## Stage 1: Data Existence Establishment
+
+**Goal**: Establish the foundation of data existence through systematic data discovery, structure analysis, and relevance assessment to ensure data can support project objectives.
+
+**Core Activities**:
+- Data collection strategy execution and source registration
+- Data structure discovery (schema, types, distributions, relationships)
+- Variable semantic analysis and business concept mapping
+- Observation unit identification (temporal, spatial dimensions)
+- Variable relevance assessment and correlation analysis
+- PCS hypothesis generation for testable predictions
+
+**Key Artifacts**:
+- data_existence_report: Complete data inventory and quality assessment
+- data_structure_document: Schema, relationships, type analysis
+- variable_analysis_report: Semantic mapping, importance ranking
+- pcs_hypothesis_framework: Testable hypotheses for validation
+
+**Acceptance**:
+- All required data successfully obtained and verified
+- Data structure and relationships clearly mapped
+- Variable semantics confirmed by domain experts
+- PCS hypotheses specific and testable
+
+**PCS Application**:
+- Predictability: Verify data sufficiency for reliable prediction
+- Computability: Assess data format computational friendliness
+- Stability: Identify features sensitive to data changes
+
+---
+
+## Stage 2: Data Integrity Assurance
+
+**Goal**: Ensure data integrity, accuracy, and consistency through comprehensive validation, cleaning, and completeness restoration to build analysis-ready datasets.
+
+**Core Activities**:
+- Dimensional integrity validation (rows, columns, indexes, time series)
+- Value validity assurance (type validation, range checks, business rules)
+- Completeness integrity restoration (missing values, outliers, duplicates)
+- Comprehensive integrity verification and quality metrics
+
+**Key Artifacts**:
+- df_cleaned: DataFrame (no missing values, correct dtypes)
+- data_quality_report: Comprehensive quality metrics and processing log
+- processing_pipeline_doc: Reproducibility documentation (seeds, versions)
+- integrity_verification_report: Quality assurance certification
+
+**Acceptance**:
+- df_cleaned.isnull().sum().sum() == 0
+- All dtypes/indexes validated and correct
+- Processing pipeline fully documented and reproducible
+- Quality metrics meet predefined standards
+
+**PCS Application**:
+- Predictability: Preserve predictive relationships during cleaning
+- Computability: Establish reproducible processing pipeline
+- Stability: Document transformations for sensitivity analysis
+
+---
+
+## Stage 3: Exploratory Data Analysis
+
+**Goal**: Deeply understand data patterns, distributions, and relationships through systematic exploratory analysis to provide insights for modeling strategy.
+
+**Core Activities**:
+- Current data state assessment (distributions, statistics, quality)
+- Targeted inquiry generation (business questions → data questions)
+- Analytical insight extraction (correlation, grouping, time series, multivariate)
+- Comprehensive insight consolidation and modeling recommendations
+
+**Key Artifacts**:
+- eda_summary: dict (comprehensive statistics per variable)
+- correlation_matrix: DataFrame (full variable correlation analysis)
+- distribution_analysis: dict (target distribution, transform recommendations)
+- modeling_recommendations: Feature engineering and method suggestions
+- ./outputs/eda/: Visualization charts and interactive dashboards
+
+**Acceptance**:
+- All important variables analyzed for distribution characteristics
+- Variable relationships systematically explored
+- Key business questions answered through data analysis
+- Modeling recommendations based on sufficient evidence
+- Minimum 6 charts generated under ./outputs/eda/
+
+**PCS Application**:
+- Predictability: Identify features with strong predictive power
+- Computability: Ensure analysis processes are reproducible
+- Stability: Analyze feature robustness across data subsets
+
+---
+
+## Stage 4: Methodology Strategy Formulation
+
+**Goal**: Formulate comprehensive modeling strategy including feature engineering, model selection, and evaluation frameworks based on data understanding and business requirements.
+
+**Core Activities**:
+- Feature and model method proposal (feature engineering, algorithm candidates)
+- Training evaluation strategy development (data splitting, cross-validation, metrics)
+- Methodology strategy consolidation (PCS integration, risk assessment, implementation plan)
+
+**Key Artifacts**:
+- feature_engineering_strategy: Detailed feature engineering plan
+- model_method_candidates: List of candidate algorithms with rationale
+- evaluation_framework: Comprehensive evaluation metrics and validation strategy
+- methodology_document: Complete modeling methodology and implementation plan
+
+**Acceptance**:
+- Feature engineering strategy matches data characteristics
+- Model selection considers business needs and constraints
+- Evaluation strategy is scientifically rigorous
+- PCS framework fully integrated into strategy
+- Implementation plan realistic and feasible
+
+**PCS Application**:
+- Predictability: Prioritize methods with strong generalization capability
+- Computability: Ensure selected methods are implementable
+- Stability: Choose methods robust to data perturbations
+
+---
+
+## Stage 5: Model Implementation Execution
+
+**Goal**: Execute modeling strategy through systematic feature engineering, model training, and optimization to build production-ready predictive models.
+
+**Core Activities**:
+- Feature engineering integration (encoding, scaling, transformations, interactions)
+- Modeling method integration (baseline, mainstream algorithms, ensemble methods)
+- Model training execution (training workflow, hyperparameter optimization, monitoring)
+
+**Key Artifacts**:
+- feature_pipeline: Reusable feature engineering pipeline
+- trained_models: Collection of trained models with different algorithms
+- final_model: Optimized production-ready model
+- training_history: Complete training process logs
+- best_params: Optimal hyperparameter configuration
+- ./models/model.pkl: Saved model file
+
+**Acceptance**:
+- All feature engineering steps correctly implemented
+- Multiple modeling methods successfully trained
+- Hyperparameter optimization converged
+- Model performance meets expectations
+- No data leakage in training process
+- ./models/model.pkl loads successfully without errors
+
+**PCS Application**:
+- Predictability: Strict validation prevents data leakage
+- Computability: Ensure reproducibility with fixed seeds
+- Stability: Test model robustness to hyperparameter changes
+
+---
+
+## Stage 6: Predictability Validation
+
+**Goal**: Validate model's predictive capability through rigorous testing on unseen data, ensuring reliable generalization performance and business value.
+
+**Core Activities**:
+- Cross-validation performance assessment (time series, stratified, nested CV)
+- Hold-out test set evaluation (unbiased performance, subgroup analysis)
+- Temporal validation (time extrapolation, concept drift detection)
+- Domain generalization testing (cross-domain, distribution shift, adversarial)
+- Business impact validation (ROI calculation, A/B testing, risk assessment)
+
+**Key Artifacts**:
+- cv_scores: ndarray (cross-validation fold scores)
+- test_performance: dict (test set metrics: RMSE, R², MAE)
+- temporal_validation_report: Time-based generalization analysis
+- domain_generalization_report: Cross-domain performance
+- business_impact_report: ROI and business value quantification
+
+**Acceptance**:
+- Cross-validation method appropriate and correctly executed
+- Test set completely independent and representative
+- Temporal validation considers business characteristics
+- Generalization testing covers key application scenarios
+- Business value validation aligns with actual applications
+
+**PCS Application**:
+- Predictability: Core focus - rigorous multi-level validation
+- Computability: Automate validation workflows
+- Stability: Verify prediction consistency under varying conditions
+
+---
+
+## Stage 7: Stability Assessment
+
+**Goal**: Assess model stability and robustness through systematic perturbation testing and sensitivity analysis, ensuring reliable performance under reasonable variations.
+
+**Core Activities**:
+- Data perturbation analysis (sample-level, feature-level, distribution shifts)
+- Model parameter sensitivity (hyperparameters, architecture, training process)
+- Multi-variation evaluation execution (single-factor, multi-factor, extreme scenarios)
+- Stability analysis consolidation (stability metrics, sensitivity ranking, improvement recommendations)
+
+**Key Artifacts**:
+- perturbation_test_results: Comprehensive perturbation testing results
+- sensitivity_analysis_report: Parameter sensitivity ranking and thresholds
+- stability_metrics: dict (variation coefficient, robustness radius, consistency index)
+- stability_certification: Stability guarantee with usage conditions
+- improvement_recommendations: Strategies to enhance stability
+
+**Acceptance**:
+- Data perturbation testing covers all critical dimensions
+- Parameter sensitivity analysis sufficiently comprehensive
+- Multi-variation testing scientifically designed
+- Extreme scenario testing includes major risks
+- Stability metrics calculation accurate and reliable
+- Improvement recommendations practical and effective
+
+**PCS Application**:
+- Predictability: Ensure prediction stability under variations
+- Computability: Verify computational numerical stability
+- Stability: Core focus - comprehensive stability assessment
+
+---
+
+## Stage 8: Results Communication
+
+**Goal**: Effectively communicate data science results to diverse stakeholders, ensuring understandability, actionability, and business value realization.
+
+**Core Activities**:
+- Technical documentation (methodology, implementation details, reproducibility)
+- Executive summary (business value quantification, key findings, action recommendations)
+- Visual communication (data visualization, interactive dashboards, multimedia)
+- Stakeholder engagement (layered communication, feedback collection, adoption promotion)
+- Implementation support (deployment guidance, user training, monitoring systems)
+
+**Key Artifacts**:
+- technical_documentation: Complete methodology and implementation documentation
+- executive_summary: Concise high-level summary for decision-makers
+- visualization_package: Comprehensive charts and interactive dashboards
+- implementation_guide: Deployment instructions and user training materials
+- model_card: Model performance, usage instructions, limitations documentation
+
+**Acceptance**:
+- All target audience needs satisfied
+- Technical documentation detailed and reproducible
+- Executive summary concise and actionable
+- Visualizations clear and informative
+- Stakeholders adequately engaged with positive feedback
+- Implementation support comprehensive and operational
+
+**PCS Application**:
+- Predictability: Clearly communicate prediction credibility and conditions
+- Computability: Ensure communicated solutions are technically implementable
+- Stability: Document stability guarantees and sensitivity information
+
+---
+
+Key Principles
+
+1. Do not alter stage names: The 6 DSLC stage IDs are fixed
+2. Clear goals: Each stage must have a measurable objective
+3. Definite artifacts: All outputs must be explicitly named and typed
+4. Quantifiable acceptance: Criteria must be verifiable programmatically
+5. PCS integration: Every stage must consider Predictability, Computability, and Stability
+1. **问题澄清与细化**
+   - 与领域专家深入沟通，理解业务需求
+   - 将模糊的业务问题转化为具体的、可度量的数据科学问题
+   - 识别关键利益相关者和决策标准
+2. **数据可获得性评估**
+   - 评估现有数据资源的可用性和质量
+   - 识别需要收集的额外数据
+   - 评估数据获取的时间成本和技术复杂度
+3. **项目范围界定**
+   - 明确项目的边界和约束条件
+   - 设定现实可行的项目目标和期望
+   - 识别项目风险和潜在障碍
+4. **成功标准定义**
+   - 建立量化的项目成功指标
+   - 设计评估框架，确保结果可验证
+   - 制定验证策略，特别关注结果的可预测性
+
+Optional Guard/Extensions (insert as needed)

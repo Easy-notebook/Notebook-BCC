@@ -56,6 +56,7 @@ class Config:
         # Workflow API endpoints
         cls.FEEDBACK_API_URL = f"{cls.DSLC_BASE_URL}/planning"
         cls.BEHAVIOR_API_URL = f"{cls.DSLC_BASE_URL}/generating"
+        cls.REFLECTING_API_URL = f"{cls.DSLC_BASE_URL}/reflecting"
         cls.GENERATE_API_URL = f"{cls.DSLC_BASE_URL}/generate"
 
         # Code execution API endpoints
@@ -68,6 +69,7 @@ class Config:
     # Workflow API endpoints
     FEEDBACK_API_URL = f"{DSLC_BASE_URL}/planning"
     BEHAVIOR_API_URL = f"{DSLC_BASE_URL}/generating"
+    REFLECTING_API_URL = f"{DSLC_BASE_URL}/reflecting"
     GENERATE_API_URL = f"{DSLC_BASE_URL}/generate"
 
     # Code execution API endpoints
@@ -148,6 +150,7 @@ class Config:
             'dslc_base_url': cls.DSLC_BASE_URL,
             'feedback_api_url': cls.FEEDBACK_API_URL,
             'behavior_api_url': cls.BEHAVIOR_API_URL,
+            'reflecting_api_url': cls.REFLECTING_API_URL,
             'generate_api_url': cls.GENERATE_API_URL,
         }
 

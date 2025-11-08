@@ -1,225 +1,365 @@
-# Notebook-BCC 文档中心
+# Notebook-BCC Documentation
 
-## 📚 核心协议文档
-
-### [OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md) 🆕
-**Observation 协议规范** - 完整的 POMDP observation 结构定义
-
-**包含内容**：
-- 完整 observation 结构（location, progress, goals, context）
-- 层级化进度追踪机制（stages/steps/behaviors）
-- 产出追踪系统（expected/produced/in_progress）
-- 临时变量升格规则（df_working → df_imputed@iter3）
-- Context Filter 协议详解
-- 错误处理规则（变量不存在时的 WARN 机制）
-
-**适用对象**：
-- 后端开发者（实现 Planning/Generating API）
-- 前端开发者（构建 observation payload）
-- 系统架构师（理解数据流）
+Welcome to the Notebook-BCC documentation center. This guide will help you navigate the documentation based on your role and needs.
 
 ---
 
-### [API_PROTOCOL.md](./API_PROTOCOL.md)
-**API 交互协议** - Planning 和 Generating API 的完整规范
-
-**包含内容**：
-- API 端点配置
-- Planning First 协议
-- 请求/响应格式
-- 流式响应处理
-- **Context Filter 协议**（NEW）
-- 上下文更新机制
-- 最佳实践
-
-**适用对象**：
-- API 集成开发者
-- 后端服务实现者
-
-**关键更新**：
-- ✅ 添加 Context Filter 协议
-- ✅ 更新 focus 为文本格式（非变量名列表）
-- ✅ 明确 effects 是代码执行输出
-
----
-
-### [ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md)
-**Action 协议规范** - 7 种 Generating Actions 的详细定义
-
-**包含内容**：
-- POMDP 设计原理
-- 7 种 Generating Actions：
-  1. ADD_ACTION - 添加内容
-  2. EXEC_CODE - 执行代码
-  3. IS_THINKING / FINISH_THINKING - 思考过程
-  4. NEW_CHAPTER / NEW_SECTION - 结构标记
-  5. UPDATE_TITLE - 更新标题
-- 已弃用的 Actions（UPDATE_WORKFLOW, COMPLETE_STEP 等）
-- Shot Type 说明
-- 错误处理
-
-**适用对象**：
-- Action 执行器实现者
-- Generating API 开发者
-
-**关键更新**：
-- ✅ 明确 Generating Actions（7个）vs Planning Updates（6个）
-- ✅ 添加已弃用 Actions 章节
-- ✅ 更新 POMDP observation 示例
-
----
-
-## 📖 总结文档
-
-### [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md)
-**系统重构总结** - Action 系统重构的完整记录
-
-**包含内容**：
-- 重构前后对比
-- Actions 分组（Generating vs Planning）
-- Context 简化
-- 层级化 Focus 系统设计
-- 迁移指南
-- 测试清单
-
-**适用对象**：
-- 项目维护者
-- 新加入的开发者
-- 系统审计
-
----
-
-## 🗂️ 目录结构
+## 📚 Documentation Structure
 
 ```
 docs/
-├── README.md                      # 本文档（导航）
-├── OBSERVATION_PROTOCOL.md        # 🆕 Observation 协议（核心）
-├── API_PROTOCOL.md                # API 交互协议
-├── ACTION_PROTOCOL.md             # Action 规范
-└── REFACTORING_SUMMARY.md         # 重构总结
+├── README.md                    # This file - documentation index
+│
+├── protocols/                   # Core protocol specifications (4 files)
+│   ├── STATE_MACHINE.md        # State machine FSM protocol
+│   ├── OBSERVATION.md          # POMDP observation structure
+│   ├── API.md                  # API interaction protocol
+│   └── ACTION.md               # Action specifications
+│
+├── guides/                      # User guides (2 files)
+│   ├── CLI_USAGE.md            # Complete CLI usage guide
+│   └── QUICK_REFERENCE.md      # Quick reference cheat sheet
+│
+└── examples/                    # Example workflows and payloads
+    └── ames_housing/           # Ames housing price prediction example
 ```
 
 ---
 
-## 🚀 快速开始
+## 🎯 Quick Navigation
 
-### 我是后端开发者
+### For Backend Developers
 
-1. **首先阅读**：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md)
-   - 理解完整的 observation 结构
-   - 理解产出追踪机制
-   - 理解 Context Filter 协议
+**Building the Planning/Generating API?**
 
-2. **然后阅读**：[API_PROTOCOL.md](./API_PROTOCOL.md)
-   - 实现 Planning API
-   - 实现 Generating API
-   - 实现 context_filter 逻辑
+1. **[OBSERVATION Protocol](./protocols/OBSERVATION.md)** - Start here
+   - Understand the complete observation structure
+   - Learn about progress tracking (stages/steps/behaviors)
+   - Understand context filtering and variable management
 
-3. **最后阅读**：[ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md)
-   - 生成 7 种 Generating Actions
+2. **[API Protocol](./protocols/API.md)** - Then read this
+   - Implement Planning API endpoints
+   - Implement Generating API endpoints
+   - Handle streaming responses
+   - Apply context filters
 
-### 我是前端开发者
+3. **[ACTION Protocol](./protocols/ACTION.md)** - Finally this
+   - Generate 7 types of actions for Generating API
+   - Understand action execution flow
 
-1. **首先阅读**：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md)
-   - 构建 observation payload
-   - 实现产出追踪
-   - 实现临时变量升格
+### For Frontend/Client Developers
 
-2. **然后阅读**：[API_PROTOCOL.md](./API_PROTOCOL.md)
-   - 调用 Planning/Generating API
-   - 处理 context_filter
-   - 应用筛选逻辑
+**Building the workflow execution client?**
 
-3. **参考**：[ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md)
-   - 执行 Actions
-   - 更新 effects
+1. **[STATE_MACHINE Protocol](./protocols/STATE_MACHINE.md)** - Start here
+   - Understand FSM states and transitions
+   - Learn event-driven state changes
+   - Understand the "Planning First" protocol
 
-### 我是新加入的开发者
+2. **[OBSERVATION Protocol](./protocols/OBSERVATION.md)** - Then this
+   - Build observation payloads for API calls
+   - Track workflow progress
+   - Manage variables and effects
 
-1. **快速了解**：[REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md)
-   - 理解系统架构
-   - 理解设计决策
-   - 理解重构原因
+3. **[API Protocol](./protocols/API.md)** - Next
+   - Call Planning/Generating APIs correctly
+   - Handle API responses
+   - Apply context updates
 
-2. **深入学习**：按上述角色指南阅读相关文档
+4. **[ACTION Protocol](./protocols/ACTION.md)** - Finally
+   - Execute actions received from APIs
+   - Update notebook state
+   - Track execution effects
+
+### For CLI Users
+
+**Using Notebook-BCC from command line?**
+
+- **[CLI Usage Guide](./guides/CLI_USAGE.md)** - Complete reference
+  - `test-request` - Preview API requests
+  - `send-api` - Send API requests
+  - `apply-transition` - Apply state transitions
+  - REPL commands
+
+- **[Quick Reference](./guides/QUICK_REFERENCE.md)** - Cheat sheet
+  - Common commands
+  - Quick examples
+
+### For New Contributors
+
+**Just getting started?**
+
+1. Browse **[examples/ames_housing/](./examples/ames_housing/)** - See real workflow examples
+2. Read **[STATE_MACHINE Protocol](./protocols/STATE_MACHINE.md)** - Understand the architecture
+3. Read **[CLI Usage Guide](./guides/CLI_USAGE.md)** - Try the CLI tools
 
 ---
 
-## 🔑 核心概念速查
+## 📖 Protocol Documents
+
+### [State Machine Protocol](./protocols/STATE_MACHINE.md)
+
+**The workflow control system**
+
+Defines FSM states, events, and transition rules:
+- 15 FSM states (IDLE → STAGE_RUNNING → STEP_RUNNING → BEHAVIOR_RUNNING → ...)
+- 23 workflow events (START_WORKFLOW, START_STEP, COMPLETE_BEHAVIOR, ...)
+- 40+ state transition rules
+- "Planning First" protocol - when to call Planning API
+- Client navigation responsibilities
+
+**Key Concepts:**
+- State hierarchy: `idle → stage → step → behavior → action`
+- Mixed control: Planning API (decisions) + Client (navigation)
+- Event-driven transitions
+
+---
+
+### [Observation Protocol](./protocols/OBSERVATION.md)
+
+**The POMDP observation structure**
+
+Complete specification of the observation payload sent to APIs:
+- **Location**: Current position in workflow (stage_id, step_id, behavior_id)
+- **Progress**: Hierarchical tracking (stages/steps/behaviors)
+- **Goals**: Workflow objectives and focus
+- **Context**: Variables, effects, notebook state, FSM state
+
+**Key Features:**
+- Three-state output tracking (expected/produced/in_progress)
+- Temporary variable promotion rules
+- Context filter protocol
+- Effect tracking (code execution outputs)
+
+---
+
+### [API Protocol](./protocols/API.md)
+
+**Planning and Generating API specifications**
+
+How to call and implement the two core APIs:
+- **Planning API** - Makes decisions (when to start/complete stages/steps)
+- **Generating API** - Creates actions (notebook content generation)
+- **Reflecting API** - Provides behavior feedback
+
+**Request/Response Formats:**
+- Observation payload structure
+- Planning response (targetAchieved, transition, context_update)
+- Generating response (7 action types, streaming)
+- Context filter usage
+
+---
+
+### [Action Protocol](./protocols/ACTION.md)
+
+**The 7 Generating Actions**
+
+Detailed specifications for actions returned by Generating API:
+1. **ADD_ACTION** - Add markdown/code/hybrid cells
+2. **EXEC_CODE** - Execute code cells
+3. **IS_THINKING** / **FINISH_THINKING** - Show thinking process
+4. **NEW_CHAPTER** / **NEW_SECTION** - Structure markers
+5. **UPDATE_TITLE** - Update notebook title
+
+**Also Covers:**
+- POMDP design principles
+- Shot types (one-shot, multi-shot)
+- Deprecated actions (moved to Planning API)
+- Error handling
+
+---
+
+## 📘 User Guides
+
+### [CLI Usage Guide](./guides/CLI_USAGE.md)
+
+**Complete CLI reference**
+
+All CLI commands with detailed examples:
+- **`test-request`** - Preview API requests without sending (auto-infers API type)
+- **`send-api`** - Send actual API requests (auto-infers API type)
+- **`apply-transition`** - Apply transitions offline
+- **`resume`** - Resume workflow from state file
+- **REPL commands** - Interactive workflow shell
+
+**Includes:**
+- Parameter explanations
+- Output examples
+- Troubleshooting guide
+- Use cases and workflows
+
+---
+
+### [Quick Reference](./guides/QUICK_REFERENCE.md)
+
+**Command cheat sheet**
+
+Quick lookup for common commands and patterns:
+- Essential CLI commands
+- REPL commands
+- Common workflows
+- Keyboard shortcuts
+
+---
+
+## 💡 Examples
+
+### [Ames Housing Example](./examples/ames_housing/)
+
+**Complete workflow example**
+
+Real-world example showing:
+- Full workflow definition (3 stages, multiple steps)
+- State files for all FSM states
+- Transition XML examples
+- Planning/Generating API payloads
+- Variable evolution through workflow
+
+**Use this to:**
+- Understand complete workflow flow
+- Test your API implementation
+- Generate test cases
+- Debug state transitions
+
+---
+
+## 🔑 Core Concepts
+
+### FSM States
+The workflow progresses through hierarchical states:
+```
+IDLE
+  → STAGE_RUNNING
+    → STEP_RUNNING
+      → BEHAVIOR_RUNNING
+        → ACTION_RUNNING
+          → ACTION_COMPLETED
+```
+
+See: [STATE_MACHINE Protocol](./protocols/STATE_MACHINE.md)
 
 ### Observation
-完整的 POMDP 观测数据，包含：
-- **Location**: 当前位置、进度、目标
-- **Context**: 变量、effects、notebook 状态
-- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md)
+Complete POMDP observation sent to APIs containing:
+- **location**: Where we are (stage/step/behavior)
+- **progress**: What's completed, current, remaining
+- **goals**: What we're trying to achieve
+- **context**: Variables, effects, notebook state
 
-### Focus
-Planner 生成的**详细分析文本**，用于指导 Generating API：
-- 不是变量名列表
-- 不是任务描述列表
-- 是完整的分析和建议文本
-- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md#2-progress层级化进度)
+See: [OBSERVATION Protocol](./protocols/OBSERVATION.md)
 
-### Effects
-Python 代码执行的**实际输出**：
-- 不是操作日志
-- 是 print() 输出、显示结果、返回值
-- 用于提供执行证据
-- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md#2-effectseffects)
+### Planning First Protocol
+Most state transitions require Planning API to decide next steps:
+- **STAGE_RUNNING** → Planning decides which step to start
+- **STEP_RUNNING** → Planning checks if target achieved
+- **BEHAVIOR_COMPLETED** → Planning decides if behavior succeeded
+- **STEP_COMPLETED** → Planning decides if stage is complete
 
-### 产出追踪
-三状态追踪系统：
-- **expected**: 期望产出
-- **produced**: 已完成产出
-- **in_progress**: 正在构建
-- 详见：[OBSERVATION_PROTOCOL.md](./OBSERVATION_PROTOCOL.md#产出追踪机制)
+See: [API Protocol](./protocols/API.md)
 
-### Context Filter
-Planning API 的筛选指令：
-- 控制传递给 Generating API 的信息
-- 减少 token 消耗
-- 提高提示词质量
-- 详见：[API_PROTOCOL.md](./API_PROTOCOL.md#-context-filter-协议new)
+### Actions
+7 types of actions generated by Generating API:
+- Content creation (ADD_ACTION)
+- Code execution (EXEC_CODE)
+- Thinking process (IS_THINKING, FINISH_THINKING)
+- Structure markers (NEW_CHAPTER, NEW_SECTION)
+- Metadata update (UPDATE_TITLE)
 
-### Actions 分组
-- **Generating Actions**（7个）：由 Generating API 返回
-- **Planning Updates**（6个）：由 Planning API 通过 context_update 返回
-- 详见：[ACTION_PROTOCOL.md](./ACTION_PROTOCOL.md#-action-类型总览)
+See: [ACTION Protocol](./protocols/ACTION.md)
 
----
+### Context Updates
+Planning API returns context updates to modify:
+- `workflow_update` - Update workflow template
+- `stage_steps_update` - Update stage steps
+- `progress_update` - Update hierarchical focus
+- `variables` - Add/modify variables
+- `effects` - Update execution effects
 
-## 📝 更新日志
-
-### 2025-01-15
-- 🆕 创建 OBSERVATION_PROTOCOL.md
-- ✅ 更新 API_PROTOCOL.md，添加 Context Filter 协议
-- ✅ 更新 ACTION_PROTOCOL.md，明确 Generating vs Planning
-- 🗑️ 清理旧设计文档
-
-### 2025-01-14
-- ✅ 完成系统重构
-- ✅ 创建 REFACTORING_SUMMARY.md
+See: [API Protocol](./protocols/API.md#context-updates)
 
 ---
 
-## 🤝 贡献指南
+## 🚀 Getting Started
 
-更新文档时请遵循：
-1. **保持一致性**：使用相同的术语和格式
-2. **添加示例**：每个概念都要有代码示例
-3. **注明版本**：重大更新要标记日期
-4. **交叉引用**：相关概念要链接到其他文档
+### Install
+```bash
+# Clone repository
+git clone https://github.com/your-org/notebook-bcc.git
+cd notebook-bcc
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Quick Test
+```bash
+# Preview a request
+python main.py test-request \
+  --state-file ./docs/examples/ames_housing/payloads/00_STATE_IDLE.json
+
+# Send an actual request (requires server)
+python main.py send-api \
+  --state-file ./docs/examples/ames_housing/payloads/00_STATE_IDLE.json
+
+# Start interactive REPL
+python main.py repl
+```
+
+### Learn More
+- Read the [CLI Usage Guide](./guides/CLI_USAGE.md)
+- Explore [example workflows](./examples/ames_housing/)
+- Review protocol specifications in `protocols/`
 
 ---
 
-## 📧 联系方式
+## 📝 Document Maintenance
 
-如有疑问或建议，请：
-- 提交 Issue
-- 查看 [GitHub Repository](https://github.com/anthropics/notebook-bcc)
+### When to Update
+
+**Update [STATE_MACHINE Protocol](./protocols/STATE_MACHINE.md) when:**
+- Adding/removing FSM states
+- Changing state transition rules
+- Modifying event definitions
+
+**Update [OBSERVATION Protocol](./protocols/OBSERVATION.md) when:**
+- Changing observation payload structure
+- Adding/removing fields in location/progress/context
+- Modifying variable or effect tracking rules
+
+**Update [API Protocol](./protocols/API.md) when:**
+- Changing API request/response formats
+- Adding new API endpoints
+- Modifying context update structure
+
+**Update [ACTION Protocol](./protocols/ACTION.md) when:**
+- Adding/removing action types
+- Changing action payload structure
+- Modifying execution behavior
+
+**Update [CLI Usage Guide](./guides/CLI_USAGE.md) when:**
+- Adding new CLI commands
+- Changing command parameters
+- Adding new examples
 
 ---
 
-**Last Updated**: 2025-01-15
-**Version**: 2.0 (After Refactoring)
+## 🤝 Contributing
+
+When updating documentation:
+1. **Keep consistency** - Use the same terminology across all docs
+2. **Add examples** - Every concept should have code examples
+3. **Cross-reference** - Link to related concepts in other docs
+4. **Version updates** - Mark significant changes with dates
+5. **Test examples** - Ensure all code examples actually work
+
+---
+
+## 📧 Support
+
+- **Issues**: [GitHub Issues](https://github.com/your-org/notebook-bcc/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-org/notebook-bcc/discussions)
+- **Documentation**: You're reading it!
+
+---
+
+**Last Updated:** 2025-11-08
+**Documentation Version:** 3.0

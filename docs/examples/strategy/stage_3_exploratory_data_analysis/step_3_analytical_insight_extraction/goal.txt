@@ -1,0 +1,45 @@
+================================================================================
+STEP EDA.3: ANALYTICAL INSIGHT EXTRACTION
+================================================================================
+
+GOAL: Complete analytical insight extraction with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_correlation_analysis -> Explore Agent
+   - Execute comprehensive correlation analysis
+
+2. behavior_2_group_comparison_analysis -> Explore Agent
+   - Perform group comparison and difference analysis
+
+3. behavior_3_multivariate_statistical_analysis -> Explore Agent
+   - Conduct multivariate statistical analysis
+
+4. behavior_4_advanced_visualization -> Explore Agent
+   - Create advanced analytical visualizations
+
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- correlation_analysis_results
+- group_comparison_analysis_results
+- multivariate_statistical_analysis_results
+- advanced_visualization_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

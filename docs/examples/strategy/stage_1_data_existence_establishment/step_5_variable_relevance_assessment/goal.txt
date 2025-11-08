@@ -1,0 +1,41 @@
+================================================================================
+STEP DE.5: VARIABLE RELEVANCE ASSESSMENT
+================================================================================
+
+GOAL: Complete variable relevance assessment with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_target_variable_correlation -> Explore Agent
+   - Analyze correlation between variables and target
+
+2. behavior_2_feature_importance_evaluation -> Explore Agent
+   - Evaluate variable importance using statistical methods
+
+3. behavior_3_business_logic_verification -> Explore Agent
+   - Verify statistical relevance aligns with business logic
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- target_variable_correlation_results
+- feature_importance_evaluation_results
+- business_logic_verification_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

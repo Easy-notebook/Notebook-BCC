@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.1.3: CHECK TIME SERIES DATA CONTINUITY
+================================================================================
+
+GOAL: Check time series data continuity
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.1.3.1: Execute Primary Task
+  Check time series data continuity
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.1.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- time_series_completeness_results
+- time_series_completeness_documentation
+  

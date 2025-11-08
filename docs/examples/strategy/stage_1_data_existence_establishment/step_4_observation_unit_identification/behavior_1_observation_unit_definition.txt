@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DE.4.1: DEFINE OBSERVATION UNITS AND UNIQUENESS IDENTIFIERS
+================================================================================
+
+GOAL: Define observation units and uniqueness identifiers
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.4.1.1: Execute Primary Task
+  Define observation units and uniqueness identifiers
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DE.4.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- observation_unit_definition_results
+- observation_unit_definition_documentation
+  

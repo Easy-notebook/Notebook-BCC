@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.1.3: PROVIDE DETAILED RESULTS ANALYSIS
+================================================================================
+
+GOAL: Provide detailed results analysis
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.1.3.1: Execute Primary Task
+  Provide detailed results analysis
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.1.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- results_detailed_analysis_results
+- results_detailed_analysis_documentation
+  

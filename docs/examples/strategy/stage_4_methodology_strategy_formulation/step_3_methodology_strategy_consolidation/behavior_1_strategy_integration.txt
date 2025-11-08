@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.3.1: INTEGRATE ALL STRATEGY COMPONENTS
+================================================================================
+
+GOAL: Integrate all strategy components
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.3.1.1: Execute Primary Task
+  Integrate all strategy components
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.3.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- strategy_integration_results
+- strategy_integration_documentation
+  

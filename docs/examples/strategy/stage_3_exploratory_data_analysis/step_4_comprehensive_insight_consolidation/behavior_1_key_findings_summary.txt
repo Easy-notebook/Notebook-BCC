@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.4.1: SUMMARIZE KEY DISCOVERIES AND PATTERNS
+================================================================================
+
+GOAL: Summarize key discoveries and patterns
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.4.1.1: Execute Primary Task
+  Summarize key discoveries and patterns
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.4.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- key_findings_summary_results
+- key_findings_summary_documentation
+  

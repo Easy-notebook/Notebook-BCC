@@ -1,0 +1,58 @@
+================================================================================
+BEHAVIOR DE.1.2: INITIAL INVENTORY AND ACCESS CHECK
+================================================================================
+
+GOAL: Complete initial data inventory with basic statistics and verify data completeness and accessibility.
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.1.2.1: Calculate Basic Statistics
+  Compute basic data inventory statistics
+  - Count total number of rows (observations)
+  - Count total number of columns (variables/features)
+  - Calculate file size and memory footprint
+  - Identify data format and encoding
+
+ACTION DE.1.2.2: Verify Data Completeness
+  Verify data completeness and integrity
+  - Check for missing files or incomplete downloads
+  - Verify data structure matches expected schema
+  - Validate data can be loaded successfully
+  - Check for file corruption or access errors
+
+ACTION DE.1.2.3: Establish Data Catalog
+  Create comprehensive data catalog and metadata
+  - List all data tables/files with descriptions
+  - Document column n and preliminary types
+  - Record data sources and update frequency
+  - Create data dictionary framework
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_inventory_report (rows, columns, size, format, load status)
+- data_catalog_metadata (table descriptions, field list, metadata)
+
+  
+================================================================================
+TASK TEMPLATE:
+================================================================================
+- Report exact counts: "Dataset contains X rows and Y columns"
+- Include file size in MB/GB and estimated memory usage
+- List all column n with preliminary data types
+- Document any loading errors or accessibility issues
+- Persist inventory reports under ./outputs/stage_1_data_existence/step_1/
+- Cross-reference with data_collection_log for consistency
+
+================================================================================
+ACCEPTANCE EXAMPLES:
+================================================================================
+- data_inventory_report contains: row_count, column_count, file_size_mb, data_format
+- data_catalog_metadata lists all tables/files with descriptions
+- All data sources confirmed accessible and loadable
+- Data structure documented with column n and types
+- No critical data completeness issues identified

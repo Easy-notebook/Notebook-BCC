@@ -1,0 +1,97 @@
+## Stage Goal
+Establish the foundation of data existence through systematic data discovery, structure analysis, and relevance assessment to ensure data can support project objectives.
+
+## Core Steps(if you want to call it activities, must give the correct name)
+
+### Data Collection and Inventory
+- Execute data collection strategy based on Chapter 0 planning
+- Verify reliability of data acquisition channels
+- Establish data version control and traceability mechanisms
+- Complete initial data inventory (rows, columns, file size)
+- Verify data completeness and accessibility
+- Establish data catalog and metadata records
+
+### Data Structure Discovery
+- Analyze data hierarchy and organizational structure
+- Identify primary keys, foreign keys, and index fields
+- Discover relationships between data tables
+- Determine data types (numeric, categorical, text, temporal)
+- Identify mixed data types and anomalous formats
+- Explore data distribution characteristics (mean, std, quantiles)
+
+### Variable Semantic Analysis
+- Map variable n to business concepts
+- Identify measurement units and scales
+- Understand business context and usage scenarios
+- Assess variable value reasonableness and validity
+- Verify variable interpretation accuracy with domain experts
+- Obtain expert opinions on variable importance
+
+### Observation Unit Identification
+- Identify basic observation units (individuals, events, time points)
+- Determine unique identifiers for observation units
+- Analyze observation unit representativeness and completeness
+- Identify temporal span and sampling frequency
+- Analyze time series continuity and consistency
+- Identify geographic or spatial distribution
+
+### Variable Relevance Assessment
+- Analyze correlation between variables and target variable
+- Identify potential predictive variables
+- Assess multicollinearity among variables
+- Establish variable priority ranking
+- Verify statistical relevance aligns with business logic
+
+### PCS Hypothesis Generation
+- Generate testable hypotheses based on PCS framework
+- Design experimental schemes for hypothesis validation
+- Identify factors affecting predictability and stability
+
+## PCS Framework Integration
+
+### Predictability
+- Data sufficiency verification: Ensure data volume and quality support reliable prediction
+- Generalization capability assessment: Analyze data representativeness and coverage
+- Predictive variable identification: Systematically identify variables with predictive power
+
+### Computability
+- Data processability: Assess computational friendliness of data format and structure
+- Resource requirement assessment: Evaluate computational resource needs for data processing
+- Reproducibility guarantee: Establish standardized data processing workflows
+
+### Stability
+- Data sensitivity analysis: Identify critical features sensitive to data changes
+- Robustness assessment: Evaluate potential impact of data quality issues on results
+- Consistency verification: Verify data consistency across temporal and spatial dimensions
+
+## Output Deliverables
+
+1. **Data Existence Report**
+   - Data inventory checklist
+   - Data quality assessment
+   - Data completeness verification
+
+2. **Data Structure Documentation**
+   - Data dictionary and metadata
+   - Variable semantic interpretation
+   - Data relationship mapping
+
+3. **Variable Analysis Report**
+   - Variable importance ranking
+   - Correlation analysis results
+   - Business logic verification
+
+4. **PCS Hypothesis Framework**
+   - List of testable hypotheses
+   - Validation experiment design
+   - Expected result ranges
+
+## Quality Checklist
+
+- [ ] All required data successfully obtained and verified
+- [ ] Data structure and relationships clearly mapped
+- [ ] Variable semantics confirmed by domain experts
+- [ ] Observation unit definition clear and consistent
+- [ ] Variable correlation analysis complete and reliable
+- [ ] PCS hypotheses specific and testable
+- [ ] Data quality issues identified and documented

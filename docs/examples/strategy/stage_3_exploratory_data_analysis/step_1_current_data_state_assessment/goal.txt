@@ -1,0 +1,41 @@
+================================================================================
+STEP EDA.1: CURRENT DATA STATE ASSESSMENT
+================================================================================
+
+GOAL: Complete current data state assessment with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_descriptive_statistics -> Explore Agent
+   - Calculate comprehensive descriptive statistics
+
+2. behavior_2_distribution_visualization -> Explore Agent
+   - Visualize data distributions
+
+3. behavior_3_data_quality_reassessment -> Explore Agent
+   - Reassess data quality after cleaning
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- descriptive_statistics_results
+- distribution_visualization_results
+- data_quality_reassessment_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

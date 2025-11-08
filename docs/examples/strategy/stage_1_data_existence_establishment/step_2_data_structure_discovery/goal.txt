@@ -1,0 +1,43 @@
+================================================================================
+STEP DE.2: DATA STRUCTURE DISCOVERY
+================================================================================
+
+STAGE: data_existence_establishment
+GOAL: Deeply understand data internal structure and organization through schema analysis, data type identification, and distribution exploration.
+
+PCS CONSIDERATIONS:
+- Predictability: Identify data structure patterns that affect predictive capability.
+- Computability: Ensure data structure supports efficient computational processing.
+- Stability: Assess structural consistency and identify sensitivity to structure changes.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_schema_and_relationship_analysis -> Explore Agent
+   - Analyze data schema, hierarchical structure, and identify relationships between data entities
+
+2. behavior_2_data_type_and_format_analysis -> Explore Agent
+   - Determine data types for all variables and identify mixed types, format anomalies, and conversion requirements
+
+3. behavior_3_distribution_exploration -> Explore Agent
+   - Explore and document data distribution characteristics, calculate basic statistics, and identify outlier patterns
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate data structure discovery completeness and alignment with acceptance criteria
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- data_schema_document (hierarchy, keys, indexes, relationships)
+- data_type_report (field types, mixed types, format issues)
+- distribution_summary (statistics, distributions, outlier patterns)
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- data_schema_document includes complete schema with keys and relationships
+- data_type_report identifies all variable types with conversion needs
+- distribution_summary contains basic statistics for all numeric variables
+- Mixed data types and format anomalies identified and documented
+- Data distribution characteristics (normal, skewed, multimodal) analyzed
+- Outliers and extreme values identified with statistical methods

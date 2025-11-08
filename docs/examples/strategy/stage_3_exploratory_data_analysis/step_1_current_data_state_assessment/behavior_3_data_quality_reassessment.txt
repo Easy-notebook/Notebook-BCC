@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.1.3: REASSESS DATA QUALITY AFTER CLEANING
+================================================================================
+
+GOAL: Reassess data quality after cleaning
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.1.3.1: Execute Primary Task
+  Reassess data quality after cleaning
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.1.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_quality_reassessment_results
+- data_quality_reassessment_documentation
+  

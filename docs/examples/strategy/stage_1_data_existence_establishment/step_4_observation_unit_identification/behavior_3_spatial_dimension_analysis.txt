@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DE.4.3: ANALYZE GEOGRAPHIC/SPATIAL DISTRIBUTION
+================================================================================
+
+GOAL: Analyze geographic/spatial distribution
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DE.4.3.1: Execute Primary Task
+  Analyze geographic/spatial distribution
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DE.4.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- spatial_dimension_analysis_results
+- spatial_dimension_analysis_documentation
+  

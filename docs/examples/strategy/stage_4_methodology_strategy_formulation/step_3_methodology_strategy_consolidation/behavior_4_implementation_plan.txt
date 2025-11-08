@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.3.4: DEVELOP DETAILED IMPLEMENTATION PLAN
+================================================================================
+
+GOAL: Develop detailed implementation plan
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.3.4.1: Execute Primary Task
+  Develop detailed implementation plan
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.3.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- implementation_plan_results
+- implementation_plan_documentation
+  

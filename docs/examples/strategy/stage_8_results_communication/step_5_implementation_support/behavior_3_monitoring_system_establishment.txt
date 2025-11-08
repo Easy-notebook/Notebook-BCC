@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.5.3: ESTABLISH MONITORING SYSTEMS
+================================================================================
+
+GOAL: Establish monitoring systems
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.5.3.1: Execute Primary Task
+  Establish monitoring systems
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.5.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- monitoring_system_establishment_results
+- monitoring_system_establishment_documentation
+  

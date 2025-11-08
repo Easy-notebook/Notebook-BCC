@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.4.2: VERIFY INTERNAL DATA CONSISTENCY
+================================================================================
+
+GOAL: Verify internal data consistency
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.4.2.1: Execute Primary Task
+  Verify internal data consistency
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.4.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- consistency_verification_results
+- consistency_verification_documentation
+  

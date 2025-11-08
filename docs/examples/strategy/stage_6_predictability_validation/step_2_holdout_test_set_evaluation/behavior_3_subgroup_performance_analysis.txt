@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.2.3: ANALYZE PERFORMANCE ACROSS SUBGROUPS
+================================================================================
+
+GOAL: Analyze performance across subgroups
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.2.3.1: Execute Primary Task
+  Analyze performance across subgroups
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.2.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- subgroup_performance_analysis_results
+- subgroup_performance_analysis_documentation
+  

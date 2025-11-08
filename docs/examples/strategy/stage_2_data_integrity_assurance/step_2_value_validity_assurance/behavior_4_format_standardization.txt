@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.2.4: STANDARDIZE DATA FORMATS AND ENCODINGS
+================================================================================
+
+GOAL: Standardize data formats and encodings
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.2.4.1: Execute Primary Task
+  Standardize data formats and encodings
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.2.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- format_standardization_results
+- format_standardization_documentation
+  

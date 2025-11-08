@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.3.3: DETECT CONCEPT DRIFT OVER TIME
+================================================================================
+
+GOAL: Detect concept drift over time
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.3.3.1: Execute Primary Task
+  Detect concept drift over time
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.3.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- concept_drift_detection_results
+- concept_drift_detection_documentation
+  

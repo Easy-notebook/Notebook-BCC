@@ -25,6 +25,14 @@ from notebook.notebook_manager import NotebookManager
 from notebook.cell_renderer import CellRenderer
 
 
+class DummyContext:
+    """Dummy context manager for when rich is not available."""
+    def __enter__(self):
+        return self
+    def __exit__(self, *args):
+        pass
+
+
 
 class WorkflowCLI(ModernLogger):
     """
@@ -124,6 +132,43 @@ class WorkflowCLI(ModernLogger):
 
         # REPL command
         subparsers.add_parser('repl', help='Start interactive REPL')
+
+        # Send-API command (NEW)
+        send_api_parser = subparsers.add_parser('send-api', help='Send API request from state file')
+        send_api_parser.add_argument('--state-file', type=str, required=True, help='Path to state JSON file')
+        send_api_parser.add_argument('--api-type', type=str, required=False,
+                                     choices=['planning', 'generating', 'reflecting'],
+                                     help='API type to call (auto-inferred from FSM state if not specified)')
+        send_api_parser.add_argument('--output', type=str, help='Output file for response (optional)')
+        send_api_parser.add_argument('--stream', action='store_true', help='Use streaming for generating API')
+
+        # Resume command (NEW)
+        resume_parser = subparsers.add_parser('resume', help='Resume workflow from state file')
+        resume_parser.add_argument('--state-file', type=str, required=True, help='Path to state JSON file')
+        resume_parser.add_argument('--continue', dest='continue_execution', action='store_true',
+                                  help='Continue execution after loading state')
+
+        # Test-request command (NEW)
+        test_req_parser = subparsers.add_parser('test-request', help='Preview API request without sending')
+        test_req_parser.add_argument('--state-file', type=str, required=True, help='Path to state JSON file')
+        test_req_parser.add_argument('--api-type', type=str, required=False,
+                                     choices=['planning', 'generating', 'reflecting'],
+                                     help='API type to preview (auto-inferred from FSM state if not specified)')
+        test_req_parser.add_argument('--output', type=str, help='Export request payload to file')
+        test_req_parser.add_argument('--format', type=str, choices=['json', 'pretty'], default='pretty',
+                                     help='Output format (json or pretty)')
+
+        # Apply-transition command (NEW)
+        apply_trans_parser = subparsers.add_parser('apply-transition',
+                                                   help='Apply transition to state and export updated state')
+        apply_trans_parser.add_argument('--state-file', type=str, required=True,
+                                       help='Path to input state JSON file')
+        apply_trans_parser.add_argument('--transition-file', type=str, required=True,
+                                       help='Path to transition XML file')
+        apply_trans_parser.add_argument('--output', type=str, required=True,
+                                       help='Output file for updated state JSON')
+        apply_trans_parser.add_argument('--format', type=str, choices=['json', 'pretty'], default='pretty',
+                                       help='Output format (json or pretty)')
 
         return parser
 
@@ -266,6 +311,408 @@ class WorkflowCLI(ModernLogger):
         repl = WorkflowREPL(self)
         repl.run()
 
+    def cmd_send_api(self, args):
+        """Send API request from state file."""
+        import json
+        import asyncio
+        from utils.state_file_loader import state_file_loader
+        from utils.api_client import workflow_api_client
+        from utils.api_display import api_display
+        from config import Config
+
+        try:
+            # Load state file
+            print(f"📂 Loading state from: {args.state_file}")
+            state_json = state_file_loader.load_state_file(args.state_file)
+            parsed_state = state_file_loader.parse_state_for_api(state_json)
+
+            # Display state info
+            api_display.display_state_info(parsed_state)
+
+            # Infer API type if not specified
+            if args.api_type:
+                api_type = args.api_type
+                print(f"\n🎯 Using specified API type: {api_type}")
+            else:
+                api_type = state_file_loader.infer_api_type(state_json)
+                print(f"\n Auto-inferred API type: {api_type}")
+                print(f"   (You can override with --api-type)")
+
+            # Extract parameters
+            stage_id = parsed_state['stage_id'] or 'none'
+            step_id = parsed_state['step_id'] or 'none'
+            state = parsed_state['state']
+
+            # Determine API URL
+            api_url_map = {
+                'planning': Config.FEEDBACK_API_URL,
+                'generating': Config.BEHAVIOR_API_URL,
+                'reflecting': Config.REFLECTING_API_URL
+            }
+            api_url = api_url_map[api_type]
+
+            # Display request info
+            payload_json = json.dumps(state, ensure_ascii=False)
+            api_display.display_api_request(
+                api_type=api_type,
+                api_url=api_url,
+                stage_id=stage_id,
+                step_id=step_id,
+                payload_size=len(payload_json)
+            )
+
+            # Send request with progress display
+            async def send_request():
+                try:
+                    if api_type == 'planning':
+                        # Planning API
+                        with api_display.display_sending_progress('planning') or DummyContext():
+                            result = await workflow_api_client.send_feedback(
+                                stage_id=stage_id,
+                                step_index=step_id,
+                                state=state
+                            )
+                        api_display.display_api_response('planning', result, success=True)
+                        return result
+
+                    elif api_type == 'generating':
+                        # Generating API
+                        actions = []
+                        with api_display.display_sending_progress('generating') or DummyContext():
+                            async for action in workflow_api_client.fetch_behavior_actions(
+                                stage_id=stage_id,
+                                step_index=step_id,
+                                state=state,
+                                stream=args.stream
+                            ):
+                                actions.append(action)
+
+                        # Display actions
+                        api_display.display_actions(actions)
+
+                        result = {'actions': actions, 'count': len(actions)}
+                        api_display.display_api_response('generating', result, success=True)
+                        return result
+
+                    elif api_type == 'reflecting':
+                        # Reflecting API
+                        with api_display.display_sending_progress('reflecting') or DummyContext():
+                            result = await workflow_api_client.send_reflecting(
+                                stage_id=stage_id,
+                                step_index=step_id,
+                                state=state
+                            )
+                        api_display.display_api_response('reflecting', result, success=True)
+                        return result
+
+                except Exception as e:
+                    api_display.display_api_response(api_type, {}, success=False, error=str(e))
+                    raise
+
+            # Run async request
+            result = asyncio.run(send_request())
+
+            # Save to output file if specified
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    json.dump(result, f, indent=2, ensure_ascii=False)
+                print(f"\n💾 Response saved to: {args.output}")
+
+            print("\n✅ API request completed successfully")
+
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            self.error(f"send-api failed: {e}", exc_info=True)
+            sys.exit(1)
+
+    def cmd_resume(self, args):
+        """Resume workflow from state file."""
+        import json
+        from utils.state_file_loader import state_file_loader
+        from utils.api_display import api_display
+
+        try:
+            # Load state file
+            print(f"📂 Loading state from: {args.state_file}")
+            state_json = state_file_loader.load_state_file(args.state_file)
+            parsed_state = state_file_loader.parse_state_for_api(state_json)
+
+            # Display state info
+            api_display.display_state_info(parsed_state)
+
+            # Extract context
+            context_data = state_file_loader.extract_context(state_json)
+
+            # Restore AI context
+            print("\n📦 Restoring AI context...")
+            self.ai_context_store.set_variables(context_data.get('variables', {}))
+
+            effects = context_data.get('effects', {})
+            self.ai_context_store.set_effect(effects)
+
+            print(f"   ✓ Variables: {len(context_data.get('variables', {}))}")
+            print(f"   ✓ Current Effects: {len(effects.get('current', []))}")
+            print(f"   ✓ Effect History: {len(effects.get('history', []))}")
+
+            # Restore FSM state info
+            fsm = context_data.get('FSM', {})
+            fsm_state = fsm.get('state', 'UNKNOWN')
+            print(f"   ✓ FSM State: {fsm_state}")
+
+            # Extract workflow position
+            stage_id = parsed_state.get('stage_id')
+            step_id = parsed_state.get('step_id')
+
+            print(f"\n📍 Workflow Position:")
+            print(f"   Stage: {stage_id or 'None'}")
+            print(f"   Step: {step_id or 'None'}")
+
+            # Check if should continue execution
+            if args.continue_execution:
+                print("\n🚀 Continuing workflow execution...")
+                # TODO: Implement workflow continuation logic
+                # This would require restoring the full workflow state and resuming execution
+                print("⚠️  Workflow continuation not fully implemented yet")
+                print("   Use 'send-api' to manually send requests from this state")
+            else:
+                print("\n✅ State loaded successfully")
+                print("   Use --continue to resume execution")
+                print("   Or use 'send-api' to send manual API requests")
+
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            self.error(f"resume failed: {e}", exc_info=True)
+            sys.exit(1)
+
+    def cmd_test_request(self, args):
+        """Preview API request without sending."""
+        import json
+        from utils.state_file_loader import state_file_loader
+        from utils.api_display import api_display
+        from config import Config
+
+        try:
+            # Load state file
+            print(f"📂 Loading state from: {args.state_file}")
+            state_json = state_file_loader.load_state_file(args.state_file)
+            parsed_state = state_file_loader.parse_state_for_api(state_json)
+
+            # Display state info
+            api_display.display_state_info(parsed_state)
+
+            # Infer API type if not specified
+            if args.api_type:
+                api_type = args.api_type
+                print(f"\n🎯 Using specified API type: {api_type}")
+            else:
+                api_type = state_file_loader.infer_api_type(state_json)
+                print(f"\n Auto-inferred API type: {api_type}")
+                print(f"   (You can override with --api-type)")
+
+            # Extract parameters
+            stage_id = parsed_state['stage_id'] or 'none'
+            step_id = parsed_state['step_id'] or 'none'
+            state = parsed_state['state']
+
+            # Determine API URL
+            api_url_map = {
+                'planning': Config.FEEDBACK_API_URL,
+                'generating': Config.BEHAVIOR_API_URL,
+                'reflecting': Config.REFLECTING_API_URL
+            }
+            api_url = api_url_map[api_type]
+
+            # Build request payload (same as actual API call)
+            # Extract progress information
+            progress_info = state.get('progress_info')
+            if not progress_info:
+                print("\n⚠️  Warning: State does not contain progress_info")
+                progress_info = {}
+
+            # Build payload
+            payload = {
+                'observation': {
+                    'location': progress_info,
+                    'context': {
+                        'variables': state.get('variables', {}),
+                        'effects': state.get('effects', {'current': [], 'history': []}),
+                        'notebook': state.get('notebook', {})
+                    }
+                },
+                'options': {
+                    'stream': False
+                }
+            }
+
+            # Add FSM if present
+            if 'FSM' in state:
+                payload['observation']['context']['FSM'] = state['FSM']
+
+            # Display request preview
+            print("\n" + "="*70)
+            print(" REQUEST PREVIEW (Will NOT be sent)")
+            print("="*70)
+
+            # Display request info
+            api_display.display_api_request(
+                api_type=api_type,
+                api_url=api_url,
+                stage_id=stage_id,
+                step_id=step_id,
+                payload_size=len(json.dumps(payload, ensure_ascii=False))
+            )
+
+            # Format output based on format argument
+            if args.format == 'json':
+                # Compact JSON
+                output_text = json.dumps(payload, ensure_ascii=False)
+            else:
+                # Pretty formatted JSON
+                output_text = json.dumps(payload, indent=2, ensure_ascii=False)
+
+            # Display payload
+            print("\n" + "="*70)
+            print(" REQUEST PAYLOAD")
+            print("="*70)
+
+            try:
+                from rich.syntax import Syntax
+                from rich.console import Console
+                console = Console()
+                syntax = Syntax(output_text, "json", theme="monokai", line_numbers=True)
+                console.print(syntax)
+            except ImportError:
+                # Fallback without rich
+                print(output_text)
+
+            # Display statistics
+            print("\n" + "="*70)
+            print("📊 REQUEST STATISTICS")
+            print("="*70)
+            print(f"API Type:       {api_type.upper()}")
+            print(f"API URL:        {api_url}")
+            print(f"Stage ID:       {stage_id}")
+            print(f"Step ID:        {step_id}")
+            print(f"Payload Size:   {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
+            print(f"Variables:      {len(state.get('variables', {}))}")
+            print(f"Current Effects: {len(state.get('effects', {}).get('current', []))}")
+            print(f"Effect History:  {len(state.get('effects', {}).get('history', []))}")
+
+            # Export to file if requested
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(output_text)
+                print(f"\n💾 Request payload exported to: {args.output}")
+                print(f"   Format: {args.format}")
+
+            print("\n" + "="*70)
+            print("✅ Request preview completed (NOT sent to server)")
+            print("="*70)
+            print("\nTo actually send this request, use:")
+            print(f"  python main.py send-api --state-file {args.state_file} --api-type {api_type}")
+
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            self.error(f"test-request failed: {e}", exc_info=True)
+            sys.exit(1)
+
+    def cmd_apply_transition(self, args):
+        """Apply transition to state and export updated state."""
+        import json
+        from utils.state_file_loader import state_file_loader
+        from utils.state_updater import state_updater
+        from utils.api_display import api_display
+
+        try:
+            # Load state file
+            print(f"📂 Loading state from: {args.state_file}")
+            state_json = state_file_loader.load_state_file(args.state_file)
+            parsed_state = state_file_loader.parse_state_for_api(state_json)
+
+            # Display original state info
+            print("\n Original State:")
+            api_display.display_state_info(parsed_state)
+
+            # Load transition file
+            print(f"\n📄 Loading transition from: {args.transition_file}")
+            with open(args.transition_file, 'r', encoding='utf-8') as f:
+                transition_content = f.read()
+
+            # Display transition info
+            print(f"   ✓ Loaded {len(transition_content)} bytes")
+
+            # Apply transition
+            print("\n🔄 Applying transition...")
+            updated_state = state_updater.apply_transition(
+                state=state_json,
+                transition_response=transition_content,
+                transition_type='auto'
+            )
+
+            # Display updated state info
+            print("\n✅ Transition Applied Successfully!")
+            parsed_updated = state_file_loader.parse_state_for_api(updated_state)
+            print("\n Updated State:")
+            api_display.display_state_info(parsed_updated)
+
+            # Show what changed
+            print("\n📊 Changes:")
+            original_fsm = state_json.get('state', {}).get('FSM', {})
+            updated_fsm = updated_state.get('state', {}).get('FSM', {})
+
+            if original_fsm.get('state') != updated_fsm.get('state'):
+                print(f"   FSM State: {original_fsm.get('state', 'UNKNOWN')} → {updated_fsm.get('state', 'UNKNOWN')}")
+
+            if original_fsm.get('last_transition') != updated_fsm.get('last_transition'):
+                print(f"   Last Transition: {original_fsm.get('last_transition', 'None')} → {updated_fsm.get('last_transition', 'None')}")
+
+            original_stage = parsed_state.get('stage_id')
+            updated_stage = parsed_updated.get('stage_id')
+            if original_stage != updated_stage:
+                print(f"   Stage ID: {original_stage or 'None'} → {updated_stage or 'None'}")
+
+            original_step = parsed_state.get('step_id')
+            updated_step = parsed_updated.get('step_id')
+            if original_step != updated_step:
+                print(f"   Step ID: {original_step or 'None'} → {updated_step or 'None'}")
+
+            # Format output based on format argument
+            if args.format == 'json':
+                # Compact JSON
+                output_text = json.dumps(updated_state, ensure_ascii=False)
+            else:
+                # Pretty formatted JSON
+                output_text = json.dumps(updated_state, indent=2, ensure_ascii=False)
+
+            # Export to file
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(output_text)
+
+            print(f"\n💾 Updated state exported to: {args.output}")
+            print(f"   Format: {args.format}")
+            print(f"   Size: {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
+
+            print("\n" + "="*70)
+            print("✅ Transition applied and state exported successfully")
+            print("="*70)
+
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: File not found - {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            self.error(f"apply-transition failed: {e}", exc_info=True)
+            sys.exit(1)
+
     def run(self, argv=None):
         """Run the CLI."""
         parser = self.create_parser()
@@ -334,6 +781,10 @@ class WorkflowCLI(ModernLogger):
             'list': self.cmd_list,
             'export': self.cmd_export,
             'repl': self.cmd_repl,
+            'send-api': self.cmd_send_api,
+            'resume': self.cmd_resume,
+            'test-request': self.cmd_test_request,
+            'apply-transition': self.cmd_apply_transition,
         }
 
         handler = command_handlers.get(args.command)

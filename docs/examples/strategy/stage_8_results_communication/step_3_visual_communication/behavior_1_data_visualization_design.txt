@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.3.1: DESIGN EFFECTIVE DATA VISUALIZATIONS
+================================================================================
+
+GOAL: Design effective data visualizations
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.3.1.1: Execute Primary Task
+  Design effective data visualizations
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.3.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- data_visualization_design_results
+- data_visualization_design_documentation
+  

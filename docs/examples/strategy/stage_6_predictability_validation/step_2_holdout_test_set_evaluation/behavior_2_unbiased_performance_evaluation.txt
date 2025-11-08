@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.2.2: CONDUCT UNBIASED PERFORMANCE EVALUATION
+================================================================================
+
+GOAL: Conduct unbiased performance evaluation
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.2.2.1: Execute Primary Task
+  Conduct unbiased performance evaluation
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.2.2.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- unbiased_performance_evaluation_results
+- unbiased_performance_evaluation_documentation
+  

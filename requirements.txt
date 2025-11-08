@@ -8,6 +8,10 @@ aiohttp>=3.9.0
 # Configuration management
 python-dotenv>=1.0.0
 
+# Rich library for beautiful CLI displays
+rich>=13.7.0
+silantui
+
 # Optional: Data science libraries
 # Uncomment if you need data analysis capabilities
 # numpy>=1.24.0

@@ -61,6 +61,7 @@ def effect_action_running(state_machine, payload: Any = None):
 def effect_action_completed(state_machine, payload: Any = None):
     """
     Effect for ACTION_COMPLETED state.
+    Per STATE_MACHINE_PROTOCOL.md: Should call Planning API if all actions done.
 
     Args:
         state_machine: Reference to WorkflowStateMachine instance
@@ -73,9 +74,35 @@ def effect_action_completed(state_machine, payload: Any = None):
 
     from core.events import WorkflowEvent
     if next_index < len(ctx.current_behavior_actions):
-        # More actions to execute
+        # More actions to execute (Client decides)
         ctx.current_action_index = next_index
         state_machine.transition(WorkflowEvent.NEXT_ACTION)
     else:
-        # All actions done, complete behavior
-        state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)
+        # All actions done - Call Planning API to confirm behavior completion
+        state_machine.info(f"[FSM Effect] All actions completed, calling Planning API")
+
+        try:
+            from utils.api_client import workflow_api_client
+            from utils.state_builder import build_api_state, build_behavior_feedback
+
+            current_state = build_api_state(state_machine, require_progress_info=True)
+            behavior_feedback = build_behavior_feedback(state_machine)
+
+            feedback_response = workflow_api_client.send_feedback_sync(
+                stage_id=ctx.current_stage_id,
+                step_index=ctx.current_step_id,
+                state=current_state,
+                behavior_feedback=behavior_feedback
+            )
+
+            # Apply context updates using workflow_updater
+            from utils.workflow_updater import workflow_updater
+            workflow_updater.update_from_response(state_machine, feedback_response)
+
+            # Planning API confirms behavior can be completed
+            state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)
+
+        except Exception as e:
+            state_machine.error(f"[FSM Effect] Failed to call Planning API: {e}", exc_info=True)
+            # Fallback: complete behavior anyway
+            state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)

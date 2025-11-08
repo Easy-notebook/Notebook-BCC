@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.3.4: CREATE ADVANCED ANALYTICAL VISUALIZATIONS
+================================================================================
+
+GOAL: Create advanced analytical visualizations
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.3.4.1: Execute Primary Task
+  Create advanced analytical visualizations
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.3.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- advanced_visualization_results
+- advanced_visualization_documentation
+  

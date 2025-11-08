@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.5.4: SUPPORT CONTINUOUS OPTIMIZATION
+================================================================================
+
+GOAL: Support continuous optimization
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.5.4.1: Execute Primary Task
+  Support continuous optimization
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.5.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- continuous_optimization_results
+- continuous_optimization_documentation
+  

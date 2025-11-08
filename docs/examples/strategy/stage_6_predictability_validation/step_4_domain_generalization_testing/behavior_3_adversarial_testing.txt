@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR PV.4.3: CONDUCT ADVERSARIAL ROBUSTNESS TESTING
+================================================================================
+
+GOAL: Conduct adversarial robustness testing
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION PV.4.3.1: Execute Primary Task
+  Conduct adversarial robustness testing
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION PV.4.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- adversarial_testing_results
+- adversarial_testing_documentation
+  

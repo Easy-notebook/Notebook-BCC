@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.4.3: PROVIDE RECOMMENDATIONS FOR MODELING
+================================================================================
+
+GOAL: Provide recommendations for modeling
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.4.3.1: Execute Primary Task
+  Provide recommendations for modeling
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.4.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- modeling_recommendations_results
+- modeling_recommendations_documentation
+  

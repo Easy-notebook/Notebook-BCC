@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR SA.3.3: TEST EXTREME SCENARIOS
+================================================================================
+
+GOAL: Test extreme scenarios
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION SA.3.3.1: Execute Primary Task
+  Test extreme scenarios
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION SA.3.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- extreme_scenario_testing_results
+- extreme_scenario_testing_documentation
+  

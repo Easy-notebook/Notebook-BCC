@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.2.3: DEFINE COMPREHENSIVE EVALUATION METRICS
+================================================================================
+
+GOAL: Define comprehensive evaluation metrics
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.2.3.1: Execute Primary Task
+  Define comprehensive evaluation metrics
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.2.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- evaluation_metrics_definition_results
+- evaluation_metrics_definition_documentation
+  

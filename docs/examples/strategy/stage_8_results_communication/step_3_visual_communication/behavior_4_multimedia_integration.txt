@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.3.4: INTEGRATE MULTIMEDIA ELEMENTS
+================================================================================
+
+GOAL: Integrate multimedia elements
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.3.4.1: Execute Primary Task
+  Integrate multimedia elements
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.3.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- multimedia_integration_results
+- multimedia_integration_documentation
+  

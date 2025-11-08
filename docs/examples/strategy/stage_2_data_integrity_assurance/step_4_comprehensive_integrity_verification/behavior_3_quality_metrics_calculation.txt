@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.4.3: CALCULATE COMPREHENSIVE QUALITY METRICS
+================================================================================
+
+GOAL: Calculate comprehensive quality metrics
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.4.3.1: Execute Primary Task
+  Calculate comprehensive quality metrics
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.4.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- quality_metrics_calculation_results
+- quality_metrics_calculation_documentation
+  

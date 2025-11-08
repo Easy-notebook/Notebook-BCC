@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR RC.4.3: FACILITATE RESULTS ADOPTION
+================================================================================
+
+GOAL: Facilitate results adoption
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION RC.4.3.1: Execute Primary Task
+  Facilitate results adoption
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION RC.4.3.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- adoption_facilitation_results
+- adoption_facilitation_documentation
+  

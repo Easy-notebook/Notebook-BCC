@@ -57,10 +57,22 @@ class WorkflowStateMachine(ModernLogger):
         self.interactive = interactive
         self.paused = False
 
-        # Hierarchical focus management
-        self._stage_focus: List[str] = []
-        self._step_focus: List[str] = []
-        self._behavior_focus: List[str] = []
+        # Hierarchical focus management (detailed analysis text from Planner)
+        # Focus is a STRING containing detailed analysis, not a list of variable names
+        # Updated per OBSERVATION_PROTOCOL.md (2025-10-30)
+        # Format example: "【Behavior: ...】\n\n## 当前状态分析\n...\n\n## 关键产出目标\n..."
+        self._stage_focus: str = ""
+        self._step_focus: str = ""
+        self._behavior_focus: str = ""
+
+        # Output tracking (expected/produced/in_progress)
+        # Tracks variables at each hierarchical level per OBSERVATION_PROTOCOL.md
+        # - expected: Variables this level should produce
+        # - produced: Variables already completed and verified
+        # - in_progress: Variables currently being constructed
+        self._stage_outputs: Dict[str, List[str]] = {"expected": [], "produced": [], "in_progress": []}
+        self._step_outputs: Dict[str, List[str]] = {"expected": [], "produced": [], "in_progress": []}
+        self._behavior_outputs: Dict[str, List[str]] = {"expected": [], "produced": [], "in_progress": []}
 
         # State effect handlers (will be populated)
         self._state_effects: Dict[WorkflowState, Callable] = {}
@@ -305,7 +317,8 @@ class WorkflowStateMachine(ModernLogger):
             "completed": all_stages[:current_stage_idx] if current_stage_idx > 0 else [],
             "current": ctx.current_stage_id,
             "remaining": all_stages[current_stage_idx + 1:] if current_stage_idx >= 0 else [],
-            "focus": self._stage_focus.copy()
+            "focus": self._stage_focus,  # Detailed text from Planner
+            "current_outputs": self._stage_outputs.copy()
         }
 
         # Get steps progress
@@ -318,17 +331,25 @@ class WorkflowStateMachine(ModernLogger):
                 "completed": all_steps[:current_step_idx] if current_step_idx > 0 else [],
                 "current": ctx.current_step_id,
                 "remaining": all_steps[current_step_idx + 1:] if current_step_idx >= 0 else [],
-                "focus": self._step_focus.copy()
+                "focus": self._step_focus,  # Detailed text from Planner
+                "current_outputs": self._step_outputs.copy()
             }
         else:
-            steps_progress = {"completed": [], "current": None, "remaining": [], "focus": []}
+            steps_progress = {
+                "completed": [],
+                "current": None,
+                "remaining": [],
+                "focus": "",
+                "current_outputs": {"expected": [], "produced": [], "in_progress": []}
+            }
 
         # Get behaviors progress (dynamically generated, track completed ones)
         behaviors_progress = {
             "completed": ctx.completed_behaviors.copy(),
             "current": ctx.current_behavior_id,
             "iteration": ctx.behavior_iteration,
-            "focus": self._behavior_focus.copy()
+            "focus": self._behavior_focus,  # Detailed text from Planner
+            "current_outputs": self._behavior_outputs.copy()
         }
 
         # Get goals
@@ -363,23 +384,48 @@ class WorkflowStateMachine(ModernLogger):
             }
         }
 
-    def update_progress_focus(self, level: str, focus: List[str]):
+    def update_progress_focus(self, level: str, focus: str):
         """
         Update focus for a specific progress level.
 
         Args:
             level: "stages" | "steps" | "behaviors"
-            focus: List of variable names to focus on
+            focus: Detailed analysis text from Planner (string, not list)
         """
         if level == "stages":
-            self._stage_focus = focus.copy()
-            self.info(f"[FSM] Updated stages focus: {focus}")
+            self._stage_focus = focus
+            self.info(f"[FSM] Updated stages focus ({len(focus)} chars)")
         elif level == "steps":
-            self._step_focus = focus.copy()
-            self.info(f"[FSM] Updated steps focus: {focus}")
+            self._step_focus = focus
+            self.info(f"[FSM] Updated steps focus ({len(focus)} chars)")
         elif level == "behaviors":
-            self._behavior_focus = focus.copy()
-            self.info(f"[FSM] Updated behaviors focus: {focus}")
+            self._behavior_focus = focus
+            self.info(f"[FSM] Updated behaviors focus ({len(focus)} chars)")
+        else:
+            self.warning(f"[FSM] Invalid level: {level}")
+
+    def update_progress_outputs(self, level: str, outputs: Dict[str, List[str]]):
+        """
+        Update current_outputs for a specific progress level.
+
+        Args:
+            level: "stages" | "steps" | "behaviors"
+            outputs: Dict with "expected", "produced", "in_progress" keys
+        """
+        valid_keys = {"expected", "produced", "in_progress"}
+        if not all(key in valid_keys for key in outputs.keys()):
+            self.warning(f"[FSM] Invalid outputs keys: {outputs.keys()}")
+            return
+
+        if level == "stages":
+            self._stage_outputs = outputs.copy()
+            self.info(f"[FSM] Updated stages outputs: expected={len(outputs.get('expected', []))}, produced={len(outputs.get('produced', []))}")
+        elif level == "steps":
+            self._step_outputs = outputs.copy()
+            self.info(f"[FSM] Updated steps outputs: expected={len(outputs.get('expected', []))}, produced={len(outputs.get('produced', []))}")
+        elif level == "behaviors":
+            self._behavior_outputs = outputs.copy()
+            self.info(f"[FSM] Updated behaviors outputs: expected={len(outputs.get('expected', []))}, produced={len(outputs.get('produced', []))}")
         else:
             self.warning(f"[FSM] Invalid level: {level}")
 

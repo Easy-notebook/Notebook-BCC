@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR EDA.2.1: TRANSLATE BUSINESS PROBLEMS TO DATA QUESTIONS
+================================================================================
+
+GOAL: Translate business problems to data questions
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION EDA.2.1.1: Execute Primary Task
+  Translate business problems to data questions
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION EDA.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- business_question_translation_results
+- business_question_translation_documentation
+  

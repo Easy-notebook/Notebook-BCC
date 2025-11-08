@@ -1,0 +1,22 @@
+# Stage 8: Results Communication
+
+## Stage Goal
+Effectively communicate analysis results to different audiences to ensure understandability, actionability, and value realization.
+
+## Core Activities
+- Compile technical documentation
+- Create executive summary
+- Design effective visualizations
+- Engage with stakeholders
+- Provide implementation support
+
+## PCS Framework Integration
+- Predictability: Communicate confidence and applicability
+- Computability: Ensure solutions are implementable
+- Stability: Explain stability ranges and conditions
+
+## Quality Checklist
+- [ ] All audience needs satisfied
+- [ ] Documentation detailed and reproducible
+- [ ] Visualizations clear and insightful
+- [ ] Implementation support comprehensive

@@ -1,0 +1,45 @@
+================================================================================
+STEP DI.3: COMPLETENESS INTEGRITY RESTORATION
+================================================================================
+
+GOAL: Complete completeness integrity restoration with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_missing_value_pattern_analysis -> Explore Agent
+   - Analyze missing value patterns
+
+2. behavior_2_missing_value_treatment -> Explore Agent
+   - Execute missing value treatment strategies
+
+3. behavior_3_outlier_detection_and_treatment -> Explore Agent
+   - Detect and treat outliers
+
+4. behavior_4_duplicate_handling -> Explore Agent
+   - Identify and handle duplicate records
+
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- missing_value_pattern_analysis_results
+- missing_value_treatment_results
+- outlier_detection_and_treatment_results
+- duplicate_handling_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

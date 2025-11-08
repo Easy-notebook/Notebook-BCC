@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MI.2.1: ESTABLISH BASELINE MODELS
+================================================================================
+
+GOAL: Establish baseline models
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MI.2.1.1: Execute Primary Task
+  Establish baseline models
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MI.2.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- baseline_model_establishment_results
+- baseline_model_establishment_documentation
+  

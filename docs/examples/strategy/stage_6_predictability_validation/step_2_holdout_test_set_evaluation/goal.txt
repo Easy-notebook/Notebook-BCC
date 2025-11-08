@@ -1,0 +1,41 @@
+================================================================================
+STEP PV.2: HOLDOUT TEST SET EVALUATION
+================================================================================
+
+GOAL: Complete holdout test set evaluation with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_test_set_construction -> Explore Agent
+   - Construct independent test set
+
+2. behavior_2_unbiased_performance_evaluation -> Explore Agent
+   - Conduct unbiased performance evaluation
+
+3. behavior_3_subgroup_performance_analysis -> Explore Agent
+   - Analyze performance across subgroups
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- test_set_construction_results
+- unbiased_performance_evaluation_results
+- subgroup_performance_analysis_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

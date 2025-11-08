@@ -1,0 +1,45 @@
+================================================================================
+STEP SA.4: STABILITY ANALYSIS CONSOLIDATION
+================================================================================
+
+GOAL: Complete stability analysis consolidation with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_stability_metrics_calculation -> Explore Agent
+   - Calculate comprehensive stability metrics
+
+2. behavior_2_sensitivity_analysis_summary -> Explore Agent
+   - Summarize sensitivity analysis results
+
+3. behavior_3_stability_pattern_identification -> Explore Agent
+   - Identify stability patterns
+
+4. behavior_4_improvement_recommendations -> Explore Agent
+   - Provide stability improvement recommendations
+
+5. behavior_5_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- stability_metrics_calculation_results
+- sensitivity_analysis_summary_results
+- stability_pattern_identification_results
+- improvement_recommendations_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

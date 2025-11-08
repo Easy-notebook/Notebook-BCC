@@ -1,0 +1,41 @@
+================================================================================
+STEP MI.3: MODEL TRAINING EXECUTION
+================================================================================
+
+GOAL: Complete model training execution with comprehensive analysis and documentation.
+
+PCS CONSIDERATIONS:
+- Predictability: Ensure generalization and reliable prediction capability.
+- Computability: Ensure reproducibility and resource feasibility.
+- Stability: Ensure robustness under reasonable perturbations.
+
+================================================================================
+BEHAVIORS IN THIS STEP you can choose from(all build what you need):
+================================================================================
+1. behavior_1_training_workflow_execution -> Explore Agent
+   - Execute model training workflows
+
+2. behavior_2_hyperparameter_optimization -> Explore Agent
+   - Optimize model hyperparameters
+
+3. behavior_3_training_monitoring_diagnosis -> Explore Agent
+   - Monitor and diagnose training process
+
+4. behavior_4_validation_and_acceptance -> PCS Agent
+   - Validate all step activities meet acceptance criteria and align with PCS framework
+
+================================================================================
+OVERALL OUTPUT ARTIFACTS:
+================================================================================
+- training_workflow_execution_results
+- hyperparameter_optimization_results
+- training_monitoring_diagnosis_results
+- step_validation_report
+
+================================================================================
+ACCEPTANCE CRITERIA:
+================================================================================
+- All required analysis and processing completed
+- All artifacts generated and meet quality standards
+- PCS framework requirements satisfied
+- Ready to proceed to next step

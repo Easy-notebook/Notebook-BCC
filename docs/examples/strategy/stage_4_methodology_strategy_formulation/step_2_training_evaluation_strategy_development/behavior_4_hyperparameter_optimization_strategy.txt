@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR MS.2.4: DESIGN HYPERPARAMETER OPTIMIZATION APPROACH
+================================================================================
+
+GOAL: Design hyperparameter optimization approach
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION MS.2.4.1: Execute Primary Task
+  Design hyperparameter optimization approach
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION MS.2.4.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- hyperparameter_optimization_strategy_results
+- hyperparameter_optimization_strategy_documentation
+  

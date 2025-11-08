@@ -1,0 +1,30 @@
+================================================================================
+BEHAVIOR DI.3.1: ANALYZE MISSING VALUE PATTERNS
+================================================================================
+
+GOAL: Analyze missing value patterns
+
+RECOMMENDED AGENT: Explore-Agent  
+
+================================================================================
+ACTIONS:
+================================================================================
+
+ACTION DI.3.1.1: Execute Primary Task
+  Analyze missing value patterns
+  - Perform required analysis or processing
+  - Document methods and parameters used
+  - Generate required outputs
+
+ACTION DI.3.1.2: Document Results
+  Document findings and outputs
+  - Record all results systematically
+  - Create required artifacts
+  - Ensure reproducibility
+
+================================================================================
+OUTPUT ARTIFACTS:
+================================================================================
+- missing_value_pattern_analysis_results
+- missing_value_pattern_analysis_documentation
+  

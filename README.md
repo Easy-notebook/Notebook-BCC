@@ -2,7 +2,7 @@
 
 **Complete Python Implementation of Easy-notebook-advance Frontend Workflow**
 
-## 📋 Overview
+##  Overview
 
 Notebook-BCC is a complete Python reimplementation of the TypeScript/React workflow system from Easy-notebook-advance. It replicates the entire state machine, stores, executors, and notebook management system with high fidelity.
 
@@ -146,7 +146,7 @@ python main.py start --problem "Analyze data"
 2. **Conditional Generation**: Only calls `/generating` API if more actions needed
 3. **Intelligent Execution**: Avoids redundant work by checking completion status first
 
-📖 **See [ADVANCED_USAGE.md](ADVANCED_USAGE.md) for detailed examples and best practices.**
+📖 **See [ADVANCED_USAGE.md](docs/ADVANCED_USAGE.md) for detailed examples and best practices.**
 
 ### Usage
 
@@ -175,7 +175,44 @@ python main.py show --notebook notebook_20240101_120000.json
 python main.py export notebook_20240101_120000.json --output analysis.md
 ```
 
-#### 2. Interactive REPL
+#### 2. Test/Preview API Requests (NEW!)
+
+```bash
+# Preview request without sending
+python main.py test-request \
+  --state-file ./docs/examples/ames_housing/payloads/00_STATE_IDLE.json \
+  --api-type planning
+
+# Export to file
+python main.py test-request \
+  --state-file state.json \
+  --api-type generating \
+  --output request_payload.json \
+  --format pretty
+```
+
+**See [TEST_REQUEST_USAGE.md](docs/TEST_REQUEST_USAGE.md) for detailed guide.**
+
+#### 3. Apply Transitions to States (NEW!)
+
+```bash
+# Apply transition XML to state and generate updated state
+python main.py apply-transition \
+  --state-file ./docs/examples/ames_housing/payloads/00_STATE_IDLE.json \
+  --transition-file ./docs/examples/ames_housing/payloads/00_Transition_planning_START_WORKFLOW.xml \
+  --output ./test/updated_state.json \
+  --format pretty
+```
+
+**Use cases:**
+- Simulate workflow state transitions offline
+- Test state transformation logic
+- Debug workflow progression
+- Generate example states for documentation
+
+**See [APPLY_TRANSITION_USAGE.md](docs/APPLY_TRANSITION_USAGE.md) for detailed guide.**
+
+#### 4. Interactive REPL
 
 ```bash
 # Start the REPL
