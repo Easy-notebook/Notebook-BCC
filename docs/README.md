@@ -206,20 +206,38 @@ Quick lookup for common commands and patterns:
 
 ### [Ames Housing Example](./examples/ames_housing/)
 
-**Complete workflow example**
+**Complete workflow example with prompts and state transitions**
 
-Real-world example showing:
-- Full workflow definition (3 stages, multiple steps)
-- State files for all FSM states
-- Transition XML examples
-- Planning/Generating API payloads
-- Variable evolution through workflow
+This comprehensive example demonstrates the full lifecycle of building a house price prediction model, showing:
+
+**Prompts (prompt/):**
+- `00_START_WORKFLOW.txt` - Planning API prompt for generating workflow stages
+- `01_START_SECTION.txt` - Planning API prompt for generating step breakdown
+- `02_START_BEHAVIOUR.txt` - Planning API prompt for arranging behavior context
+
+**State Files (payloads/):**
+- `00_STATE_IDLE.json` - Initial state with user inputs
+- `01_STATE_Stage_Running.json` - After START_WORKFLOW transition
+- `02_STATE_Step_Running.json` - After START_STEP transition
+
+**Transition Files (payloads/):**
+- `00_Transition_planning_START_WORKFLOW.xml` - Planning response: 8 workflow stages
+- `01_Transition_planning_START_STEP.xml` - Planning response: step breakdown
+- `02_Transition_planning_START_BEHAVIOUR.xml` - Planning response: behavior context
+
+**What you'll learn:**
+- How prompts are structured for Planning API
+- What each FSM state contains
+- How Planning API responses drive state transitions
+- Variable and artifact accumulation through workflow
+- PCS framework integration at every level
 
 **Use this to:**
-- Understand complete workflow flow
-- Test your API implementation
-- Generate test cases
-- Debug state transitions
+- Understand complete workflow flow from IDLE to execution
+- Test your API implementation with real examples
+- Generate test cases for different workflow stages
+- Debug state transitions and prompt engineering
+- Learn proper observation payload structure
 
 ---
 
