@@ -228,13 +228,81 @@ class StateUpdater(ModernLogger):
 
         Updates:
         - location.progress.behaviors with new behavior
-        - location.current with behavior_id
+        - location.current with behavior_id and iteration
+        - location.goals with behavior task description
         - FSM state to BEHAVIOR_RUNNING
         """
         new_state = deepcopy(state)
 
-        # TODO: Implement behavior transition logic
-        self.warning("[StateUpdater] Behavior transition not fully implemented")
+        # Content is the behavior data itself (not nested under 'behavior' key)
+        behavior_id = content.get('behavior_id')
+        step_id = content.get('step_id')
+        agent = content.get('agent')
+        task = content.get('task', '').strip()  # Clean up whitespace
+        inputs = content.get('inputs', {})
+        outputs = content.get('outputs', {})
+        acceptance = content.get('acceptance', [])
+        whathappened = content.get('whathappened', {})
+
+        self.info(f"[StateUpdater] Applying behavior: {behavior_id}")
+
+        # Get observation structure
+        observation = new_state.get('observation', {})
+        location = observation.get('location', {})
+        progress = location.get('progress', {})
+        behaviors_progress = progress.get('behaviors', {})
+
+        # Build current behavior
+        current_behavior = {
+            'behavior_id': behavior_id,
+            'step_id': step_id,
+            'agent': agent,
+            'task': task,
+            'inputs': inputs,
+            'outputs': outputs,
+            'acceptance': acceptance
+        }
+
+        # Add whathappened if present
+        if whathappened:
+            current_behavior['whathappened'] = whathappened
+
+        # Update current behavior
+        behaviors_progress['current'] = current_behavior
+        behaviors_progress['completed'] = []
+        behaviors_progress['iteration'] = 1
+
+        # Initialize current_outputs for behaviors
+        expected_outputs = []
+        for artifact_name, artifact_desc in outputs.items():
+            expected_outputs.append({
+                'name': artifact_name,
+                'description': artifact_desc
+            })
+
+        behaviors_progress['current_outputs'] = {
+            'expected': expected_outputs,
+            'produced': [],
+            'in_progress': []
+        }
+
+        # Update behaviors focus with task description
+        behaviors_progress['focus'] = task
+
+        # Update location.current
+        location['current']['behavior_id'] = behavior_id
+        location['current']['behavior_iteration'] = 1
+
+        # Update location.goals with behavior task
+        if task:
+            location['goals'] = task
+
+        self.info(f"[StateUpdater] Set current behavior: {behavior_id}, iteration: 1")
+
+        # Update FSM state
+        fsm = new_state.get('state', {}).get('FSM', {})
+        fsm['state'] = 'BEHAVIOR_RUNNING'
+        fsm['last_transition'] = 'START_BEHAVIOR'
 
         return new_state
 
