@@ -1,6 +1,6 @@
 # Observation 协议规范
 
-## 📋 概述
+##  概述
 
 Observation 是 POMDP 框架中的核心数据结构，包含 Planner 维护的完整状态信息。本文档详细定义 observation 的结构、产出追踪机制、筛选协议和错误处理规则。
 

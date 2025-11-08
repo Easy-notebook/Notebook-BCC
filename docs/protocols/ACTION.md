@@ -1,6 +1,6 @@
 # Notebook-BCC Action 协议规范
 
-## 📋 概述
+##  概述
 
 Action 是 Notebook-BCC 工作流中的最小执行单元。每个 Action 代表一个具体的操作，如添加文本、执行代码、创建章节等。
 

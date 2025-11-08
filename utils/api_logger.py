@@ -113,7 +113,7 @@ class APICallLogger:
         lines.append("")
 
         # 基本信息
-        lines.append("📋 基本信息")
+        lines.append(" 基本信息")
         lines.append("-" * 80)
         lines.append(f"调用编号: #{call_number:04d}")
         lines.append(f"调用时间: {timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
@@ -122,7 +122,7 @@ class APICallLogger:
         lines.append("")
 
         # 请求负载
-        lines.append("📤 请求负载 (Payload)")
+        lines.append(" 请求负载 (Payload)")
         lines.append("-" * 80)
         try:
             payload_json = json.dumps(payload, indent=2, ensure_ascii=False)

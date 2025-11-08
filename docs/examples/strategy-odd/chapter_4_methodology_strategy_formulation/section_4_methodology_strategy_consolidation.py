@@ -40,14 +40,14 @@ def generate_method_proposal_sequence_step3(
             fe_table = step_template.to_tableh(feature_engineering_methods)
             step_template.add_text(fe_table)
         
-        step_template.add_text("🤖 **Proposed Modeling Methods**：")
+        step_template.add_text(" **Proposed Modeling Methods**：")
         
         # Display modeling methods
         if model_methods:
             model_table = step_template.to_tableh(model_methods)
             step_template.add_text(model_table)
         
-        step_template.add_text("📋 **Training and Evaluation Strategy**：")
+        step_template.add_text(" **Training and Evaluation Strategy**：")
         
         # Display training strategy
         if training_strategy:

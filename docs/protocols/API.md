@@ -100,7 +100,7 @@ targetAchieved?
 
 ---
 
-## 📤 API 请求格式
+##  API 请求格式
 
 ### 通用请求结构 (POMDP Observation)
 
