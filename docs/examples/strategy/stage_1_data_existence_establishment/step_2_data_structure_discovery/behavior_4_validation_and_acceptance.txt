@@ -4,7 +4,7 @@ BEHAVIOR DE.2.4: VALIDATION AND ACCEPTANCE
 
 GOAL: Validate data structure discovery completeness and alignment with acceptance criteria.
 
-RECOMMENDED AGENT: PCS-Agent
+RECOMMENDED AGENT: Define-Agent
 
 ================================================================================
 ACTIONS:

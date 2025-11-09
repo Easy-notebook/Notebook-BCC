@@ -4,7 +4,7 @@ BEHAVIOR DE.4.1: DEFINE OBSERVATION UNITS AND UNIQUENESS IDENTIFIERS
 
 GOAL: Define observation units and uniqueness identifiers
 
-RECOMMENDED AGENT: Explore-Agent  
+RECOMMENDED AGENT: Define-Agent  
 
 ================================================================================
 ACTIONS:

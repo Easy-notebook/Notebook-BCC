@@ -4,7 +4,7 @@ BEHAVIOR DE.6.1: GENERATE TESTABLE PREDICTABILITY HYPOTHESES
 
 GOAL: Generate testable predictability hypotheses
 
-RECOMMENDED AGENT: Explore-Agent  
+RECOMMENDED AGENT: Define-Agent  
 
 ================================================================================
 ACTIONS:

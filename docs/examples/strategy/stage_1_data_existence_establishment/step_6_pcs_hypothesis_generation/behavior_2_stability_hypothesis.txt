@@ -4,7 +4,7 @@ BEHAVIOR DE.6.2: GENERATE STABILITY AND ROBUSTNESS HYPOTHESES
 
 GOAL: Generate stability and robustness hypotheses
 
-RECOMMENDED AGENT: Explore-Agent  
+RECOMMENDED AGENT: Define-Agent  
 
 ================================================================================
 ACTIONS:

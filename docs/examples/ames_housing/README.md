@@ -1,8 +1,8 @@
-# Ames Housing Example - Complete Workflow Guide
+# Housing Example - Complete Workflow Guide
 
 ## 📖 Overview
 
-This example demonstrates a complete workflow for building a house price prediction model using the Ames Housing dataset. It shows the full lifecycle from IDLE state through all workflow stages, illustrating:
+This example demonstrates a complete workflow for building a house price prediction model using the Housing dataset. It shows the full lifecycle from IDLE state through all workflow stages, illustrating:
 
 - **FSM State Transitions** - How states change through the workflow
 - **Prompt Engineering** - What prompts are sent to Planning/Generating APIs

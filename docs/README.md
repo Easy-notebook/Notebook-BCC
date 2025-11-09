@@ -21,7 +21,7 @@ docs/
 │   └── QUICK_REFERENCE.md      # Quick reference cheat sheet
 │
 └── examples/                    # Example workflows and payloads
-    └── ames_housing/           # Ames housing price prediction example
+    └── ames_housing/           # Housing price prediction example
 ```
 
 ---
@@ -204,7 +204,7 @@ Quick lookup for common commands and patterns:
 
 ## 💡 Examples
 
-### [Ames Housing Example](./examples/ames_housing/)
+### [Housing Example](./examples/ames_housing/)
 
 **Complete workflow example with prompts and state transitions**
 

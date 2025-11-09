@@ -4,7 +4,7 @@ BEHAVIOR DE.4.4: VALIDATION AND ACCEPTANCE
 
 GOAL: Validate all step activities meet acceptance criteria and align with PCS framework.
 
-RECOMMENDED AGENT: PCS-Agent
+RECOMMENDED AGENT: Define-Agent
 
 ================================================================================
 ACTIONS:

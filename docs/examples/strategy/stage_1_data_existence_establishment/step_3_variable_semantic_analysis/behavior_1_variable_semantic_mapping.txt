@@ -4,7 +4,7 @@ BEHAVIOR DE.3.1: MAP VARIABLE N TO BUSINESS CONCEPTS AND IDENTIFY MEASUREMENT UN
 
 GOAL: Map variable n to business concepts and identify measurement units
 
-RECOMMENDED AGENT: Explore-Agent  
+RECOMMENDED AGENT: Define-Agent  
 
 ================================================================================
 ACTIONS:
