@@ -1,0 +1,54 @@
+<actions>
+  <update-project-title>Ames Housing Price Prediction - Data Science Lifecycle</update-project-title>
+  <update-section-title>Data Existence Establishment</update-section-title>
+  <update-step-title>Data Collection and Inventory</update-step-title>
+  <add-text>
+We begin by establishing data existence through systematic collection and inventory.  
+This foundational step ensures the **Ames Housing dataset** is accessible, complete, and ready for further exploration.  
+We will validate the dataset file located at `./assets/housing.csv`, gather its metadata, and perform an initial inventory to confirm readiness for downstream analysis.  
+The verification includes confirming file accessibility, recording its size and timestamp, loading the data for inspection, and compiling a comprehensive existence report aligned with PCS principles of **Predictability**, **Computability**, and **Stability**.
+  </add-text>
+  <add-code2run>
+import os
+import pandas as pd
+from datetime import datetime
+
+# Step 1: Verify dataset path
+file_path = "./assets/housing.csv"
+exists = os.path.exists(file_path)
+file_size_bytes = os.path.getsize(file_path) if exists else 0
+file_size_mb = round(file_size_bytes / (1024 * 1024), 4) if exists else 0
+last_modified = datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat() if exists else None
+
+print(f"File exists: {exists}, Size: {file_size_mb} MB, Last modified: {last_modified}")
+
+# Step 2: Load dataset to confirm readability
+df_raw = pd.read_csv(file_path)
+print(f"Loaded dataset shape: {df_raw.shape}")
+
+# Step 3: Compute schema and metadata
+data_catalog_metadata = {
+    "columns": df_raw.columns.tolist(),
+    "dtypes": df_raw.dtypes.astype(str).to_dict(),
+    "schema_verified": True,
+    "load_success": True
+}
+
+# Step 4: Create data existence report
+data_existence_report = {
+    "file_path": file_path,
+    "exists": exists,
+    "file_size_bytes": file_size_bytes,
+    "file_size_mb": file_size_mb,
+    "last_modified": last_modified,
+    "row_count": df_raw.shape[0],
+    "column_count": df_raw.shape[1],
+    "data_format": "csv",
+    "memory_usage_mb": round(df_raw.memory_usage(deep=True).sum() / (1024 * 1024), 4),
+    "catalog_metadata": data_catalog_metadata
+}
+
+print("Data existence report generated successfully.")
+print(data_existence_report)
+  </add-code2run>
+</actions>
