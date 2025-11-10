@@ -2,10 +2,11 @@
 
 ## 📡 概述
 
-Notebook-BCC 采用基于 POMDP (Partially Observable Markov Decision Process) 的交互协议，通过两个主要 API 端点与后端服务通信：
+Notebook-BCC 采用基于 POMDP (Partially Observable Markov Decision Process) 的交互协议，通过以下 API 端点与后端服务通信：
 
 - **Planning API** (`/planning`) - 目标检查，判断当前步骤是否已达成
 - **Generating API** (`/generating`) - 行为生成，获取下一步要执行的 actions
+- **Reflection Mechanism** (XML Response) - 行为完成反思，通过 XML 格式返回状态转换信息
 
 ---
 
@@ -933,6 +934,229 @@ else:
     elif feedback_response['transition']['target_achieved']:
         # 完成 Step
         transition(WorkflowEvent.COMPLETE_STEP)
+```
+
+---
+
+---
+
+## 🔄 Reflection Mechanism (反思机制)
+
+### 概述
+
+Reflection Mechanism 是行为完成后的状态转换机制，通过 XML 格式的响应文件来指导状态机的下一步转换。
+
+### Reflection XML 结构
+
+**文件格式**: `.xml`
+
+**根元素**: `<reflection current_behavior_is_complete="true|false">`
+
+**完整结构示例**:
+
+```xml
+<reflection current_behavior_is_complete="true">
+  <evaluation>
+    <artifacts_produced>
+      <artifact name="data_existence_report" status="complete">
+        The dataset existence report was successfully generated...
+      </artifact>
+    </artifacts_produced>
+
+    <acceptance_validation>
+      <criterion status="passed">os.path.exists("./assets/housing.csv")==True</criterion>
+      <criterion status="passed">os.path.getsize("./assets/housing.csv")>0</criterion>
+    </acceptance_validation>
+
+    <execution_quality>
+      <code_execution>success</code_execution>
+      <errors_found>None detected</errors_found>
+    </execution_quality>
+
+    <goal_achievement>
+      <status>achieved</status>
+      <reasoning>
+        All acceptance criteria met, execution successful...
+      </reasoning>
+    </goal_achievement>
+  </evaluation>
+
+  <new_variable>
+    <save_current_effect name="data_existence_report"/>
+  </new_variable>
+
+  <decision>
+    <next_state>STATE_Step_Running</next_state>
+    <reasoning>
+      Behavior goal complete, transition to next step: data_structure_discovery
+    </reasoning>
+  </decision>
+
+  <context_for_next>
+    <variables_produced>
+      <variable name="df_raw" value="DataFrame with 2930 rows and 82 columns">
+        Loaded housing dataset for structural analysis
+      </variable>
+      <variable name="data_existence_report" value="Metadata summary">
+        Comprehensive record for traceability
+      </variable>
+    </variables_produced>
+
+    <whathappened>
+      <overview>
+        Verified dataset accessibility, recorded metadata...
+      </overview>
+      <key_findings>
+        Dataset is well-structured and ready for analysis
+      </key_findings>
+    </whathappened>
+
+    <recommendations_for_next>
+      <if_moving_forward>
+        Proceed to data_structure_discovery using df_raw
+      </if_moving_forward>
+    </recommendations_for_next>
+  </context_for_next>
+
+  <outputs_tracking_update>
+    <produced><artifact>data_existence_report</artifact></produced>
+    <in_progress></in_progress>
+    <remaining></remaining>
+  </outputs_tracking_update>
+</reflection>
+```
+
+### 关键字段说明
+
+#### 1. `current_behavior_is_complete` (属性)
+
+**用途**: 标识当前行为是否已完成
+
+**取值**:
+- `true` - 行为完成，准备转换到下一状态
+- `false` - 行为未完成，需要继续迭代
+
+#### 2. `<decision>` 节点
+
+**用途**: 指定下一个 FSM 状态
+
+**子节点**:
+- `<next_state>` - 目标状态（如 `STATE_Step_Running`, `STATE_Behavior_Running`）
+- `<reasoning>` - 转换原因说明
+
+**示例状态值**:
+- `STATE_Step_Running` - 步骤运行中
+- `STATE_Behavior_Running` - 行为运行中
+- `ACTION_COMPLETED` - 动作完成
+
+#### 3. `<context_for_next>` 节点
+
+**用途**: 为下一个状态提供上下文信息
+
+**子节点**:
+- `<variables_produced>` - 产生的变量列表
+- `<whathappened>` - 执行总结
+- `<recommendations_for_next>` - 下一步建议
+
+#### 4. `<outputs_tracking_update>` 节点
+
+**用途**: 更新产出追踪状态
+
+**子节点**:
+- `<produced>` - 已完成的产出
+- `<in_progress>` - 进行中的产出
+- `<remaining>` - 剩余待完成的产出
+
+### Apply Transition 工具
+
+**命令行工具**: `python main.py apply-transition`
+
+**用途**: 根据 Reflection XML 文件生成下一个状态 JSON
+
+**命令格式**:
+
+```bash
+python main.py apply-transition \
+  --state-file <当前状态JSON文件> \
+  --transition-file <转换XML文件> \
+  --output <输出状态JSON文件>
+```
+
+**示例**:
+
+```bash
+python main.py apply-transition \
+  --state-file docs/examples/ames_housing/payloads/04_STATE_Action_Completed.json \
+  --transition-file docs/examples/ames_housing/payloads/04_Transition_Complete_behavior.xml \
+  --output docs/examples/ames_housing/payloads/05_STATE_Step_Running.json
+```
+
+**处理流程**:
+
+1. **解析 Reflection XML** - 提取状态转换信息
+2. **更新 FSM 状态** - 根据 `next_state` 更新状态机
+3. **添加新变量** - 将 `variables_produced` 添加到 `state.variables`
+4. **更新进度** - 移动已完成的行为/步骤到 `completed` 列表
+5. **更新产出追踪** - 应用 `outputs_tracking_update`
+6. **生成新状态文件** - 输出完整的状态 JSON
+
+### Reflection 工作流
+
+```
+Behavior 执行完成
+    ↓
+生成 Reflection XML
+    ↓
+apply-transition 工具
+    ↓
+新状态 JSON 文件
+    ↓
+Client 加载新状态
+    ↓
+继续下一个 Step/Behavior
+```
+
+### 状态转换规则
+
+**基于 `current_behavior_is_complete`**:
+
+| current_behavior_is_complete | next_state | 说明 |
+|------------------------------|-----------|------|
+| `true` | `STATE_Step_Running` | 行为完成，进入下一步骤 |
+| `true` | `STATE_Stage_Running` | 步骤完成，进入下一阶段 |
+| `false` | `STATE_Behavior_Running` | 行为未完成，继续迭代 |
+
+### Client 端处理
+
+**ResponseParser 支持**:
+
+```python
+# utils/response_parser.py
+def _parse_reflection_xml(self, root: ET.Element) -> Dict[str, Any]:
+    """解析 reflection XML"""
+    reflection = {
+        'behavior_is_complete': root.get('current_behavior_is_complete') == 'true',
+        'next_state': None,
+        'variables_produced': {},
+        'artifacts_produced': [],
+        'outputs_tracking': {}
+    }
+    # ... 提取各个节点信息
+    return reflection
+```
+
+**StateUpdater 应用**:
+
+```python
+# utils/state_updater.py
+def _apply_reflection_transition(self, state, content):
+    """应用 reflection 转换"""
+    # 1. 更新 FSM 状态
+    # 2. 添加新变量
+    # 3. 移动已完成的行为到 completed
+    # 4. 更新产出追踪
+    # 5. 转换到下一步骤（如需要）
+    return new_state
 ```
 
 ---
