@@ -1119,7 +1119,7 @@ class WorkflowCLI(ModernLogger):
                         "execution_count": self.notebook_store.execution_count
                     },
                     "FSM": {
-                        "state": "ACTION_COMPLETED",
+                        "state": "BEHAVIOR_COMPLETE",
                         "last_transition": "COMPLETE_ACTION",
                         "previous_state": "BEHAVIOR_RUNNING",
                         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -1147,7 +1147,7 @@ class WorkflowCLI(ModernLogger):
             # Display summary
             console.print(Panel(
                 f"[green]✓[/green] 文件已保存: [cyan]{args.output}[/cyan]\n"
-                f"[green]✓[/green] FSM 状态: [magenta]ACTION_COMPLETED[/magenta]",
+                f"[green]✓[/green] FSM 状态: [magenta]BEHAVIOR_COMPLETE[/magenta]",
                 title="[bold green]💾 输出已保存[/bold green]",
                 border_style="green",
                 box=box.DOUBLE
@@ -1158,7 +1158,7 @@ class WorkflowCLI(ModernLogger):
             summary_table.add_column("项目", style="cyan", width=30)
             summary_table.add_column("数值", style="green", justify="right")
 
-            summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → ACTION_COMPLETED")
+            summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
             summary_table.add_row("执行的动作数", str(stats['actions_executed']))
             summary_table.add_row("创建的单元格数", str(stats['cells_added']))
             summary_table.add_row("执行的代码数", str(stats['code_executed']))
