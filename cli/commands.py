@@ -170,6 +170,20 @@ class WorkflowCLI(ModernLogger):
         apply_trans_parser.add_argument('--format', type=str, choices=['json', 'pretty'], default='pretty',
                                        help='Output format (json or pretty)')
 
+        # Test-actions command (NEW) - Execute actions from JSON with streaming display
+        test_actions_parser = subparsers.add_parser('test-actions',
+                                                    help='Execute actions from JSON file with rich streaming display')
+        test_actions_parser.add_argument('--actions-file', type=str, required=True,
+                                        help='Path to actions JSON file')
+        test_actions_parser.add_argument('--state-file', type=str, required=True,
+                                        help='Path to input state JSON file')
+        test_actions_parser.add_argument('--output', type=str, required=True,
+                                        help='Output file for updated state JSON')
+        test_actions_parser.add_argument('--no-display', action='store_true',
+                                        help='Disable rich display (faster execution)')
+        test_actions_parser.add_argument('--delay', type=float, default=0.3,
+                                        help='Delay between actions in seconds (default: 0.3)')
+
         return parser
 
     def cmd_start(self, args):
@@ -713,6 +727,350 @@ class WorkflowCLI(ModernLogger):
             self.error(f"apply-transition failed: {e}", exc_info=True)
             sys.exit(1)
 
+    def cmd_test_actions(self, args):
+        """Execute actions from JSON file with streaming display."""
+        import json
+        import time
+        from datetime import datetime
+        from models.cell import CellType
+
+        try:
+            # Import rich for display
+            from rich.console import Console
+            from rich.panel import Panel
+            from rich.table import Table
+            from rich.markdown import Markdown
+            from rich.syntax import Syntax
+            from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+            from rich import box
+            from rich.text import Text
+
+            console = Console()
+
+            # Load files
+            console.print("\n[bold cyan]📂 加载输入文件...[/bold cyan]")
+
+            with open(args.actions_file, 'r', encoding='utf-8') as f:
+                actions_data = json.load(f)
+
+            with open(args.state_file, 'r', encoding='utf-8') as f:
+                state_data = json.load(f)
+
+            table = Table(show_header=False, box=box.ROUNDED)
+            table.add_row("Actions 文件", args.actions_file)
+            table.add_row("Actions 数量", f"[green]{len(actions_data)}[/green]")
+            table.add_row("State 文件", args.state_file)
+            table.add_row("当前 FSM 状态", f"[yellow]{state_data['state']['FSM']['state']}[/yellow]")
+            table.add_row("输出文件", args.output)
+
+            console.print(table)
+
+            # Initialize notebook store
+            last_added_cell_id = None
+            stats = {'actions_executed': 0, 'cells_added': 0, 'code_executed': 0, 'errors': 0}
+
+            # Execute actions
+            console.print(f"\n[bold cyan]⚙️  开始流式执行 {len(actions_data)} 个动作[/bold cyan]\n")
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console
+            ) as progress:
+
+                task = progress.add_task("[cyan]执行动作...", total=len(actions_data))
+
+                for idx, action_item in enumerate(actions_data):
+                    action = action_item.get('action', {})
+                    action_type = action.get('action')
+
+                    progress.update(task, advance=1, description=f"[cyan]动作 {idx+1}/{len(actions_data)}: {action_type}")
+
+                    # Execute action
+                    if action_type == 'update_title':
+                        title = action.get('content', 'Untitled')
+                        self.notebook_store.update_title(title)
+                        if not args.no_display:
+                            console.print(Panel(
+                                f"[bold]{title}[/bold]",
+                                title=f"[cyan]动作 {idx+1}: {action_type}[/cyan]",
+                                border_style="cyan",
+                                box=box.ROUNDED
+                            ))
+                        stats['actions_executed'] += 1
+
+                    elif action_type in ['new_chapter', 'new_section', 'new_step']:
+                        if action_type == 'new_chapter':
+                            content = f"# {action.get('content', 'Chapter')}"
+                        elif action_type == 'new_section':
+                            content = f"## {action.get('content', 'Section')}"
+                        else:
+                            content = f"### {action.get('content', 'Step')}"
+
+                        cell_id = f'cell-{action_type}-{idx}'
+                        self.notebook_store.add_cell({
+                            'id': cell_id,
+                            'type': 'markdown',
+                            'content': content,
+                            'enableEdit': True,
+                            'description': f"{action_type}: {action.get('content')}"
+                        })
+                        last_added_cell_id = cell_id
+
+                        if not args.no_display:
+                            md = Markdown(content)
+                            console.print(Panel(
+                                md,
+                                title=f"[green]动作 {idx+1}: {action_type} → Markdown Cell[/green]",
+                                border_style="green",
+                                box=box.ROUNDED
+                            ))
+                        stats['cells_added'] += 1
+                        stats['actions_executed'] += 1
+
+                    elif action_type == 'add':
+                        shot_type = action.get('shot_type', 'dialogue')
+                        content = action.get('content', '')
+
+                        if shot_type == 'action':
+                            cell_id = f'cell-code-{idx}'
+                            self.notebook_store.add_cell({
+                                'id': cell_id,
+                                'type': 'code',
+                                'content': content,
+                                'language': 'python',
+                                'enableEdit': True,
+                                'description': 'Code cell'
+                            })
+                            last_added_cell_id = cell_id
+
+                            if not args.no_display:
+                                display_content = content if len(content) < 500 else content[:500] + "\n... (truncated)"
+                                syntax = Syntax(display_content, "python", theme="monokai", line_numbers=True)
+                                console.print(Panel(
+                                    syntax,
+                                    title=f"[magenta]动作 {idx+1}: add (code) → Code Cell[/magenta]",
+                                    border_style="magenta",
+                                    box=box.ROUNDED
+                                ))
+                            stats['cells_added'] += 1
+                        else:
+                            cell_id = f'cell-md-{idx}'
+                            self.notebook_store.add_cell({
+                                'id': cell_id,
+                                'type': 'markdown',
+                                'content': content,
+                                'enableEdit': True,
+                                'description': f'{shot_type} content'
+                            })
+                            last_added_cell_id = cell_id
+
+                            if not args.no_display:
+                                md = Markdown(content)
+                                console.print(Panel(
+                                    md,
+                                    title=f"[green]动作 {idx+1}: {shot_type} → Markdown Cell[/green]",
+                                    border_style="green",
+                                    box=box.ROUNDED
+                                ))
+                            stats['cells_added'] += 1
+
+                        stats['actions_executed'] += 1
+
+                    elif action_type == 'exec':
+                        cell = self.notebook_store.get_cell(last_added_cell_id)
+                        if cell and cell.type == CellType.CODE:
+                            if not args.no_display:
+                                console.print(Panel(
+                                    f"[bold yellow]执行代码单元格: {last_added_cell_id}[/bold yellow]",
+                                    title=f"[yellow]动作 {idx+1}: exec[/yellow]",
+                                    border_style="yellow",
+                                    box=box.ROUNDED
+                                ))
+
+                            try:
+                                exec_globals = {}
+                                exec_locals = {}
+
+                                from io import StringIO
+                                import sys
+                                old_stdout = sys.stdout
+                                sys.stdout = StringIO()
+
+                                exec(cell.content, exec_globals, exec_locals)
+
+                                output_text = sys.stdout.getvalue()
+                                sys.stdout = old_stdout
+
+                                if output_text:
+                                    cell.outputs = [{'output_type': 'stream', 'name': 'stdout', 'text': output_text}]
+
+                                self.notebook_store.execution_count += 1
+                                cell.execution_count = self.notebook_store.execution_count
+
+                                # Store variables
+                                if 'data_existence_report' in exec_locals:
+                                    state_data['state']['variables']['data_existence_report'] = exec_locals['data_existence_report']
+                                if 'df_raw' in exec_locals:
+                                    df_raw = exec_locals['df_raw']
+                                    state_data['state']['variables']['df_raw'] = {
+                                        'type': 'DataFrame',
+                                        'shape': list(df_raw.shape),
+                                        'columns': df_raw.shape[1],
+                                        'memory_mb': round(df_raw.memory_usage(deep=True).sum() / (1024 * 1024), 4)
+                                    }
+
+                                if not args.no_display and output_text:
+                                    display_output = output_text if len(output_text) < 1000 else output_text[:1000] + "\n... (truncated)"
+                                    console.print(Panel(
+                                        Text(display_output, style="dim"),
+                                        title="[green]✓ 执行成功 - 输出[/green]",
+                                        border_style="green",
+                                        box=box.ROUNDED
+                                    ))
+
+                                stats['code_executed'] += 1
+
+                            except Exception as e:
+                                cell.outputs = [{'output_type': 'error', 'ename': type(e).__name__, 'evalue': str(e), 'traceback': [str(e)]}]
+                                if not args.no_display:
+                                    console.print(Panel(
+                                        f"[bold red]{type(e).__name__}: {str(e)}[/bold red]",
+                                        title="[red]✗ 执行失败[/red]",
+                                        border_style="red",
+                                        box=box.ROUNDED
+                                    ))
+                                stats['errors'] += 1
+
+                        stats['actions_executed'] += 1
+
+                    # Delay between actions
+                    if not args.no_display:
+                        time.sleep(args.delay)
+
+            console.print("\n[bold green]✅ 所有动作执行完成[/bold green]\n")
+
+            # Build cells array
+            cells_array = []
+            for cell in self.notebook_store.cells:
+                cell_dict = {
+                    'id': cell.id,
+                    'type': cell.type.value,
+                    'content': cell.content,
+                    'outputs': cell.outputs,
+                    'enableEdit': cell.enable_edit,
+                    'phaseId': cell.phase_id,
+                    'description': cell.description
+                }
+
+                if cell.type == CellType.CODE:
+                    cell_dict['execution_count'] = cell.execution_count
+                    cell_dict['language'] = cell.language
+
+                cells_array.append(cell_dict)
+
+            # Build output state
+            effects_list = [
+                {
+                    "effect_type": "notebook_updated",
+                    "details": {
+                        "title_updated": True,
+                        "new_title": self.notebook_store.title,
+                        "cells_added": len(self.notebook_store.cells),
+                        "code_cells_executed": self.notebook_store.execution_count
+                    }
+                }
+            ]
+
+            if 'df_raw' in state_data['state']['variables']:
+                effects_list.append({
+                    "effect_type": "data_loaded",
+                    "details": {
+                        "dataset": "housing.csv",
+                        "rows": state_data['state']['variables']['df_raw']['shape'][0],
+                        "columns": state_data['state']['variables']['df_raw']['shape'][1]
+                    }
+                })
+
+            effects_list.append({
+                "effect_type": "artifact_generated",
+                "details": {
+                    "artifact_name": "data_existence_report",
+                    "status": "completed"
+                }
+            })
+
+            output_state = {
+                "observation": state_data['observation'],
+                "state": {
+                    "variables": state_data['state']['variables'],
+                    "effects": {"current": effects_list, "history": []},
+                    "notebook": {
+                        "notebook_id": state_data['state']['notebook'].get('notebook_id', 'test-notebook'),
+                        "title": self.notebook_store.title,
+                        "cells": cells_array,
+                        "execution_count": self.notebook_store.execution_count
+                    },
+                    "FSM": {
+                        "state": "ACTION_COMPLETED",
+                        "last_transition": "COMPLETE_ACTION",
+                        "previous_state": "BEHAVIOR_RUNNING",
+                        "timestamp": datetime.utcnow().isoformat() + 'Z',
+                        "transition_data": {
+                            "actions_applied": len(actions_data),
+                            "cells_added": len(self.notebook_store.cells),
+                            "code_executed": self.notebook_store.execution_count,
+                            "acceptance_checks_passed": stats['errors'] == 0
+                        }
+                    }
+                },
+                "metadata": state_data.get('metadata', {})
+            }
+
+            # Update metadata
+            output_state['metadata'].update({
+                "execution_timestamp": datetime.utcnow().isoformat() + 'Z',
+                "status": "completed"
+            })
+
+            # Save output
+            with open(args.output, 'w', encoding='utf-8') as f:
+                json.dump(output_state, f, indent=2, ensure_ascii=False)
+
+            # Display summary
+            console.print(Panel(
+                f"[green]✓[/green] 文件已保存: [cyan]{args.output}[/cyan]\n"
+                f"[green]✓[/green] FSM 状态: [magenta]ACTION_COMPLETED[/magenta]",
+                title="[bold green]💾 输出已保存[/bold green]",
+                border_style="green",
+                box=box.DOUBLE
+            ))
+
+            # Summary table
+            summary_table = Table(box=box.DOUBLE, title="执行摘要", title_style="bold cyan")
+            summary_table.add_column("项目", style="cyan", width=30)
+            summary_table.add_column("数值", style="green", justify="right")
+
+            summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → ACTION_COMPLETED")
+            summary_table.add_row("执行的动作数", str(stats['actions_executed']))
+            summary_table.add_row("创建的单元格数", str(stats['cells_added']))
+            summary_table.add_row("执行的代码数", str(stats['code_executed']))
+            summary_table.add_row("错误数", str(stats['errors']))
+            summary_table.add_row("验收检查", "✓ 全部通过" if stats['errors'] == 0 else "✗ 有错误")
+
+            console.print(summary_table)
+            console.print("\n[bold green]🎉 执行完成！[/bold green]\n")
+
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: File not found - {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            self.error(f"test-actions failed: {e}", exc_info=True)
+            sys.exit(1)
+
     def run(self, argv=None):
         """Run the CLI."""
         parser = self.create_parser()
@@ -785,6 +1143,7 @@ class WorkflowCLI(ModernLogger):
             'resume': self.cmd_resume,
             'test-request': self.cmd_test_request,
             'apply-transition': self.cmd_apply_transition,
+            'test-actions': self.cmd_test_actions,
         }
 
         handler = command_handlers.get(args.command)

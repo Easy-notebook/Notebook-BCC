@@ -1,0 +1,41 @@
+[
+  {
+    "action": {
+      "action": "update_title",
+      "content": "Ames Housing Price Prediction - Data Science Lifecycle"
+    }
+  },
+  {
+    "action": {
+      "action": "new_section",
+      "content": "Data Existence Establishment"
+    }
+  },
+  {
+    "action": {
+      "action": "new_step",
+      "content": "Data Collection and Inventory"
+    }
+  },
+  {
+    "action": {
+      "action": "add",
+      "shot_type": "dialogue",
+      "content": "We begin by establishing data existence through systematic collection and inventory.  \nThis foundational step ensures the **Ames Housing dataset** is accessible, complete, and ready for further exploration.  \nWe will validate the dataset file located at `./assets/housing.csv`, gather its metadata, and perform an initial inventory to confirm readiness for downstream analysis.  \nThe verification includes confirming file accessibility, recording its size and timestamp, loading the data for inspection, and compiling a comprehensive existence report aligned with PCS principles of **Predictability**, **Computability**, and **Stability**."
+    }
+  },
+  {
+    "action": {
+      "action": "add",
+      "shot_type": "action",
+      "content": "import os\nimport pandas as pd\nfrom datetime import datetime\n\n# Step 1: Verify dataset path\nfile_path = \"./assets/housing.csv\"\nexists = os.path.exists(file_path)\nfile_size_bytes = os.path.getsize(file_path) if exists else 0\nfile_size_mb = round(file_size_bytes / (1024 * 1024), 4) if exists else 0\nlast_modified = datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat() if exists else None\n\nprint(f\"File exists: {exists}, Size: {file_size_mb} MB, Last modified: {last_modified}\")\n\n# Step 2: Load dataset to confirm readability\ndf_raw = pd.read_csv(file_path)\nprint(f\"Loaded dataset shape: {df_raw.shape}\")\n\n# Step 3: Compute schema and metadata\ndata_catalog_metadata = {\n    \"columns\": df_raw.columns.tolist(),\n    \"dtypes\": df_raw.dtypes.astype(str).to_dict(),\n    \"schema_verified\": True,\n    \"load_success\": True\n}\n\n# Step 4: Create data existence report\ndata_existence_report = {\n    \"file_path\": file_path,\n    \"exists\": exists,\n    \"file_size_bytes\": file_size_bytes,\n    \"file_size_mb\": file_size_mb,\n    \"last_modified\": last_modified,\n    \"row_count\": df_raw.shape[0],\n    \"column_count\": df_raw.shape[1],\n    \"data_format\": \"csv\",\n    \"memory_usage_mb\": round(df_raw.memory_usage(deep=True).sum() / (1024 * 1024), 4),\n    \"catalog_metadata\": data_catalog_metadata\n}\n\nprint(\"Data existence report generated successfully.\")\nprint(data_existence_report)"
+    }
+  },
+  {
+    "action": {
+      "action": "exec",
+      "codecell_id": "lastAddedCellId",
+      "need_output": true
+    }
+  }
+]
