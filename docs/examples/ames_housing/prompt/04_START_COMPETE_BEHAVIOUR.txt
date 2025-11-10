@@ -1,0 +1,245 @@
+[SYSTEM PROMPT]
+
+## Role
+You are the **Behavior Reflection Agent** — evaluating completed actions, assessing behavior completion, and determining FSM state transitions.
+
+## Task
+Output XML that evaluates execution results and decides next state:
+- `STATE_Behavior_Running`: Continue current behavior (artifacts incomplete, criteria unmet, or errors exist)
+- `STATE_Step_Running`: Move to next behavior (all artifacts produced, all criteria satisfied, goal achieved)
+
+## Output Format (XML only)
+
+```xml
+<reflection current_behavior_is_complete="true|false">
+  <evaluation>
+    <artifacts_produced>
+      <artifact name="artifact_name" status="complete|incomplete|missing">Assessment</artifact>
+    </artifacts_produced>
+    <acceptance_validation>
+      <criterion status="passed|failed|partial">criterion_description</criterion>
+    </acceptance_validation>
+    <execution_quality>
+      <code_execution>success|failed|partial</code_execution>
+      <errors_found>description</errors_found>
+    </execution_quality>
+    <goal_achievement>
+      <status>achieved|partial|not_achieved</status>
+      <reasoning>Explanation</reasoning>
+    </goal_achievement>
+  </evaluation>
+
+  <new_variable> // operational
+    <save_current_effect name="name"/>  
+  </new_variable>
+
+  <decision>
+    <next_state>STATE_Behavior_Running|STATE_Step_Running</next_state>
+    <reasoning>Why this state was chosen</reasoning>
+  </decision>
+
+  <context_for_next>
+    <variables_produced>
+      <variable name="name" value="description">Content or reference</variable>
+    </variables_produced>
+    <whathappened>
+      <overview>Summary of accomplishments</overview>
+      <key_findings>Important insights</key_findings>
+    </whathappened>
+    <recommendations_for_next>
+      <if_continuing_behavior>What to do next if iterating</if_continuing_behavior>
+      <if_moving_forward>What next step should focus on</if_moving_forward>
+    </recommendations_for_next>
+  </context_for_next>
+
+  <outputs_tracking_update>
+    <produced><artifact>name</artifact></produced>
+    <in_progress><artifact>name</artifact></in_progress>
+    <remaining><artifact>name</artifact></remaining>
+  </outputs_tracking_update>
+</reflection>
+```
+
+## Rules
+1. Output XML only, no external explanations
+2. Base evaluation on actual execution results
+3. Reference actual variable names and values
+4. Provide clear, decisive state transitions
+
+---
+
+[USER PROMPT]
+
+## Behavior Context
+
+**ID**: data_collection_inventory_b1 | **Iteration**: 1
+**Task**: Verify accessibility of ./assets/housing.csv, record metadata, generate data_existence_report with validation results.
+
+**Focus**: Verify accessibility and completeness of the user-submitted housing dataset located at ./assets/housing.csv, record file metadata (size, timestamp), and generate a comprehensive data_existence_report including version traceability and validation results.
+
+**What Happened**:
+- **Overview**: The dataset existence stage has begun. The housing dataset was submitted by the user and now needs to be validated for accessibility, completeness, and traceability.
+- **Background**: No prior steps have been executed yet; this is the first verification step under data_existence_establishment.
+
+**Inputs**:
+```json
+{
+  "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+  "user_submit_files": "[\"./assets/housing.csv\"]"
+}
+```
+
+**Expected Outputs**:
+- `data_existence_report`: Comprehensive record confirming dataset presence, metadata (size, timestamp), accessibility
+
+**Acceptance Criteria**:
+- os.path.exists("./assets/housing.csv")==True
+- os.path.getsize("./assets/housing.csv")>0
+
+**PCS Validation Standards**:
+- **Predictability**: Ensures dataset is consistently sourced and representative for generalizable predictions
+- **Computability**: Standardizes file loading path and encoding for deterministic reproducibility
+- **Stability**: Validates dataset integrity to prevent downstream errors or broken references
+
+---
+
+## Execution Results
+
+**Variables Before**:
+```json
+{
+  "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+  "user_submit_files": ["./assets/housing.csv"]
+}
+```
+
+**Effects from Execution**:
+```json
+{
+  "current": [
+    {
+      "type": "text",
+      "text": "File exists: True, Size: 0.9459 MB, Last modified: 2025-11-10T13:45:52.881171\nLoaded dataset shape: (2930, 82)\nData existence report generated successfully.\n{'file_path': './assets/housing.csv', 'exists': True, 'file_size_bytes': 991888, 'file_size_mb': 0.9459, 'last_modified': '2025-11-10T13:45:52.881171', 'row_count': 2930, 'column_count': 82, 'data_format': 'csv', 'memory_usage_mb': np.float64(6.9154), 'catalog_metadata': {'columns': ['Order', 'PID', 'MS SubClass', 'MS Zoning', 'Lot Frontage', 'Lot Area', 'Street', 'Alley', 'Lot Shape', 'Land Contour', 'Utilities', 'Lot Config', 'Land Slope', 'Neighborhood', 'Condition 1', 'Condition 2', 'Bldg Type', 'House Style', 'Overall Qual', 'Overall Cond', 'Year Built', 'Year Remod/Add', 'Roof Style', 'Roof Matl', 'Exterior 1st', 'Exterior 2nd', 'Mas Vnr Type', 'Mas Vnr Area', 'Exter Qual', 'Exter Cond', 'Foundation', 'Bsmt Qual', 'Bsmt Cond', 'Bsmt Exposure', 'BsmtFin Type 1', 'BsmtFin SF 1', 'BsmtFin Type 2', 'BsmtFin SF 2', 'Bsmt Unf SF', 'Total Bsmt SF', 'Heating', 'Heating QC', 'Central Air', 'Electrical', '1st Flr SF', '2nd Flr SF', 'Low Qual Fin SF', 'Gr Liv Area', 'Bsmt Full Bath', 'Bsmt Half Bath', 'Full Bath', 'Half Bath', 'Bedroom AbvGr', 'Kitchen AbvGr', 'Kitchen Qual', 'TotRms AbvGrd', 'Functional', 'Fireplaces', 'Fireplace Qu', 'Garage Type', 'Garage Yr Blt', 'Garage Finish', 'Garage Cars', 'Garage Area', 'Garage Qual', 'Garage Cond', 'Paved Drive', 'Wood Deck SF', 'Open Porch SF', 'Enclosed Porch', '3Ssn Porch', 'Screen Porch', 'Pool Area', 'Pool QC', 'Fence', 'Misc Feature', 'Misc Val', 'Mo Sold', 'Yr Sold', 'Sale Type', 'Sale Condition', 'SalePrice'], 'dtypes': {...}, 'schema_verified': True, 'load_success': True}}\n"
+    }
+  ]
+}
+```
+
+---
+
+## Current Notebook State
+
+**Notebook Content**:
+```
+# Ames Housing Price Prediction - Data Science Lifecycle
+
+## Data Existence Establishment
+
+### Data Collection and Inventory
+
+We begin by establishing data existence through systematic collection and inventory.  
+This foundational step ensures the **Ames Housing dataset** is accessible, complete, and ready for further exploration.  
+We will validate the dataset file located at `./assets/housing.csv`, gather its metadata, and perform an initial inventory to confirm readiness for downstream analysis.  
+The verification includes confirming file accessibility, recording its size and timestamp, loading the data for inspection, and compiling a comprehensive existence report aligned with PCS principles of **Predictability**, **Computability**, and **Stability**.
+
+```python
+import os
+import pandas as pd
+from datetime import datetime
+
+# Step 1: Verify dataset path
+file_path = "./assets/housing.csv"
+exists = os.path.exists(file_path)
+file_size_bytes = os.path.getsize(file_path) if exists else 0
+file_size_mb = round(file_size_bytes / (1024 * 1024), 4) if exists else 0
+last_modified = datetime.fromtimestamp(os.path.getmtime(file_path)).isoformat() if exists else None
+
+print(f"File exists: {exists}, Size: {file_size_mb} MB, Last modified: {last_modified}")
+
+# Step 2: Load dataset to confirm readability
+df_raw = pd.read_csv(file_path)
+print(f"Loaded dataset shape: {df_raw.shape}")
+
+# Step 3: Compute schema and metadata
+data_catalog_metadata = {
+    "columns": df_raw.columns.tolist(),
+    "dtypes": df_raw.dtypes.astype(str).to_dict(),
+    "schema_verified": True,
+    "load_success": True
+}
+
+# Step 4: Create data existence report
+data_existence_report = {
+    "file_path": file_path,
+    "exists": exists,
+    "file_size_bytes": file_size_bytes,
+    "file_size_mb": file_size_mb,
+    "last_modified": last_modified,
+    "row_count": df_raw.shape[0],
+    "column_count": df_raw.shape[1],
+    "data_format": "csv",
+    "memory_usage_mb": round(df_raw.memory_usage(deep=True).sum() / (1024 * 1024), 4),
+    "catalog_metadata": data_catalog_metadata
+}
+
+print("Data existence report generated successfully.")
+print(data_existence_report)
+```
+
+<output>
+File exists: True, Size: 0.9459 MB, Last modified: 2025-11-10T13:45:52.881171
+Loaded dataset shape: (2930, 82)
+Data existence report generated successfully.
+{'file_path': './assets/housing.csv', 'exists': True, 'file_size_bytes': 991888, 'file_size_mb': 0.9459, 'last_modified': '2025-11-10T13:45:52.881171', 'row_count': 2930, 'column_count': 82, 'data_format': 'csv', 'memory_usage_mb': np.float64(6.9154), 'catalog_metadata': {'columns': ['Order', 'PID', 'MS SubClass', 'MS Zoning', 'Lot Frontage', 'Lot Area', 'Street', 'Alley', 'Lot Shape', 'Land Contour', 'Utilities', 'Lot Config', 'Land Slope', 'Neighborhood', 'Condition 1', 'Condition 2', 'Bldg Type', 'House Style', 'Overall Qual', 'Overall Cond', 'Year Built', 'Year Remod/Add', 'Roof Style', 'Roof Matl', 'Exterior 1st', 'Exterior 2nd', 'Mas Vnr Type', 'Mas Vnr Area', 'Exter Qual', 'Exter Cond', 'Foundation', 'Bsmt Qual', 'Bsmt Cond', 'Bsmt Exposure', 'BsmtFin Type 1', 'BsmtFin SF 1', 'BsmtFin Type 2', 'BsmtFin SF 2', 'Bsmt Unf SF', 'Total Bsmt SF', 'Heating', 'Heating QC', 'Central Air', 'Electrical', '1st Flr SF', '2nd Flr SF', 'Low Qual Fin SF', 'Gr Liv Area', 'Bsmt Full Bath', 'Bsmt Half Bath', 'Full Bath', 'Half Bath', 'Bedroom AbvGr', 'Kitchen AbvGr', 'Kitchen Qual', 'TotRms AbvGrd', 'Functional', 'Fireplaces', 'Fireplace Qu', 'Garage Type', 'Garage Yr Blt', 'Garage Finish', 'Garage Cars', 'Garage Area', 'Garage Qual', 'Garage Cond', 'Paved Drive', 'Wood Deck SF', 'Open Porch SF', 'Enclosed Porch', '3Ssn Porch', 'Screen Porch', 'Pool Area', 'Pool QC', 'Fence', 'Misc Feature', 'Misc Val', 'Mo Sold', 'Yr Sold', 'Sale Type', 'Sale Condition', 'SalePrice'], 'dtypes': {'Order': 'int64', 'PID': 'int64', 'MS SubClass': 'int64', 'MS Zoning': 'object', 'Lot Frontage': 'float64', 'Lot Area': 'int64', 'Street': 'object', 'Alley': 'object', 'Lot Shape': 'object', 'Land Contour': 'object', 'Utilities': 'object', 'Lot Config': 'object', 'Land Slope': 'object', 'Neighborhood': 'object', 'Condition 1': 'object', 'Condition 2': 'object', 'Bldg Type': 'object', 'House Style': 'object', 'Overall Qual': 'int64', 'Overall Cond': 'int64', 'Year Built': 'int64', 'Year Remod/Add': 'int64', 'Roof Style': 'object', 'Roof Matl': 'object', 'Exterior 1st': 'object', 'Exterior 2nd': 'object', 'Mas Vnr Type': 'object', 'Mas Vnr Area': 'float64', 'Exter Qual': 'object', 'Exter Cond': 'object', 'Foundation': 'object', 'Bsmt Qual': 'object', 'Bsmt Cond': 'object', 'Bsmt Exposure': 'object', 'BsmtFin Type 1': 'object', 'BsmtFin SF 1': 'float64', 'BsmtFin Type 2': 'object', 'BsmtFin SF 2': 'float64', 'Bsmt Unf SF': 'float64', 'Total Bsmt SF': 'float64', 'Heating': 'object', 'Heating QC': 'object', 'Central Air': 'object', 'Electrical': 'object', '1st Flr SF': 'int64', '2nd Flr SF': 'int64', 'Low Qual Fin SF': 'int64', 'Gr Liv Area': 'int64', 'Bsmt Full Bath': 'float64', 'Bsmt Half Bath': 'float64', 'Full Bath': 'int64', 'Half Bath': 'int64', 'Bedroom AbvGr': 'int64', 'Kitchen AbvGr': 'int64', 'Kitchen Qual': 'object', 'TotRms AbvGrd': 'int64', 'Functional': 'object', 'Fireplaces': 'int64', 'Fireplace Qu': 'object', 'Garage Type': 'object', 'Garage Yr Blt': 'float64', 'Garage Finish': 'object', 'Garage Cars': 'float64', 'Garage Area': 'float64', 'Garage Qual': 'object', 'Garage Cond': 'object', 'Paved Drive': 'object', 'Wood Deck SF': 'int64', 'Open Porch SF': 'int64', 'Enclosed Porch': 'int64', '3Ssn Porch': 'int64', 'Screen Porch': 'int64', 'Pool Area': 'int64', 'Pool QC': 'object', 'Fence': 'object', 'Misc Feature': 'object', 'Misc Val': 'int64', 'Mo Sold': 'int64', 'Yr Sold': 'int64', 'Sale Type': 'object', 'Sale Condition': 'object', 'SalePrice': 'int64'}, 'schema_verified': True, 'load_success': True}}
+</output>
+```
+
+---
+
+## Outputs Tracking
+
+**Expected**: data_existence_report
+**Produced**: []
+**In Progress**: []
+**Remaining**: []
+
+---
+
+## Context
+
+**Current Step**: data_collection_inventory - Collect and validate housing dataset
+
+**Next Step** (if current behavior completes):
+- **ID**: data_structure_discovery
+- **Goal**: Identify the dataset's schema, variable names, and types to ensure readiness for analysis
+- **Artifacts**: data_structure_document (schema summary with column names, types, nullability)
+- **Acceptance**: `len(df_raw.columns)>5` and `df_raw.dtypes.notnull().all()==True`
+- **Required Variables**: df_raw (from current step)
+- **PCS Focus**:
+  - Predictability: Consistent schema understanding for feature interpretation
+  - Computability: Reproducible schema parsing and deterministic type inference
+  - Stability: Detect inconsistent/malformed columns affecting model performance
+
+**Remaining Steps in Stage**: data_structure_discovery, variable_semantic_analysis, variable_relevance_assessment, pcs_hypothesis_generation
+
+**Current Stage**: data_existence_establishment - Verify dataset existence and structure
+**Remaining Stages**: data_integrity_assurance, exploratory_data_analysis, methodology_strategy_formulation, model_implementation_execution, predictability_validation, stability_assessment, results_communication
+
+---
+
+## Reflection Instructions
+
+Based on the context above, your reflection must:
+
+1. **If continuing behavior** (`STATE_Behavior_Running`):
+   - In `<recommendations_for_next><if_continuing_behavior>`, specify what the next iteration should fix/improve
+   - Reference specific artifacts that are incomplete or acceptance criteria that failed
+
+2. **If moving to next step** (`STATE_Step_Running`):
+   - In `<recommendations_for_next><if_moving_forward>`, guide the next step based on what was accomplished
+   - Reference the Next Step information above
+   - Highlight which variables/artifacts from current step will be used by next step
+
+---
+
+**Generate reflection XML based on execution results and notebook state.**

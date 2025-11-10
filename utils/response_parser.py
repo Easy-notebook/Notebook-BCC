@@ -100,6 +100,11 @@ class ResponseParser(ModernLogger):
                     'type': 'behavior',
                     'content': self._parse_behavior_xml(root)
                 }
+            elif root.tag == 'reflection':
+                return {
+                    'type': 'reflection',
+                    'content': self._parse_reflection_xml(root)
+                }
             else:
                 self.warning(f"Unknown XML root tag: {root.tag}")
                 return {
@@ -292,6 +297,82 @@ class ResponseParser(ModernLogger):
             if child.text:
                 pcs[child.tag] = child.text
         return pcs
+
+    def _parse_reflection_xml(self, root: ET.Element) -> Dict[str, Any]:
+        """
+        Parse <reflection> XML definition.
+
+        Returns:
+            Dict with reflection details including:
+            - behavior_is_complete: boolean from attribute
+            - next_state: target FSM state
+            - variables_produced: dict of new variables
+            - artifacts_produced: list of completed artifacts
+            - outputs_tracking: dict with produced/in_progress/remaining
+        """
+        reflection = {
+            'behavior_is_complete': root.get('current_behavior_is_complete', '').lower() == 'true',
+            'next_state': None,
+            'variables_produced': {},
+            'artifacts_produced': [],
+            'outputs_tracking': {
+                'produced': [],
+                'in_progress': [],
+                'remaining': []
+            }
+        }
+
+        for child in root:
+            if child.tag == 'decision':
+                # Extract next_state from decision
+                next_state_elem = child.find('next_state')
+                if next_state_elem is not None and next_state_elem.text:
+                    reflection['next_state'] = next_state_elem.text.strip()
+
+            elif child.tag == 'context_for_next':
+                # Extract variables_produced
+                vars_elem = child.find('variables_produced')
+                if vars_elem is not None:
+                    for var in vars_elem.findall('variable'):
+                        name = var.get('name')
+                        value = var.get('value', var.text or '')
+                        if name:
+                            reflection['variables_produced'][name] = value
+
+            elif child.tag == 'evaluation':
+                # Extract artifacts_produced
+                artifacts_elem = child.find('artifacts_produced')
+                if artifacts_elem is not None:
+                    for artifact in artifacts_elem.findall('artifact'):
+                        artifact_name = artifact.get('name')
+                        artifact_status = artifact.get('status', 'unknown')
+                        if artifact_name:
+                            reflection['artifacts_produced'].append({
+                                'name': artifact_name,
+                                'status': artifact_status
+                            })
+
+            elif child.tag == 'outputs_tracking_update':
+                # Extract produced/in_progress/remaining outputs
+                produced_elem = child.find('produced')
+                if produced_elem is not None:
+                    for artifact in produced_elem.findall('artifact'):
+                        if artifact.text:
+                            reflection['outputs_tracking']['produced'].append(artifact.text.strip())
+
+                in_progress_elem = child.find('in_progress')
+                if in_progress_elem is not None:
+                    for artifact in in_progress_elem.findall('artifact'):
+                        if artifact.text:
+                            reflection['outputs_tracking']['in_progress'].append(artifact.text.strip())
+
+                remaining_elem = child.find('remaining')
+                if remaining_elem is not None:
+                    for artifact in remaining_elem.findall('artifact'):
+                        if artifact.text:
+                            reflection['outputs_tracking']['remaining'].append(artifact.text.strip())
+
+        return reflection
 
     def _preprocess_xml(self, xml_string: str) -> str:
         """

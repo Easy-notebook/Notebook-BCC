@@ -50,6 +50,8 @@ class StateUpdater(ModernLogger):
             return self._apply_steps_transition(state, parsed['content'])
         elif parsed['type'] == 'behavior':
             return self._apply_behavior_transition(state, parsed['content'])
+        elif parsed['type'] == 'reflection':
+            return self._apply_reflection_transition(state, parsed['content'])
         elif parsed['type'] == 'json':
             # Standard JSON response (from planning/reflecting API)
             return self._apply_json_transition(state, parsed['content'])
@@ -303,6 +305,144 @@ class StateUpdater(ModernLogger):
         fsm = new_state.get('state', {}).get('FSM', {})
         fsm['state'] = 'BEHAVIOR_RUNNING'
         fsm['last_transition'] = 'START_BEHAVIOR'
+
+        return new_state
+
+    def _apply_reflection_transition(
+        self,
+        state: Dict[str, Any],
+        content: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Apply reflection transition (behavior completion reflection).
+
+        Updates:
+        - FSM state to next_state
+        - Add new variables to state.variables
+        - Update behaviors.completed list
+        - Update outputs tracking (produced/in_progress/remaining)
+        - Transition to next step if behavior_is_complete
+        """
+        new_state = deepcopy(state)
+
+        behavior_is_complete = content.get('behavior_is_complete', False)
+        next_state = content.get('next_state')
+        variables_produced = content.get('variables_produced', {})
+        artifacts_produced = content.get('artifacts_produced', [])
+        outputs_tracking = content.get('outputs_tracking', {})
+
+        self.info(f"[StateUpdater] Applying reflection: behavior_complete={behavior_is_complete}, next_state={next_state}")
+
+        # Get structures
+        observation = new_state.get('observation', {})
+        location = observation.get('location', {})
+        progress = location.get('progress', {})
+        state_data = new_state.get('state', {})
+
+        # Add new variables
+        if variables_produced:
+            current_vars = state_data.get('variables', {})
+            current_vars.update(variables_produced)
+            self.info(f"[StateUpdater] Added {len(variables_produced)} new variables")
+
+        # Update FSM state
+        fsm = state_data.get('FSM', {})
+        old_state = fsm.get('state', 'UNKNOWN')
+
+        if next_state:
+            fsm['previous_state'] = old_state
+            fsm['state'] = next_state
+            self.info(f"[StateUpdater] FSM transition: {old_state} → {next_state}")
+
+            # Determine transition name based on state change
+            if 'Step' in next_state:
+                fsm['last_transition'] = 'TRANSITION_TO_Step_Running'
+            elif 'BEHAVIOR' in next_state:
+                fsm['last_transition'] = 'TRANSITION_TO_Behavior_Running'
+            elif 'STAGE' in next_state:
+                fsm['last_transition'] = 'TRANSITION_TO_Stage_Running'
+            else:
+                fsm['last_transition'] = f'TRANSITION_TO_{next_state}'
+
+        # Update behaviors if behavior is complete
+        if behavior_is_complete:
+            behaviors_progress = progress.get('behaviors', {})
+            current_behavior = behaviors_progress.get('current')
+
+            if current_behavior:
+                # Move current behavior to completed
+                if 'completed' not in behaviors_progress:
+                    behaviors_progress['completed'] = []
+
+                # Add completion info
+                completed_behavior = deepcopy(current_behavior)
+                completed_behavior['completion_status'] = 'success'
+                completed_behavior['artifacts_produced'] = [a['name'] for a in artifacts_produced]
+
+                behaviors_progress['completed'].append(completed_behavior)
+                behaviors_progress['current'] = None
+                self.info(f"[StateUpdater] Behavior completed: {current_behavior.get('behavior_id')}")
+
+            # Update behavior outputs tracking
+            behavior_outputs = behaviors_progress.get('current_outputs', {})
+            if outputs_tracking.get('produced'):
+                behavior_outputs['produced'] = outputs_tracking['produced']
+            behavior_outputs['in_progress'] = outputs_tracking.get('in_progress', [])
+            behavior_outputs['remaining'] = outputs_tracking.get('remaining', [])
+
+        # If transitioning to Step_Running, update step progress
+        if next_state == 'STATE_Step_Running':
+            steps_progress = progress.get('steps', {})
+            current_step = steps_progress.get('current')
+
+            if current_step:
+                # Mark current step as complete and move to next step
+                if 'completed' not in steps_progress:
+                    steps_progress['completed'] = []
+
+                completed_step = deepcopy(current_step)
+                completed_step['artifacts_produced'] = outputs_tracking.get('produced', [])
+                completed_step['completion_status'] = 'all_acceptance_criteria_passed'
+
+                steps_progress['completed'].append(completed_step)
+                self.info(f"[StateUpdater] Step completed: {current_step.get('step_id')}")
+
+                # Move to next step if available
+                remaining_steps = steps_progress.get('remaining', [])
+                if remaining_steps:
+                    next_step = remaining_steps[0]
+                    steps_progress['current'] = next_step
+                    steps_progress['remaining'] = remaining_steps[1:]
+
+                    # Update location
+                    location['current']['step_id'] = next_step.get('step_id')
+                    location['current']['behavior_id'] = None
+                    location['goals'] = next_step.get('goal', '')
+
+                    # Update step outputs
+                    steps_progress['current_outputs'] = {
+                        'expected': [{'name': k, 'description': v} for k, v in next_step.get('verified_artifacts', {}).items()],
+                        'produced': [],
+                        'in_progress': []
+                    }
+
+                    self.info(f"[StateUpdater] Advanced to next step: {next_step.get('step_id')}")
+
+            # Update stage outputs tracking
+            stages_progress = progress.get('stages', {})
+            stage_outputs = stages_progress.get('current_outputs', {})
+            if outputs_tracking.get('produced'):
+                # Add to produced list (don't replace)
+                if 'produced' not in stage_outputs:
+                    stage_outputs['produced'] = []
+                for artifact_name in outputs_tracking['produced']:
+                    if not any(item.get('name') == artifact_name for item in stage_outputs['produced']):
+                        # Find description from artifacts_produced
+                        description = next((a.get('name') for a in artifacts_produced if a.get('name') == artifact_name), artifact_name)
+                        stage_outputs['produced'].append({
+                            'name': artifact_name,
+                            'description': description
+                        })
 
         return new_state
 
