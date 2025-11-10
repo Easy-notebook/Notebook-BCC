@@ -184,6 +184,14 @@ class WorkflowCLI(ModernLogger):
         test_actions_parser.add_argument('--delay', type=float, default=0.3,
                                         help='Delay between actions in seconds (default: 0.3)')
 
+        # Export-markdown command - Export notebook from state to markdown
+        export_md_parser = subparsers.add_parser('export-markdown',
+                                                help='Export notebook from state file to markdown')
+        export_md_parser.add_argument('--state-file', type=str, required=True,
+                                     help='Path to state JSON file')
+        export_md_parser.add_argument('--output', type=str, required=False,
+                                     help='Output markdown file path (default: stdout)')
+
         return parser
 
     def cmd_start(self, args):
@@ -731,7 +739,7 @@ class WorkflowCLI(ModernLogger):
         """Execute actions from JSON file with streaming display."""
         import json
         import time
-        from datetime import datetime
+        from datetime import datetime, timezone
         from models.cell import CellType
 
         try:
@@ -756,18 +764,29 @@ class WorkflowCLI(ModernLogger):
             with open(args.state_file, 'r', encoding='utf-8') as f:
                 state_data = json.load(f)
 
+            # Extract and set notebook_id from state
+            notebook_id = state_data.get('state', {}).get('notebook', {}).get('notebook_id')
+            if notebook_id:
+                console.print(f"[cyan]📓 Using notebook_id from state: {notebook_id}[/cyan]")
+                self.code_executor.notebook_id = notebook_id
+                self.code_executor.is_kernel_ready = True
+            else:
+                console.print("[yellow]⚠️  Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
+
             table = Table(show_header=False, box=box.ROUNDED)
             table.add_row("Actions 文件", args.actions_file)
             table.add_row("Actions 数量", f"[green]{len(actions_data)}[/green]")
             table.add_row("State 文件", args.state_file)
             table.add_row("当前 FSM 状态", f"[yellow]{state_data['state']['FSM']['state']}[/yellow]")
+            table.add_row("Notebook ID", f"[cyan]{notebook_id or 'Will initialize'}[/cyan]")
             table.add_row("输出文件", args.output)
 
             console.print(table)
 
-            # Initialize notebook store
+            # Initialize notebook store and tracking
             last_added_cell_id = None
             stats = {'actions_executed': 0, 'cells_added': 0, 'code_executed': 0, 'errors': 0}
+            execution_results = []  # Track all execution results for effects generation
 
             # Execute actions
             console.print(f"\n[bold cyan]⚙️  开始流式执行 {len(actions_data)} 个动作[/bold cyan]\n")
@@ -884,57 +903,93 @@ class WorkflowCLI(ModernLogger):
                         if cell and cell.type == CellType.CODE:
                             if not args.no_display:
                                 console.print(Panel(
-                                    f"[bold yellow]执行代码单元格: {last_added_cell_id}[/bold yellow]",
+                                    f"[bold yellow]执行代码单元格: {last_added_cell_id}[/bold yellow]\n"
+                                    f"[dim]通过后端 Jupyter kernel 执行 (notebook_id: {self.code_executor.notebook_id})[/dim]",
                                     title=f"[yellow]动作 {idx+1}: exec[/yellow]",
                                     border_style="yellow",
                                     box=box.ROUNDED
                                 ))
 
                             try:
-                                exec_globals = {}
-                                exec_locals = {}
+                                # Use CodeExecutor to send code to backend Jupyter kernel
+                                result = self.code_executor.execute(cell.content, cell_id=last_added_cell_id)
 
-                                from io import StringIO
-                                import sys
-                                old_stdout = sys.stdout
-                                sys.stdout = StringIO()
+                                if result['success']:
+                                    # Convert CellOutput objects to dict format for notebook storage
+                                    cell.outputs = []
+                                    has_error = False
+                                    for output in result['outputs']:
+                                        output_dict = {
+                                            'output_type': output.output_type,
+                                            'text': output.text or output.content
+                                        }
+                                        if output.output_type == 'error':
+                                            output_dict['ename'] = output.ename
+                                            output_dict['evalue'] = output.evalue
+                                            output_dict['traceback'] = output.traceback
+                                            has_error = True
+                                        cell.outputs.append(output_dict)
 
-                                exec(cell.content, exec_globals, exec_locals)
+                                    self.notebook_store.execution_count += 1
+                                    cell.execution_count = self.notebook_store.execution_count
 
-                                output_text = sys.stdout.getvalue()
-                                sys.stdout = old_stdout
+                                    # Track execution result with outputs
+                                    execution_results.append({
+                                        'cell_id': last_added_cell_id,
+                                        'success': not has_error,
+                                        'outputs': result['outputs']
+                                    })
 
-                                if output_text:
-                                    cell.outputs = [{'output_type': 'stream', 'name': 'stdout', 'text': output_text}]
+                                    # Display output if available
+                                    if not args.no_display and result['outputs']:
+                                        output_text = '\n'.join([
+                                            output.text or output.content
+                                            for output in result['outputs']
+                                            if output.text or output.content
+                                        ])
+                                        if output_text:
+                                            display_output = output_text if len(output_text) < 1000 else output_text[:1000] + "\n... (truncated)"
+                                            console.print(Panel(
+                                                Text(display_output, style="dim"),
+                                                title="[green]✓ 执行成功 - 输出[/green]",
+                                                border_style="green",
+                                                box=box.ROUNDED
+                                            ))
 
-                                self.notebook_store.execution_count += 1
-                                cell.execution_count = self.notebook_store.execution_count
+                                    stats['code_executed'] += 1
+                                else:
+                                    # Execution failed
+                                    error_msg = result.get('error', 'Unknown error')
+                                    cell.outputs = [{'output_type': 'error', 'ename': 'ExecutionError', 'evalue': error_msg, 'traceback': [error_msg]}]
 
-                                # Store variables
-                                if 'data_existence_report' in exec_locals:
-                                    state_data['state']['variables']['data_existence_report'] = exec_locals['data_existence_report']
-                                if 'df_raw' in exec_locals:
-                                    df_raw = exec_locals['df_raw']
-                                    state_data['state']['variables']['df_raw'] = {
-                                        'type': 'DataFrame',
-                                        'shape': list(df_raw.shape),
-                                        'columns': df_raw.shape[1],
-                                        'memory_mb': round(df_raw.memory_usage(deep=True).sum() / (1024 * 1024), 4)
-                                    }
+                                    # Track failed execution
+                                    execution_results.append({
+                                        'cell_id': last_added_cell_id,
+                                        'success': False,
+                                        'error': error_msg,
+                                        'outputs': result.get('outputs', [])
+                                    })
 
-                                if not args.no_display and output_text:
-                                    display_output = output_text if len(output_text) < 1000 else output_text[:1000] + "\n... (truncated)"
-                                    console.print(Panel(
-                                        Text(display_output, style="dim"),
-                                        title="[green]✓ 执行成功 - 输出[/green]",
-                                        border_style="green",
-                                        box=box.ROUNDED
-                                    ))
-
-                                stats['code_executed'] += 1
+                                    if not args.no_display:
+                                        console.print(Panel(
+                                            f"[bold red]ExecutionError: {error_msg}[/bold red]",
+                                            title="[red]✗ 执行失败[/red]",
+                                            border_style="red",
+                                            box=box.ROUNDED
+                                        ))
+                                    stats['errors'] += 1
 
                             except Exception as e:
                                 cell.outputs = [{'output_type': 'error', 'ename': type(e).__name__, 'evalue': str(e), 'traceback': [str(e)]}]
+
+                                # Track exception
+                                execution_results.append({
+                                    'cell_id': last_added_cell_id,
+                                    'success': False,
+                                    'error': str(e),
+                                    'exception': type(e).__name__
+                                })
+
                                 if not args.no_display:
                                     console.print(Panel(
                                         f"[bold red]{type(e).__name__}: {str(e)}[/bold red]",
@@ -971,36 +1026,86 @@ class WorkflowCLI(ModernLogger):
 
                 cells_array.append(cell_dict)
 
-            # Build output state
-            effects_list = [
-                {
-                    "effect_type": "notebook_updated",
-                    "details": {
-                        "title_updated": True,
-                        "new_title": self.notebook_store.title,
-                        "cells_added": len(self.notebook_store.cells),
-                        "code_cells_executed": self.notebook_store.execution_count
-                    }
-                }
-            ]
+            # Build effects from code execution outputs
+            effects_list = []
 
-            if 'df_raw' in state_data['state']['variables']:
-                effects_list.append({
-                    "effect_type": "data_loaded",
-                    "details": {
-                        "dataset": "housing.csv",
-                        "rows": state_data['state']['variables']['df_raw']['shape'][0],
-                        "columns": state_data['state']['variables']['df_raw']['shape'][1]
-                    }
-                })
+            # Convert execution outputs to OpenAI-compatible effects format
+            for exec_result in execution_results:
+                # Get cell_id for reference
+                cell_id = exec_result.get('cell_id')
 
-            effects_list.append({
-                "effect_type": "artifact_generated",
-                "details": {
-                    "artifact_name": "data_existence_report",
-                    "status": "completed"
-                }
-            })
+                # Always process all outputs, regardless of success status
+                outputs = exec_result.get('outputs', [])
+
+                if outputs:
+                    # Add each output as an effect
+                    for output in outputs:
+                        output_type = output.output_type
+
+                        if output_type == 'stream':
+                            # Standard output/print statements -> text type
+                            effects_list.append({
+                                "type": "text",
+                                "text": output.text or output.content,
+                                "cell_ref": cell_id
+                            })
+                        elif output_type == 'execute_result':
+                            # Return values from expressions -> text type
+                            effects_list.append({
+                                "type": "text",
+                                "text": str(output.content or output.text),
+                                "cell_ref": cell_id
+                            })
+                        elif output_type == 'display_data':
+                            # Display outputs (plots, images, etc)
+                            # Check if it's an image
+                            content = output.content or {}
+                            if isinstance(content, dict):
+                                if 'image/png' in content or 'image/jpeg' in content:
+                                    # For images, use a reference instead of embedding full data
+                                    image_type = 'png' if 'image/png' in content else 'jpeg'
+                                    # Generate a unique image ID based on cell_id and index
+                                    image_id = f"{cell_id}-img-{len([e for e in effects_list if e.get('type') == 'image_url'])}"
+
+                                    effects_list.append({
+                                        "type": "image_url",
+                                        "image_url": f"<image #{image_id} request-to-see>",
+                                        "cell_ref": cell_id
+                                    })
+                                else:
+                                    # Other display data -> text
+                                    effects_list.append({
+                                        "type": "text",
+                                        "text": str(content),
+                                        "cell_ref": cell_id
+                                    })
+                            else:
+                                effects_list.append({
+                                    "type": "text",
+                                    "text": str(content),
+                                    "cell_ref": cell_id
+                                })
+                        elif output_type == 'error':
+                            # Execution errors -> error type
+                            effects_list.append({
+                                "type": "error",
+                                "error": {
+                                    "name": output.ename or "Error",
+                                    "message": output.evalue or "",
+                                    "traceback": output.traceback or []
+                                },
+                                "cell_ref": cell_id
+                            })
+                elif not exec_result['success']:
+                    # Execution failed but no outputs (API level error) -> error type
+                    effects_list.append({
+                        "type": "error",
+                        "error": {
+                            "name": exec_result.get('exception', 'ExecutionError'),
+                            "message": exec_result.get('error', 'Unknown error')
+                        },
+                        "cell_ref": cell_id
+                    })
 
             output_state = {
                 "observation": state_data['observation'],
@@ -1017,7 +1122,7 @@ class WorkflowCLI(ModernLogger):
                         "state": "ACTION_COMPLETED",
                         "last_transition": "COMPLETE_ACTION",
                         "previous_state": "BEHAVIOR_RUNNING",
-                        "timestamp": datetime.utcnow().isoformat() + 'Z',
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                         "transition_data": {
                             "actions_applied": len(actions_data),
                             "cells_added": len(self.notebook_store.cells),
@@ -1031,7 +1136,7 @@ class WorkflowCLI(ModernLogger):
 
             # Update metadata
             output_state['metadata'].update({
-                "execution_timestamp": datetime.utcnow().isoformat() + 'Z',
+                "execution_timestamp": datetime.now(timezone.utc).isoformat(),
                 "status": "completed"
             })
 
@@ -1069,6 +1174,34 @@ class WorkflowCLI(ModernLogger):
         except Exception as e:
             print(f"\n❌ Error: {e}")
             self.error(f"test-actions failed: {e}", exc_info=True)
+            sys.exit(1)
+
+    def cmd_export_markdown(self, args):
+        """Export notebook from state file to markdown."""
+        try:
+            from utils.notebook_exporter import NotebookExporter
+
+            print(f"\n📂 Loading state file: {args.state_file}")
+
+            # Export to markdown
+            markdown = NotebookExporter.export_from_state_file(
+                args.state_file,
+                args.output
+            )
+
+            if args.output:
+                print(f"✅ Markdown exported to: {args.output}")
+            else:
+                print("\n" + "="*60)
+                print(markdown)
+                print("="*60)
+
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: File not found - {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            self.error(f"export-markdown failed: {e}", exc_info=True)
             sys.exit(1)
 
     def run(self, argv=None):
@@ -1144,6 +1277,7 @@ class WorkflowCLI(ModernLogger):
             'test-request': self.cmd_test_request,
             'apply-transition': self.cmd_apply_transition,
             'test-actions': self.cmd_test_actions,
+            'export-markdown': self.cmd_export_markdown,
         }
 
         handler = command_handlers.get(args.command)

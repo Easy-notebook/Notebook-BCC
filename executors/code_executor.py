@@ -130,7 +130,7 @@ class CodeExecutor(ModernLogger):
         try:
             self.info(f"[CodeExecutor] Executing code on remote kernel (cell: {cell_id})")
 
-            # Start execution
+            # Execute code (synchronous API call)
             response = requests.post(
                 f"{Config.BACKEND_BASE_URL}/execute",
                 json={
@@ -152,9 +152,12 @@ class CodeExecutor(ModernLogger):
                     'execution_count': self.execution_count
                 }
 
-            # Poll for completion
-            outputs = self._poll_execution_status()
+            # Parse outputs from response (API returns outputs directly)
+            raw_outputs = result.get('outputs', [])
+            outputs = self._parse_outputs(raw_outputs)
             self.execution_count += 1
+
+            self.info(f"[CodeExecutor] Execution complete, {len(outputs)} outputs")
 
             return {
                 'success': True,
@@ -234,10 +237,10 @@ class CodeExecutor(ModernLogger):
     def _parse_outputs(self, raw_outputs: List[Dict[str, Any]]) -> List[CellOutput]:
         """
         Parse raw outputs into CellOutput objects.
-        Replicates frontend output parsing logic.
+        Backend API returns outputs in format: [{"type": "stream", "text": "..."}]
 
         Args:
-            raw_outputs: Raw outputs from API
+            raw_outputs: Raw outputs from backend API
 
         Returns:
             List of CellOutput objects
@@ -245,22 +248,41 @@ class CodeExecutor(ModernLogger):
         parsed = []
 
         for output in raw_outputs:
-            output_type = output.get('type', 'text')
-            content = output.get('content', '')
+            output_type = output.get('type', 'stream')
+
+            # Backend returns either 'text' or 'content' field depending on type
+            default_text = output.get('content', output.get('text', ''))
 
             cell_output = CellOutput(
                 output_type=output_type,
-                content=content,
-                text=output.get('text', content)
+                content=default_text,
+                text=default_text
             )
 
-            # Handle errors
+            # Handle different output types
             if output_type == 'error':
-                cell_output.ename = output.get('ename')
-                cell_output.evalue = output.get('evalue')
+                cell_output.ename = output.get('ename', 'Error')
+                cell_output.evalue = output.get('evalue', '')
                 cell_output.traceback = output.get('traceback', [])
+            elif output_type == 'execute_result':
+                # Return values from expressions
+                cell_output.content = output.get('data', {})
+                cell_output.text = str(output.get('data', ''))
+            elif output_type == 'display_data':
+                # Display outputs (plots, images, etc.)
+                cell_output.content = output.get('data', {})
+                cell_output.text = str(output.get('data', ''))
+            elif output_type == 'stream':
+                # Standard output (print statements)
+                cell_output.text = output.get('text', '')
+                cell_output.content = output.get('text', '')
+            elif output_type == 'text':
+                # Backend returns 'text' type for print outputs
+                cell_output.output_type = 'stream'  # Normalize to 'stream' for compatibility
+                cell_output.text = output.get('content', '')
+                cell_output.content = output.get('content', '')
 
-            # Handle execution results
+            # Handle execution count if present
             if 'execution_count' in output:
                 cell_output.execution_count = output['execution_count']
 
