@@ -357,7 +357,7 @@
       "execution_count": 1
     },
     "FSM": {
-      "state": "ACTION_COMPLETED",
+      "state": "BEHAVIOR_COMPLETE",
       "last_transition": "COMPLETE_ACTION",
       "previous_state": "BEHAVIOR_RUNNING",
       "timestamp": "2025-11-10T06:42:34.490449+00:00",

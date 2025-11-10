@@ -803,7 +803,7 @@ class WorkflowCLI(ModernLogger):
 
                 for idx, action_item in enumerate(actions_data):
                     action = action_item.get('action', {})
-                    action_type = action.get('action')
+                    action_type = action.get('type')
 
                     progress.update(task, advance=1, description=f"[cyan]动作 {idx+1}/{len(actions_data)}: {action_type}")
 
