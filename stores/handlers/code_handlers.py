@@ -120,6 +120,12 @@ def exec_code_cell(
                 for output in result['outputs']:
                     script_store.notebook_store.add_cell_output(codecell_id, output)
 
+                # Update execution count (critical!)
+                script_store.notebook_store.execution_count += 1
+                cell = script_store.notebook_store.get_cell(codecell_id)
+                if cell:
+                    cell.execution_count = script_store.notebook_store.execution_count
+
             # Add to effect context
             if script_store.ai_context_store and result.get('outputs'):
                 for output in result['outputs']:

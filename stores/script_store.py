@@ -17,6 +17,7 @@ from .handlers import (
     handle_add_action,
     handle_new_chapter,
     handle_new_section,
+    handle_new_step,
     handle_exec_code,
     handle_set_effect_thinking,
     handle_is_thinking,
@@ -44,7 +45,7 @@ CELL_TYPE_MAPPING = {
     'thinking': 'thinking',
 }
 
-# Action types (Generating Actions only - 7 types)
+# Action types (Generating Actions only - 8 types)
 ACTION_TYPES = {
     'ADD_ACTION': 'add',
     'EXEC_CODE': 'exec',
@@ -52,6 +53,7 @@ ACTION_TYPES = {
     'FINISH_THINKING': 'finish_thinking',
     'NEW_CHAPTER': 'new_chapter',
     'NEW_SECTION': 'new_section',
+    'NEW_STEP': 'new_step',
     'UPDATE_TITLE': 'update_title',
 }
 
@@ -113,6 +115,7 @@ class ScriptStore(ModernLogger):
         registry.register_handler(ACTION_TYPES['ADD_ACTION'], lambda step: handle_add_action(self, step))
         registry.register_handler(ACTION_TYPES['NEW_CHAPTER'], lambda step: handle_new_chapter(self, step))
         registry.register_handler(ACTION_TYPES['NEW_SECTION'], lambda step: handle_new_section(self, step))
+        registry.register_handler(ACTION_TYPES['NEW_STEP'], lambda step: handle_new_step(self, step))
         registry.register_handler(ACTION_TYPES['IS_THINKING'], lambda step: handle_is_thinking(self, step))
         registry.register_handler(ACTION_TYPES['FINISH_THINKING'], lambda step: handle_finish_thinking(self, step))
         registry.register_handler(ACTION_TYPES['EXEC_CODE'], lambda step: handle_exec_code(self, step))
@@ -374,38 +377,80 @@ class ScriptStore(ModernLogger):
     @staticmethod
     def _dict_to_execution_step(data: Dict[str, Any]) -> ExecutionStep:
         """Convert dictionary to ExecutionStep object."""
+        # Log incoming data structure for debugging
+        import logging
+        logger = logging.getLogger('ScriptStore')
+        logger.info(f"[ScriptStore] _dict_to_execution_step received data with keys: {list(data.keys())[:20]}")
+        logger.info(f"[ScriptStore] action field: '{data.get('action')}', type field: '{data.get('type')}', shot_type: '{data.get('shotType')}'")
+
         metadata_dict = data.get('metadata', {})
+
+        # Build extra dict for any additional metadata fields not in the standard set
+        extra = {}
+        standard_fields = {
+            'is_step', 'is_chapter', 'is_section',
+            'chapter_id', 'section_id', 'chapter_number', 'section_number',
+            'finished_thinking', 'thinking_text'
+        }
+        for key, value in metadata_dict.items():
+            # Convert camelCase to snake_case for standard fields
+            snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key]).lstrip('_')
+            if snake_key not in standard_fields:
+                extra[key] = value
+
         metadata = ActionMetadata(
-            enable_edit=metadata_dict.get('enableEdit', True),
-            description=metadata_dict.get('description', ''),
-            use_workflow_thinking=metadata_dict.get('useWorkflowThinking', False),
-            finished_thinking=metadata_dict.get('finishedThinking', False),
-            thinking_text=metadata_dict.get('thinkingText'),
-            is_section=metadata_dict.get('isSection', False),
-            section_id=metadata_dict.get('sectionId'),
-            section_number=metadata_dict.get('sectionNumber')
+            is_step=metadata_dict.get('is_step', metadata_dict.get('isStep', False)),
+            is_chapter=metadata_dict.get('is_chapter', metadata_dict.get('isChapter', False)),
+            is_section=metadata_dict.get('is_section', metadata_dict.get('isSection', False)),
+            chapter_id=metadata_dict.get('chapter_id', metadata_dict.get('chapterId')),
+            section_id=metadata_dict.get('section_id', metadata_dict.get('sectionId')),
+            chapter_number=metadata_dict.get('chapter_number', metadata_dict.get('chapterNumber')),
+            section_number=metadata_dict.get('section_number', metadata_dict.get('sectionNumber')),
+            finished_thinking=metadata_dict.get('finished_thinking', metadata_dict.get('finishedThinking', False)),
+            thinking_text=metadata_dict.get('thinking_text', metadata_dict.get('thinkingText')),
+            extra=extra
         )
 
-        return ExecutionStep(
-            action=data.get('action', ''),
-            shot_type=data.get('shotType'),
-            content=data.get('content', ''),
-            store_id=data.get('storeId'),
-            codecell_id=data.get('codecellId'),
-            need_output=data.get('needOutput', True),
-            auto_debug=data.get('autoDebug', False),
-            text_array=data.get('textArray', []),
-            agent_name=data.get('agentName'),
-            custom_text=data.get('customText'),
-            text=data.get('text'),
-            title=data.get('title'),
-            thinking_text=data.get('thinkingText'),
-            metadata=metadata,
-            updated_workflow=data.get('updatedWorkflow'),
-            new_steps=data.get('newSteps', []),
-            stage_id=data.get('stageId'),
-            state=data.get('state')
-        )
+        # Only pass parameters that exist in ExecutionStep class definition
+        # Build kwargs dict to handle optional fields gracefully
+        # Support both 'action' and 'type' fields for action type
+        action_type = data.get('action') or data.get('type', '')
+        step_kwargs = {
+            'action': action_type,
+            'metadata': metadata,
+        }
+
+        # Add optional fields only if present in data
+        field_mappings = {
+            'shotType': 'shot_type',
+            'content': 'content',
+            'storeId': 'store_id',
+            'contentType': 'content_type',
+            'codecellId': 'codecell_id',
+            'needOutput': 'need_output',
+            'autoDebug': 'auto_debug',
+            'textArray': 'text_array',
+            'agentName': 'agent_name',
+            'customText': 'custom_text',
+            'text': 'text',
+            'title': 'title',
+            'thinkingText': 'thinking_text',
+            'updatedWorkflow': 'updated_workflow',
+            'newSteps': 'updated_steps',  # Map newSteps to updated_steps
+            'updatedSteps': 'updated_steps',  # Also support updatedSteps
+            'stageId': 'stage_id',
+            'state': 'state',
+            'actionIdRef': 'action_id_ref',
+            'stepId': 'step_id',
+            'phaseId': 'phase_id',
+            'keepDebugButtonVisible': 'keep_debug_button_visible',
+        }
+
+        for json_key, python_key in field_mappings.items():
+            if json_key in data:
+                step_kwargs[python_key] = data[json_key]
+
+        return ExecutionStep(**step_kwargs)
 
     def exec_action(self, step) -> Any:
         """
@@ -419,10 +464,15 @@ class ScriptStore(ModernLogger):
         """
         # Convert dict to ExecutionStep if needed
         if isinstance(step, dict):
+            self.debug(f"[ScriptStore] Converting dict to ExecutionStep, keys: {list(step.keys())[:15]}")
             step = self._dict_to_execution_step(step)
 
-        if not step or not step.action:
-            self.error("[ScriptStore] Invalid execution step")
+        if not step:
+            self.error(f"[ScriptStore] Invalid execution step: step is None or False")
+            return None
+
+        if not step.action:
+            self.error(f"[ScriptStore] Invalid execution step: action is empty. Step attributes: action={step.action}, shot_type={getattr(step, 'shot_type', None)}, content={getattr(step, 'content', 'N/A')[:50] if hasattr(step, 'content') else 'N/A'}")
             return None
 
         action_type = step.action

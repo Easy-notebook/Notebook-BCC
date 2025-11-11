@@ -34,6 +34,13 @@ class ResponseParser(ModernLogger):
         """
         # If already a dict, check if it has standard JSON response fields
         if isinstance(response, dict):
+            # Check if it's an actions response
+            if 'actions' in response and isinstance(response.get('actions'), list):
+                return {
+                    'type': 'actions',
+                    'content': response
+                }
+            # Otherwise treat as generic JSON
             return {
                 'type': 'json',
                 'content': response
@@ -50,6 +57,12 @@ class ResponseParser(ModernLogger):
             # Try to parse as JSON
             try:
                 json_content = json.loads(response)
+                # Check if it's an actions response
+                if 'actions' in json_content and isinstance(json_content.get('actions'), list):
+                    return {
+                        'type': 'actions',
+                        'content': json_content
+                    }
                 return {
                     'type': 'json',
                     'content': json_content
@@ -82,13 +95,50 @@ class ResponseParser(ModernLogger):
             # This handles cases where API returns unescaped < > & in text
             xml_string = self._preprocess_xml(xml_string)
 
+            # Handle multiple root elements by wrapping in a container
+            # API may return <stages>...</stages><focus>...</focus>
+            # which is invalid XML (only one root allowed)
+            if xml_string.count('<?xml') <= 1:  # Not already wrapped
+                # Check if there are multiple root elements
+                import re
+                # Find all root-level tags
+                root_tags = re.findall(r'<(\w+)(?:\s|>)', xml_string)
+                # Check if first root tag appears twice (opening and closing)
+                if len(root_tags) > 1:
+                    first_tag = root_tags[0]
+                    # Count occurrences of this tag at root level
+                    root_pattern = rf'^<{first_tag}[\s>].*?</{first_tag}>.*?^<\w+'
+                    if re.search(r'</\w+>\s*<\w+', xml_string):
+                        # Multiple root elements detected, wrap them
+                        xml_string = f'<response>{xml_string}</response>'
+                        self.info("[Parser] Wrapped multiple root elements in <response> container")
+
             root = ET.fromstring(xml_string)
+
+            # If wrapped in <response>, unwrap it but keep reference to wrapper
+            wrapper = None
+            if root.tag == 'response':
+                wrapper = root
+                # Find the actual content element
+                stages_elem = root.find('stages')
+                steps_elem = root.find('steps')
+                behavior_elem = root.find('behavior')
+                reflection_elem = root.find('reflection')
+
+                if stages_elem is not None:
+                    root = stages_elem
+                elif steps_elem is not None:
+                    root = steps_elem
+                elif behavior_elem is not None:
+                    root = behavior_elem
+                elif reflection_elem is not None:
+                    root = reflection_elem
 
             # Check root tag to determine content type
             if root.tag == 'stages':
                 return {
                     'type': 'stages',
-                    'content': self._parse_stages_xml(root)
+                    'content': self._parse_stages_xml(root, wrapper)
                 }
             elif root.tag == 'steps':
                 return {
@@ -118,9 +168,13 @@ class ResponseParser(ModernLogger):
                 'content': xml_string
             }
 
-    def _parse_stages_xml(self, root: ET.Element) -> Dict[str, Any]:
+    def _parse_stages_xml(self, root: ET.Element, wrapper: ET.Element = None) -> Dict[str, Any]:
         """
         Parse <stages> XML definition.
+
+        Args:
+            root: <stages> element
+            wrapper: Optional wrapper element (e.g., <response>) that may contain <focus>
 
         Returns:
             Dict with stages list and focus
@@ -130,11 +184,23 @@ class ResponseParser(ModernLogger):
 
         for child in root:
             if child.tag == 'stage':
+                # Direct <stage> child
                 stage = self._parse_stage_element(child)
                 stages.append(stage)
+            elif child.tag in ['remaining', 'completed', 'current']:
+                # Stages wrapped in <remaining>, <completed>, or <current>
+                for stage_elem in child.findall('stage'):
+                    stage = self._parse_stage_element(stage_elem)
+                    stages.append(stage)
             elif child.tag == 'focus':
                 # Clean up whitespace
                 focus = (child.text or "").strip()
+
+        # If focus not found in stages element, check wrapper
+        if not focus and wrapper is not None:
+            focus_elem = wrapper.find('focus')
+            if focus_elem is not None:
+                focus = (focus_elem.text or "").strip()
 
         return {
             'stages': stages,

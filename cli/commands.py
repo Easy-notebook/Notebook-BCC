@@ -20,6 +20,7 @@ from stores.pipeline_store import PipelineStore
 from stores.script_store import ScriptStore
 from stores.notebook_store import NotebookStore
 from stores.ai_context_store import AIPlanningContextStore
+from stores.state_builder import state_builder
 from executors.code_executor import CodeExecutor
 from notebook.notebook_manager import NotebookManager
 from notebook.cell_renderer import CellRenderer
@@ -89,6 +90,101 @@ class WorkflowCLI(ModernLogger):
             )
             root_logger.addHandler(file_handler)
 
+    # =================================================================
+    # CLI Helper Methods - Unified utilities to reduce code duplication
+    # =================================================================
+
+    def _load_state_file(self, state_file: str):
+        """
+        Load and parse state file (unified helper).
+
+        Args:
+            state_file: Path to state JSON file
+
+        Returns:
+            Tuple of (state_json, parsed_state)
+        """
+        from utils.state_file_loader import state_file_loader
+        state_json = state_file_loader.load_state_file(state_file)
+        parsed_state = state_file_loader.parse_state_for_api(state_json)
+        return state_json, parsed_state
+
+    def _infer_api_type(self, state_json, override=None):
+        """
+        Infer API type from state with optional override.
+
+        Args:
+            state_json: State JSON dict
+            override: Optional explicit API type override
+
+        Returns:
+            API type string ('planning', 'generating', or 'reflecting')
+        """
+        from utils.state_file_loader import state_file_loader
+        if override:
+            return override
+        return state_file_loader.infer_api_type(state_json)
+
+    def _convert_action_to_step(self, action_data):
+        """
+        Convert action JSON to ExecutionStep.
+        Uses ScriptStore._dict_to_execution_step to avoid code duplication.
+
+        Args:
+            action_data: Action dict from API response
+
+        Returns:
+            ExecutionStep object
+        """
+        # Debug: Log the incoming action_data structure
+        self.script_store.debug(f"[Commands] Converting action_data keys: {list(action_data.keys())[:10]}")
+        if 'action' in action_data:
+            # Nested structure: {action: {type: ..., content: ...}}
+            actual_action = action_data['action']
+        else:
+            # Flat structure: {type: ..., content: ...}
+            actual_action = action_data
+
+        self.script_store.debug(f"[Commands] Actual action keys: {list(actual_action.keys())[:10]}")
+        return ScriptStore._dict_to_execution_step(actual_action)
+
+    def _execute_actions_internal(self, actions, current_state):
+        """
+        Execute actions using ScriptStore and return updated state with effects.
+
+        Args:
+            actions: List of action dicts from API response
+            current_state: Current state dict
+
+        Returns:
+            Updated state dict with executed actions and effects
+        """
+        # Execute all actions using ScriptStore
+        for action_data in actions:
+            step = self._convert_action_to_step(action_data)
+            self.script_store.exec_action(step)
+
+        # Build updated state from stores
+        return self._build_state_from_stores(current_state)
+
+    def _build_state_from_stores(self, base_state):
+        """
+        Build updated state from current store states.
+        Uses StateBuilder to avoid code duplication.
+
+        Args:
+            base_state: Base state dict to update
+
+        Returns:
+            Updated state dict with current notebook and effects
+        """
+        # Use StateBuilder to avoid duplication
+        return state_builder.build_state_from_stores(
+            base_state,
+            self.notebook_store,
+            self.ai_context_store
+        )
+
     def create_parser(self) -> argparse.ArgumentParser:
         """Create argument parser."""
         parser = argparse.ArgumentParser(
@@ -114,6 +210,11 @@ class WorkflowCLI(ModernLogger):
         start_parser = subparsers.add_parser('start', help='Start a new workflow')
         start_parser.add_argument('--problem', type=str, help='Problem description')
         start_parser.add_argument('--context', type=str, help='Additional context for workflow initialization')
+        start_parser.add_argument('--config', type=str, help='Path to config JSON file (e.g., housing_config.json)')
+        start_parser.add_argument('--state-file', type=str, help='Path to initial state JSON file (e.g., 00_STATE_IDLE.json)')
+        start_parser.add_argument('--idle-template', type=str, help='Path to IDLE state template JSON file')
+        start_parser.add_argument('--iterate', action='store_true', help='Enable automatic iteration (loop through states)')
+        start_parser.add_argument('--max-iterations', type=int, default=10, help='Maximum iterations in loop mode (default: 10)')
 
         # Status command
         subparsers.add_parser('status', help='Show workflow status')
@@ -196,8 +297,28 @@ class WorkflowCLI(ModernLogger):
 
     def cmd_start(self, args):
         """Start a new workflow."""
-        print("🚀 Starting new workflow...")
+        import json
 
+        # Determine input mode
+        if args.state_file:
+            # Mode 1: Start from state file
+            print(f"📂 Loading initial state from: {args.state_file}")
+            self._start_from_state_file(args)
+        elif args.config:
+            # Mode 2: Start from config file
+            print(f"📂 Loading config from: {args.config}")
+            self._start_from_config(args)
+        else:
+            # Mode 3: Traditional mode (--problem and --context)
+            self._start_traditional(args)
+
+        # Enter iteration loop if requested
+        if args.iterate:
+            print(f"\n🔄 Entering iteration mode (max: {args.max_iterations} iterations)")
+            self._run_iteration_loop(args.max_iterations)
+
+    def _start_traditional(self, args):
+        """Traditional start mode with --problem and --context."""
         # Get existing custom context (if set via --custom-context)
         existing_vars = self.ai_context_store.get_context().variables
 
@@ -230,6 +351,428 @@ class WorkflowCLI(ModernLogger):
         print(f"✓ Workflow started")
         print(f"  Current state: {self.state_machine.state.value}")
         print(f"📝 Notebook will be saved to: {self.notebook_manager.notebooks_dir}/")
+
+    def _start_from_config(self, args):
+        """Start workflow from config file (e.g., housing_config.json)."""
+        import json
+        from pathlib import Path
+
+        config_path = Path(args.config)
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {args.config}")
+
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+
+        print(f"✓ Config loaded")
+
+        # Extract config fields
+        user_problem = config.get('user_problem', 'Data Analysis Task')
+        user_submit_files = config.get('user_submit_files', [])
+
+        print(f"  Problem: {user_problem}")
+        print(f"  Files: {user_submit_files}")
+
+        # Add to AI context
+        self.ai_context_store.add_variable('user_problem', user_problem)
+        self.ai_context_store.add_variable('user_submit_files', user_submit_files)
+
+        # Build planning request
+        planning_request = {
+            'problem_name': 'Analysis',
+            'user_goal': user_problem,
+            'problem_description': user_problem,
+            'context_description': f'Files: {user_submit_files}',
+        }
+
+        # Add planning variables
+        for key, value in planning_request.items():
+            self.ai_context_store.add_variable(key, value)
+
+        # If iterate mode is enabled, build initial IDLE state instead of starting execution
+        if args.iterate:
+            print(f"✓ Building initial IDLE state for iteration")
+
+            # Build initial state JSON in IDLE state (ready for planning API)
+            template_path = getattr(args, 'idle_template', None)
+            initial_state = self._build_idle_state(user_problem, user_submit_files, template_path)
+            self._current_state = initial_state
+
+            print(f"  FSM State: IDLE")
+            print(f"  Ready for iteration")
+        else:
+            # Traditional mode: initialize workflow and start execution
+            workflow = self.pipeline_store.initialize_workflow(planning_request)
+            print(f"✓ Workflow initialized: {workflow.name}")
+            print(f"  Stages: {len(workflow.stages)}")
+
+            # Start execution
+            self.pipeline_store.start_workflow_execution(self.state_machine)
+            print(f"✓ Workflow started from config")
+            print(f"  Current state: {self.state_machine.state.value}")
+
+    def _build_idle_state(self, user_problem, user_submit_files, template_path=None):
+        """Build an initial IDLE state JSON for iteration mode."""
+        import json
+        import uuid
+        from pathlib import Path
+        from datetime import datetime, timezone
+
+        # Try multiple template locations in order of priority:
+        # 1. Explicit template path from command line
+        # 2. templates/STATE_IDLE.json in project root
+        # 3. Any STATE_IDLE.json or 00_STATE_IDLE.json in current directory
+        # 4. Search in docs/examples/**/payloads/
+
+        template_candidates = []
+
+        if template_path:
+            template_candidates.append(Path(template_path))
+
+        project_root = Path(__file__).parent.parent
+        template_candidates.extend([
+            project_root / 'templates/STATE_IDLE.json',
+            Path.cwd() / 'STATE_IDLE.json',
+            Path.cwd() / '00_STATE_IDLE.json',
+        ])
+
+        # Search in docs/examples
+        examples_dir = project_root / 'docs/examples'
+        if examples_dir.exists():
+            template_candidates.extend(examples_dir.rglob('**/STATE_IDLE.json'))
+            template_candidates.extend(examples_dir.rglob('**/00_STATE_IDLE.json'))
+
+        # Find first existing template
+        for candidate in template_candidates:
+            if candidate.exists():
+                print(f"  Using template: {candidate}")
+                with open(candidate, 'r', encoding='utf-8') as f:
+                    idle_state = json.load(f)
+
+                # Replace user variables
+                idle_state['state']['variables']['user_problem'] = user_problem
+                idle_state['state']['variables']['user_submit_files'] = user_submit_files
+
+                # Generate new notebook_id
+                idle_state['state']['notebook']['notebook_id'] = uuid.uuid4().hex
+
+                # Update timestamp
+                idle_state['state']['FSM']['timestamp'] = datetime.now(timezone.utc).isoformat()
+
+                return idle_state
+
+        # No template found - require user to provide one
+        raise FileNotFoundError(
+            "No IDLE state template found. Please provide one of:\n"
+            "  1. Use --idle-template <path> to specify template file\n"
+            "  2. Create templates/STATE_IDLE.json in project root\n"
+            "  3. Put STATE_IDLE.json in current directory\n"
+            "  4. Use existing state file with --state-file instead of --config"
+        )
+
+    def _start_from_state_file(self, args):
+        """Start workflow from state file (e.g., 00_STATE_IDLE.json)."""
+        import json
+        from pathlib import Path
+
+        state_path = Path(args.state_file)
+        if not state_path.exists():
+            raise FileNotFoundError(f"State file not found: {args.state_file}")
+
+        # Load state file using unified helper
+        state_json, parsed_state = self._load_state_file(args.state_file)
+
+        fsm_state = parsed_state.get('fsm_state', 'UNKNOWN')
+
+        print(f"✓ State loaded")
+        print(f"  FSM State: {fsm_state}")
+        print(f"  Stage: {parsed_state.get('stage_id', 'None')}")
+        print(f"  Step: {parsed_state.get('step_id', 'None')}")
+
+        # Extract and restore context
+        from utils.state_file_loader import state_file_loader
+        context_data = state_file_loader.extract_context(state_json)
+
+        # Restore variables
+        variables = context_data.get('variables', {})
+        self.ai_context_store.set_variables(variables)
+        print(f"  Variables: {len(variables)}")
+
+        # Restore effects
+        effects = context_data.get('effects', {})
+        self.ai_context_store.set_effect(effects)
+        print(f"  Effects: {len(effects.get('current', []))}")
+
+        # Restore notebook data
+        notebook_data = state_json.get('state', {}).get('notebook', {})
+        if notebook_data:
+            self.notebook_store.from_dict(notebook_data)
+            cell_count = len(notebook_data.get('cells', []))
+            notebook_id = notebook_data.get('notebook_id')
+            print(f"  Notebook: {cell_count} cells" + (f", ID: {notebook_id[:8]}..." if notebook_id else ""))
+
+        # Store current state for iteration
+        self._current_state = state_json
+        # Store original state file path for generating output paths
+        self._original_state_file = state_path.resolve()
+
+        print(f"✓ Workflow started from state file")
+
+        # Auto-enable iteration mode if state is not IDLE and --iterate not specified
+        if not args.iterate and fsm_state.upper() != 'IDLE':
+            print(f"  ⚠️  State is {fsm_state} (not IDLE)")
+            print(f"  💡 Auto-enabling iteration mode to continue execution")
+            print(f"     (Use --iterate explicitly or add '--no-auto-iterate' to disable)")
+            # Auto-enable iteration mode
+            args.iterate = True
+        elif args.iterate:
+            print(f"  Ready for iteration mode")
+        else:
+            print(f"  Ready for manual API calls")
+
+    def _generate_output_path(self, new_fsm_state: str, iteration: int) -> str:
+        """
+        Generate output file path based on original state file and new FSM state.
+
+        Args:
+            new_fsm_state: New FSM state (e.g., 'BEHAVIOR_COMPLETE')
+            iteration: Current iteration number
+
+        Returns:
+            Path to output file
+
+        Examples:
+            Input: 03_STATE_Behavior_Running.json
+            FSM: BEHAVIOR_COMPLETE
+            Output: 04_STATE_BEHAVIOR_COMPLETE.json (in same directory)
+        """
+        import re
+        from pathlib import Path
+
+        # Check if we have original state file path
+        if not hasattr(self, '_original_state_file') or not self._original_state_file:
+            # Fallback: use current directory with iteration number
+            return f"state_iteration_{iteration:02d}.json"
+
+        original_path = Path(self._original_state_file)
+        original_name = original_path.stem  # Without extension
+        original_dir = original_path.parent
+
+        # Try to extract sequence number from original filename
+        # Pattern: NN_STATE_... or just NN_...
+        match = re.match(r'^(\d+)_', original_name)
+
+        if match:
+            # Found sequence number - increment it
+            old_seq = int(match.group(1))
+            new_seq = old_seq + 1
+
+            # Build new filename with incremented sequence and new FSM state
+            # Convert FSM state to uppercase and replace underscores
+            fsm_normalized = new_fsm_state.upper().replace('_', '_')
+            new_filename = f"{new_seq:02d}_STATE_{fsm_normalized}.json"
+        else:
+            # No sequence number found - use iteration-based naming
+            fsm_normalized = new_fsm_state.upper().replace('_', '_')
+            new_filename = f"state_iteration_{iteration:02d}_{fsm_normalized}.json"
+
+        # Return full path in original directory
+        output_path = original_dir / new_filename
+        return str(output_path)
+
+    def _run_iteration_loop(self, max_iterations):
+        """Run automatic iteration loop: send API -> get response -> apply transition -> repeat."""
+        import asyncio
+        import json
+        import logging
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+        from rich.table import Table
+        from rich import box
+        from utils.state_file_loader import state_file_loader
+        from utils.api_client import workflow_api_client
+        from utils.state_updater import state_updater
+        from config import Config
+
+        # Suppress verbose logging during iteration
+        logging.getLogger('silantui').setLevel(logging.WARNING)
+
+        if not hasattr(self, '_current_state'):
+            print("❌ No state loaded. Cannot iterate without initial state.")
+            print("   Use --state-file to provide initial state.")
+            return
+
+        console = Console()
+        iteration = 0
+        current_state = self._current_state
+        parsed_next = None
+
+        console.print(Panel.fit(
+            "[bold cyan]🔄 ITERATION LOOP[/bold cyan]\n"
+            f"Max iterations: {max_iterations}",
+            border_style="cyan",
+            box=box.ROUNDED
+        ))
+
+        # Create a single persistent event loop for all iterations
+        async def run_all_iterations():
+            nonlocal iteration, current_state, parsed_next
+
+            while iteration < max_iterations:
+                iteration += 1
+
+                # Parse current state
+                parsed_state = state_file_loader.parse_state_for_api(current_state)
+                fsm_state = parsed_state.get('fsm_state', 'UNKNOWN')
+                stage_id = parsed_state.get('stage_id')
+                step_id = parsed_state.get('step_id')
+
+                # Create iteration header
+                header_table = Table(show_header=False, box=None, padding=(0, 1))
+                header_table.add_column(style="bold cyan")
+                header_table.add_column(style="white")
+                header_table.add_row("Iteration", f"{iteration}/{max_iterations}")
+                header_table.add_row("FSM State", f"[yellow]{fsm_state}[/yellow]")
+                if stage_id:
+                    header_table.add_row("Stage", stage_id)
+                if step_id:
+                    header_table.add_row("Step", step_id)
+
+                console.print(Panel(
+                    header_table,
+                    title=f"[bold]🔁 Iteration {iteration}[/bold]",
+                    border_style="blue",
+                    box=box.ROUNDED
+                ))
+
+                # Check if we've reached a terminal state
+                terminal_states = ['COMPLETE', 'ERROR', 'ABORTED']
+                if fsm_state in terminal_states:
+                    console.print(f"[green]✓ Reached terminal state: {fsm_state}[/green]")
+                    break
+
+                # Infer API type from FSM state
+                api_type = state_file_loader.infer_api_type(current_state)
+
+                try:
+                    # Send API request with spinner
+                    with console.status(f"[bold blue]Calling {api_type} API...[/bold blue]", spinner="dots"):
+                        if api_type == 'planning':
+                            response = await workflow_api_client.send_feedback(
+                                stage_id=stage_id or 'initial',
+                                step_index=step_id or 'none',
+                                state=current_state
+                            )
+                        elif api_type == 'generating':
+                            actions = []
+                            async for action in workflow_api_client.fetch_behavior_actions(
+                                stage_id=stage_id or 'unknown',
+                                step_index=step_id or 'unknown',
+                                state=current_state,
+                                stream=False
+                            ):
+                                actions.append(action)
+                            response = {'actions': actions, 'count': len(actions)}
+                            current_state = self._execute_actions_internal(actions, current_state)
+                        elif api_type == 'reflecting':
+                            response = await workflow_api_client.send_reflecting(
+                                stage_id=stage_id or 'unknown',
+                                step_index=step_id or 'unknown',
+                                state=current_state
+                            )
+                        else:
+                            raise ValueError(f"Unknown API type: {api_type}")
+
+                    console.print(f"[green]✓[/green] {api_type.capitalize()} response received")
+
+                    # Show actions info and execution for generating
+                    if api_type == 'generating':
+                        num_actions = len(response['actions'])
+                        console.print(f"  └─ Received [cyan]{num_actions}[/cyan] actions")
+                        console.print(f"  └─ [yellow]⚙️  Executing actions...[/yellow]")
+
+                    # Apply transition to get next state
+
+                    # Convert response to format for state_updater
+                    if api_type == 'planning':
+                        # Planning response is already in XML format
+                        transition_content = response
+                    elif api_type == 'generating':
+                        # Generating response needs to be converted
+                        transition_content = json.dumps(response)
+                    elif api_type == 'reflecting':
+                        # Reflecting response is in XML format
+                        transition_content = response
+                    else:
+                        transition_content = str(response)
+
+                    # Apply transition to update state
+                    next_state = state_updater.apply_transition(
+                        state=current_state,
+                        transition_response=transition_content,
+                        transition_type=api_type
+                    )
+
+                    # Update current state for next iteration
+                    current_state = next_state
+                    self._current_state = next_state
+
+                    # Parse and display new state
+                    parsed_next = state_file_loader.parse_state_for_api(next_state)
+                    new_fsm_state = parsed_next.get('fsm_state', 'UNKNOWN')
+                    new_stage = parsed_next.get('stage_id')
+                    new_step = parsed_next.get('step_id')
+
+                    # Show transition result
+                    result_table = Table(show_header=False, box=None, padding=(0, 1))
+                    result_table.add_column(style="dim")
+                    result_table.add_column(style="green")
+                    result_table.add_row("→ New State", f"[bold]{new_fsm_state}[/bold]")
+                    if new_stage and new_stage != stage_id:
+                        result_table.add_row("→ Stage", new_stage)
+                    if new_step and new_step != step_id:
+                        result_table.add_row("→ Step", new_step)
+
+                    console.print(result_table)
+
+                    # Save state snapshot with smart path generation
+                    snapshot_file = self._generate_output_path(new_fsm_state, iteration)
+                    with open(snapshot_file, 'w', encoding='utf-8') as f:
+                        json.dump(next_state, f, indent=2, ensure_ascii=False)
+                    console.print(f"[dim]💾 Snapshot: {snapshot_file}[/dim]\n")
+
+                except Exception as e:
+                    console.print(f"[red]❌ Error: {e}[/red]")
+                    logging.getLogger('silantui').setLevel(logging.INFO)  # Re-enable for traceback
+                    self.error(f"Iteration failed: {e}", exc_info=True)
+                    break
+
+
+        asyncio.run(run_all_iterations())
+        # Summary
+        final_fsm = 'UNKNOWN'
+        if parsed_next:
+            final_fsm = parsed_next.get('fsm_state', 'UNKNOWN')
+        else:
+            final_parsed = state_file_loader.parse_state_for_api(current_state)
+            final_fsm = final_parsed.get('fsm_state', 'UNKNOWN')
+
+        summary = Table(show_header=False, box=None, padding=(0, 1))
+        summary.add_column(style="bold cyan")
+        summary.add_column(style="white")
+        summary.add_row("Total Iterations", str(iteration))
+        summary.add_row("Final State", f"[yellow]{final_fsm}[/yellow]")
+
+        console.print(Panel(
+            summary,
+            title="[bold green]✅ Iteration Complete[/bold green]",
+            border_style="green",
+            box=box.ROUNDED
+        ))
+
+        # Restore logging
+        logging.getLogger('silantui').setLevel(logging.INFO)
 
     def cmd_status(self, args=None):
         """Show workflow status."""
@@ -337,27 +880,24 @@ class WorkflowCLI(ModernLogger):
         """Send API request from state file."""
         import json
         import asyncio
-        from utils.state_file_loader import state_file_loader
         from utils.api_client import workflow_api_client
         from utils.api_display import api_display
         from config import Config
 
         try:
-            # Load state file
+            # Load state file using unified helper
             print(f"📂 Loading state from: {args.state_file}")
-            state_json = state_file_loader.load_state_file(args.state_file)
-            parsed_state = state_file_loader.parse_state_for_api(state_json)
+            state_json, parsed_state = self._load_state_file(args.state_file)
 
             # Display state info
             api_display.display_state_info(parsed_state)
 
-            # Infer API type if not specified
+            # Infer API type using unified helper
+            api_type = self._infer_api_type(state_json, args.api_type)
             if args.api_type:
-                api_type = args.api_type
                 print(f"\n🎯 Using specified API type: {api_type}")
             else:
-                api_type = state_file_loader.infer_api_type(state_json)
-                print(f"\n Auto-inferred API type: {api_type}")
+                print(f"\n🔍 Auto-inferred API type: {api_type}")
                 print(f"   (You can override with --api-type)")
 
             # Extract parameters
@@ -454,19 +994,18 @@ class WorkflowCLI(ModernLogger):
     def cmd_resume(self, args):
         """Resume workflow from state file."""
         import json
-        from utils.state_file_loader import state_file_loader
         from utils.api_display import api_display
 
         try:
-            # Load state file
+            # Load state file using unified helper
             print(f"📂 Loading state from: {args.state_file}")
-            state_json = state_file_loader.load_state_file(args.state_file)
-            parsed_state = state_file_loader.parse_state_for_api(state_json)
+            state_json, parsed_state = self._load_state_file(args.state_file)
 
             # Display state info
             api_display.display_state_info(parsed_state)
 
             # Extract context
+            from utils.state_file_loader import state_file_loader
             context_data = state_file_loader.extract_context(state_json)
 
             # Restore AI context
@@ -516,26 +1055,23 @@ class WorkflowCLI(ModernLogger):
     def cmd_test_request(self, args):
         """Preview API request without sending."""
         import json
-        from utils.state_file_loader import state_file_loader
         from utils.api_display import api_display
         from config import Config
 
         try:
-            # Load state file
+            # Load state file using unified helper
             print(f"📂 Loading state from: {args.state_file}")
-            state_json = state_file_loader.load_state_file(args.state_file)
-            parsed_state = state_file_loader.parse_state_for_api(state_json)
+            state_json, parsed_state = self._load_state_file(args.state_file)
 
             # Display state info
             api_display.display_state_info(parsed_state)
 
-            # Infer API type if not specified
+            # Infer API type using unified helper
+            api_type = self._infer_api_type(state_json, args.api_type)
             if args.api_type:
-                api_type = args.api_type
                 print(f"\n🎯 Using specified API type: {api_type}")
             else:
-                api_type = state_file_loader.infer_api_type(state_json)
-                print(f"\n Auto-inferred API type: {api_type}")
+                print(f"\n🔍 Auto-inferred API type: {api_type}")
                 print(f"   (You can override with --api-type)")
 
             # Extract parameters
@@ -652,15 +1188,13 @@ class WorkflowCLI(ModernLogger):
     def cmd_apply_transition(self, args):
         """Apply transition to state and export updated state."""
         import json
-        from utils.state_file_loader import state_file_loader
         from utils.state_updater import state_updater
         from utils.api_display import api_display
 
         try:
-            # Load state file
+            # Load state file using unified helper
             print(f"📂 Loading state from: {args.state_file}")
-            state_json = state_file_loader.load_state_file(args.state_file)
-            parsed_state = state_file_loader.parse_state_for_api(state_json)
+            state_json, parsed_state = self._load_state_file(args.state_file)
 
             # Display original state info
             print("\n Original State:")
@@ -684,6 +1218,7 @@ class WorkflowCLI(ModernLogger):
 
             # Display updated state info
             print("\n✅ Transition Applied Successfully!")
+            from utils.state_file_loader import state_file_loader
             parsed_updated = state_file_loader.parse_state_for_api(updated_state)
             print("\n Updated State:")
             api_display.display_state_info(parsed_updated)
@@ -738,60 +1273,55 @@ class WorkflowCLI(ModernLogger):
             sys.exit(1)
 
     def cmd_test_actions(self, args):
-        """Execute actions from JSON file with streaming display."""
+        """Execute actions from JSON file using ScriptStore (refactored to use existing tools)."""
         import json
         import time
         from datetime import datetime, timezone
-        from models.cell import CellType
 
         try:
             # Import rich for display
             from rich.console import Console
             from rich.panel import Panel
             from rich.table import Table
-            from rich.markdown import Markdown
-            from rich.syntax import Syntax
             from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
             from rich import box
-            from rich.text import Text
 
             console = Console()
 
-            # Load files
+            # Load files using unified helper
             console.print("\n[bold cyan]📂 加载输入文件...[/bold cyan]")
 
             with open(args.actions_file, 'r', encoding='utf-8') as f:
                 actions_data = json.load(f)
 
-            with open(args.state_file, 'r', encoding='utf-8') as f:
-                state_data = json.load(f)
+            state_json, parsed_state = self._load_state_file(args.state_file)
 
             # Extract and set notebook_id from state
-            notebook_id = state_data.get('state', {}).get('notebook', {}).get('notebook_id')
+            notebook_id = state_json.get('state', {}).get('notebook', {}).get('notebook_id')
             if notebook_id:
                 console.print(f"[cyan]📓 Using notebook_id from state: {notebook_id}[/cyan]")
                 self.code_executor.notebook_id = notebook_id
                 self.code_executor.is_kernel_ready = True
+                # CRITICAL: Also set notebook_id in notebook_store for consistency
+                self.notebook_store.notebook_id = notebook_id
             else:
                 console.print("[yellow]⚠️  Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
 
+            # Display info table
             table = Table(show_header=False, box=box.ROUNDED)
             table.add_row("Actions 文件", args.actions_file)
             table.add_row("Actions 数量", f"[green]{len(actions_data)}[/green]")
             table.add_row("State 文件", args.state_file)
-            table.add_row("当前 FSM 状态", f"[yellow]{state_data['state']['FSM']['state']}[/yellow]")
+            table.add_row("当前 FSM 状态", f"[yellow]{state_json['state']['FSM']['state']}[/yellow]")
             table.add_row("Notebook ID", f"[cyan]{notebook_id or 'Will initialize'}[/cyan]")
             table.add_row("输出文件", args.output)
-
             console.print(table)
 
-            # Initialize notebook store and tracking
-            last_added_cell_id = None
-            stats = {'actions_executed': 0, 'cells_added': 0, 'code_executed': 0, 'errors': 0}
-            execution_results = []  # Track all execution results for effects generation
+            # Execution statistics
+            stats = {'actions_executed': 0, 'errors': 0}
 
-            # Execute actions
-            console.print(f"\n[bold cyan]⚙️  开始流式执行 {len(actions_data)} 个动作[/bold cyan]\n")
+            # Execute actions using ScriptStore
+            console.print(f"\n[bold cyan]⚙️  开始执行 {len(actions_data)} 个动作 (使用 ScriptStore)[/bold cyan]\n")
 
             with Progress(
                 SpinnerColumn(),
@@ -800,347 +1330,39 @@ class WorkflowCLI(ModernLogger):
                 TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
                 console=console
             ) as progress:
-
                 task = progress.add_task("[cyan]执行动作...", total=len(actions_data))
 
-                for idx, action_item in enumerate(actions_data):
-                    action = action_item.get('action', {})
+                for idx, action_data in enumerate(actions_data):
+                    action = action_data.get('action', {})
                     action_type = action.get('type')
 
                     progress.update(task, advance=1, description=f"[cyan]动作 {idx+1}/{len(actions_data)}: {action_type}")
 
-                    # Execute action
-                    if action_type == 'update_title':
-                        title = action.get('content', 'Untitled')
-                        self.notebook_store.update_title(title)
+                    try:
+                        # Convert to ExecutionStep and execute using ScriptStore
+                        step = self._convert_action_to_step(action_data)
+                        self.script_store.exec_action(step)
+                        stats['actions_executed'] += 1
+
+                        # Optional: Display action result
                         if not args.no_display:
-                            console.print(Panel(
-                                f"[bold]{title}[/bold]",
-                                title=f"[cyan]动作 {idx+1}: {action_type}[/cyan]",
-                                border_style="cyan",
-                                box=box.ROUNDED
-                            ))
-                        stats['actions_executed'] += 1
+                            # Simple display for each action
+                            console.print(f"  [green]✓[/green] {action_type}")
 
-                    elif action_type in ['new_chapter', 'new_section', 'new_step']:
-                        if action_type == 'new_chapter':
-                            content = f"# {action.get('content', 'Chapter')}"
-                        elif action_type == 'new_section':
-                            content = f"## {action.get('content', 'Section')}"
-                        else:
-                            content = f"### {action.get('content', 'Step')}"
-
-                        cell_id = f'cell-{action_type}-{idx}'
-                        self.notebook_store.add_cell({
-                            'id': cell_id,
-                            'type': 'markdown',
-                            'content': content,
-                            'enableEdit': True,
-                            'description': f"{action_type}: {action.get('content')}"
-                        })
-                        last_added_cell_id = cell_id
-
+                    except Exception as e:
+                        stats['errors'] += 1
                         if not args.no_display:
-                            md = Markdown(content)
-                            console.print(Panel(
-                                md,
-                                title=f"[green]动作 {idx+1}: {action_type} → Markdown Cell[/green]",
-                                border_style="green",
-                                box=box.ROUNDED
-                            ))
-                        stats['cells_added'] += 1
-                        stats['actions_executed'] += 1
-
-                    elif action_type == 'add':
-                        shot_type = action.get('shot_type', 'dialogue')
-                        content = action.get('content', '')
-
-                        if shot_type == 'action':
-                            cell_id = f'cell-code-{idx}'
-                            self.notebook_store.add_cell({
-                                'id': cell_id,
-                                'type': 'code',
-                                'content': content,
-                                'language': 'python',
-                                'enableEdit': True,
-                                'description': 'Code cell'
-                            })
-                            last_added_cell_id = cell_id
-
-                            if not args.no_display:
-                                display_content = content if len(content) < 500 else content[:500] + "\n... (truncated)"
-                                syntax = Syntax(display_content, "python", theme="monokai", line_numbers=True)
-                                console.print(Panel(
-                                    syntax,
-                                    title=f"[magenta]动作 {idx+1}: add (code) → Code Cell[/magenta]",
-                                    border_style="magenta",
-                                    box=box.ROUNDED
-                                ))
-                            stats['cells_added'] += 1
-                        else:
-                            cell_id = f'cell-md-{idx}'
-                            self.notebook_store.add_cell({
-                                'id': cell_id,
-                                'type': 'markdown',
-                                'content': content,
-                                'enableEdit': True,
-                                'description': f'{shot_type} content'
-                            })
-                            last_added_cell_id = cell_id
-
-                            if not args.no_display:
-                                md = Markdown(content)
-                                console.print(Panel(
-                                    md,
-                                    title=f"[green]动作 {idx+1}: {shot_type} → Markdown Cell[/green]",
-                                    border_style="green",
-                                    box=box.ROUNDED
-                                ))
-                            stats['cells_added'] += 1
-
-                        stats['actions_executed'] += 1
-
-                    elif action_type == 'exec':
-                        cell = self.notebook_store.get_cell(last_added_cell_id)
-                        if cell and cell.type == CellType.CODE:
-                            if not args.no_display:
-                                console.print(Panel(
-                                    f"[bold yellow]执行代码单元格: {last_added_cell_id}[/bold yellow]\n"
-                                    f"[dim]通过后端 Jupyter kernel 执行 (notebook_id: {self.code_executor.notebook_id})[/dim]",
-                                    title=f"[yellow]动作 {idx+1}: exec[/yellow]",
-                                    border_style="yellow",
-                                    box=box.ROUNDED
-                                ))
-
-                            try:
-                                # Use CodeExecutor to send code to backend Jupyter kernel
-                                result = self.code_executor.execute(cell.content, cell_id=last_added_cell_id)
-
-                                if result['success']:
-                                    # Convert CellOutput objects to dict format for notebook storage
-                                    cell.outputs = []
-                                    has_error = False
-                                    for output in result['outputs']:
-                                        output_dict = {
-                                            'output_type': output.output_type,
-                                            'text': output.text or output.content
-                                        }
-                                        if output.output_type == 'error':
-                                            output_dict['ename'] = output.ename
-                                            output_dict['evalue'] = output.evalue
-                                            output_dict['traceback'] = output.traceback
-                                            has_error = True
-                                        cell.outputs.append(output_dict)
-
-                                    self.notebook_store.execution_count += 1
-                                    cell.execution_count = self.notebook_store.execution_count
-
-                                    # Track execution result with outputs
-                                    execution_results.append({
-                                        'cell_id': last_added_cell_id,
-                                        'success': not has_error,
-                                        'outputs': result['outputs']
-                                    })
-
-                                    # Display output if available
-                                    if not args.no_display and result['outputs']:
-                                        output_text = '\n'.join([
-                                            output.text or output.content
-                                            for output in result['outputs']
-                                            if output.text or output.content
-                                        ])
-                                        if output_text:
-                                            display_output = output_text if len(output_text) < 1000 else output_text[:1000] + "\n... (truncated)"
-                                            console.print(Panel(
-                                                Text(display_output, style="dim"),
-                                                title="[green]✓ 执行成功 - 输出[/green]",
-                                                border_style="green",
-                                                box=box.ROUNDED
-                                            ))
-
-                                    stats['code_executed'] += 1
-                                else:
-                                    # Execution failed
-                                    error_msg = result.get('error', 'Unknown error')
-                                    cell.outputs = [{'output_type': 'error', 'ename': 'ExecutionError', 'evalue': error_msg, 'traceback': [error_msg]}]
-
-                                    # Track failed execution
-                                    execution_results.append({
-                                        'cell_id': last_added_cell_id,
-                                        'success': False,
-                                        'error': error_msg,
-                                        'outputs': result.get('outputs', [])
-                                    })
-
-                                    if not args.no_display:
-                                        console.print(Panel(
-                                            f"[bold red]ExecutionError: {error_msg}[/bold red]",
-                                            title="[red]✗ 执行失败[/red]",
-                                            border_style="red",
-                                            box=box.ROUNDED
-                                        ))
-                                    stats['errors'] += 1
-
-                            except Exception as e:
-                                cell.outputs = [{'output_type': 'error', 'ename': type(e).__name__, 'evalue': str(e), 'traceback': [str(e)]}]
-
-                                # Track exception
-                                execution_results.append({
-                                    'cell_id': last_added_cell_id,
-                                    'success': False,
-                                    'error': str(e),
-                                    'exception': type(e).__name__
-                                })
-
-                                if not args.no_display:
-                                    console.print(Panel(
-                                        f"[bold red]{type(e).__name__}: {str(e)}[/bold red]",
-                                        title="[red]✗ 执行失败[/red]",
-                                        border_style="red",
-                                        box=box.ROUNDED
-                                    ))
-                                stats['errors'] += 1
-
-                        stats['actions_executed'] += 1
+                            console.print(f"  [red]✗[/red] {action_type}: {str(e)}")
+                        self.error(f"Action failed: {action_type} - {e}", exc_info=True)
 
                     # Delay between actions
-                    if not args.no_display:
+                    if not args.no_display and args.delay > 0:
                         time.sleep(args.delay)
 
             console.print("\n[bold green]✅ 所有动作执行完成[/bold green]\n")
 
-            # Build cells array
-            cells_array = []
-            for cell in self.notebook_store.cells:
-                cell_dict = {
-                    'id': cell.id,
-                    'type': cell.type.value,
-                    'content': cell.content,
-                    'outputs': cell.outputs,
-                    'enableEdit': cell.enable_edit,
-                    'phaseId': cell.phase_id,
-                    'description': cell.description
-                }
-
-                if cell.type == CellType.CODE:
-                    cell_dict['execution_count'] = cell.execution_count
-                    cell_dict['language'] = cell.language
-
-                cells_array.append(cell_dict)
-
-            # Build effects from code execution outputs
-            effects_list = []
-
-            # Convert execution outputs to OpenAI-compatible effects format
-            for exec_result in execution_results:
-                # Get cell_id for reference
-                cell_id = exec_result.get('cell_id')
-
-                # Always process all outputs, regardless of success status
-                outputs = exec_result.get('outputs', [])
-
-                if outputs:
-                    # Add each output as an effect
-                    for output in outputs:
-                        output_type = output.output_type
-
-                        if output_type == 'stream':
-                            # Standard output/print statements -> text type
-                            effects_list.append({
-                                "type": "text",
-                                "text": output.text or output.content,
-                                "cell_ref": cell_id
-                            })
-                        elif output_type == 'execute_result':
-                            # Return values from expressions -> text type
-                            effects_list.append({
-                                "type": "text",
-                                "text": str(output.content or output.text),
-                                "cell_ref": cell_id
-                            })
-                        elif output_type == 'display_data':
-                            # Display outputs (plots, images, etc)
-                            # Check if it's an image
-                            content = output.content or {}
-                            if isinstance(content, dict):
-                                if 'image/png' in content or 'image/jpeg' in content:
-                                    # For images, use a reference instead of embedding full data
-                                    image_type = 'png' if 'image/png' in content else 'jpeg'
-                                    # Generate a unique image ID based on cell_id and index
-                                    image_id = f"{cell_id}-img-{len([e for e in effects_list if e.get('type') == 'image_url'])}"
-
-                                    effects_list.append({
-                                        "type": "image_url",
-                                        "image_url": f"<image #{image_id} request-to-see>",
-                                        "cell_ref": cell_id
-                                    })
-                                else:
-                                    # Other display data -> text
-                                    effects_list.append({
-                                        "type": "text",
-                                        "text": str(content),
-                                        "cell_ref": cell_id
-                                    })
-                            else:
-                                effects_list.append({
-                                    "type": "text",
-                                    "text": str(content),
-                                    "cell_ref": cell_id
-                                })
-                        elif output_type == 'error':
-                            # Execution errors -> error type
-                            effects_list.append({
-                                "type": "error",
-                                "error": {
-                                    "name": output.ename or "Error",
-                                    "message": output.evalue or "",
-                                    "traceback": output.traceback or []
-                                },
-                                "cell_ref": cell_id
-                            })
-                elif not exec_result['success']:
-                    # Execution failed but no outputs (API level error) -> error type
-                    effects_list.append({
-                        "type": "error",
-                        "error": {
-                            "name": exec_result.get('exception', 'ExecutionError'),
-                            "message": exec_result.get('error', 'Unknown error')
-                        },
-                        "cell_ref": cell_id
-                    })
-
-            output_state = {
-                "observation": state_data['observation'],
-                "state": {
-                    "variables": state_data['state']['variables'],
-                    "effects": {"current": effects_list, "history": []},
-                    "notebook": {
-                        "notebook_id": state_data['state']['notebook'].get('notebook_id', 'test-notebook'),
-                        "title": self.notebook_store.title,
-                        "cells": cells_array,
-                        "execution_count": self.notebook_store.execution_count
-                    },
-                    "FSM": {
-                        "state": "BEHAVIOR_COMPLETE",
-                        "last_transition": "COMPLETE_ACTION",
-                        "previous_state": "BEHAVIOR_RUNNING",
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                        "transition_data": {
-                            "actions_applied": len(actions_data),
-                            "cells_added": len(self.notebook_store.cells),
-                            "code_executed": self.notebook_store.execution_count,
-                            "acceptance_checks_passed": stats['errors'] == 0
-                        }
-                    }
-                },
-                "metadata": state_data.get('metadata', {})
-            }
-
-            # Update metadata
-            output_state['metadata'].update({
-                "execution_timestamp": datetime.now(timezone.utc).isoformat(),
-                "status": "completed"
-            })
+            # Build output state from stores (ScriptStore already updated everything)
+            output_state = self._build_output_state_for_test_actions(state_json, stats, len(actions_data))
 
             # Save output
             with open(args.output, 'w', encoding='utf-8') as f:
@@ -1162,8 +1384,8 @@ class WorkflowCLI(ModernLogger):
 
             summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
             summary_table.add_row("执行的动作数", str(stats['actions_executed']))
-            summary_table.add_row("创建的单元格数", str(stats['cells_added']))
-            summary_table.add_row("执行的代码数", str(stats['code_executed']))
+            summary_table.add_row("创建的单元格数", str(len(self.notebook_store.cells)))
+            summary_table.add_row("执行的代码数", str(self.notebook_store.execution_count))
             summary_table.add_row("错误数", str(stats['errors']))
             summary_table.add_row("验收检查", "✓ 全部通过" if stats['errors'] == 0 else "✗ 有错误")
 
@@ -1177,6 +1399,29 @@ class WorkflowCLI(ModernLogger):
             print(f"\n❌ Error: {e}")
             self.error(f"test-actions failed: {e}", exc_info=True)
             sys.exit(1)
+
+    def _build_output_state_for_test_actions(self, base_state, stats, total_actions):
+        """
+        Build output state for test-actions command.
+        Uses StateBuilder to avoid code duplication.
+        """
+        # Prepare transition data
+        transition_data = {
+            "transition_type": "COMPLETE_ACTION",
+            "actions_applied": total_actions,
+            "cells_added": len(self.notebook_store.cells),
+            "code_executed": self.notebook_store.execution_count,
+            "acceptance_checks_passed": stats['errors'] == 0
+        }
+
+        # Use StateBuilder to avoid duplication
+        return state_builder.build_complete_state(
+            base_state,
+            self.notebook_store,
+            self.ai_context_store,
+            "BEHAVIOR_COMPLETE",
+            transition_data
+        )
 
     def cmd_export_markdown(self, args):
         """Export notebook from state file to markdown."""

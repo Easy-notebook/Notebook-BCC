@@ -101,7 +101,7 @@ def handle_add_action(script_store, step: ExecutionStep) -> Optional[str]:
 
 def handle_new_chapter(script_store, step: ExecutionStep) -> Optional[str]:
     """
-    Handle NEW_CHAPTER type.
+    Handle NEW_CHAPTER type (Level 1 heading: #).
 
     Args:
         script_store: Reference to ScriptStore instance
@@ -120,7 +120,7 @@ def handle_new_chapter(script_store, step: ExecutionStep) -> Optional[str]:
         script_store.add_action(ScriptAction(
             id=action_id,
             type='text',
-            content=f"## {step.content}",
+            content=f"# {step.content}",  # Fixed: Level 1 heading
             metadata=step.metadata or ActionMetadata()
         ))
         script_store.chapter_counter += 1
@@ -134,7 +134,7 @@ def handle_new_chapter(script_store, step: ExecutionStep) -> Optional[str]:
 
 def handle_new_section(script_store, step: ExecutionStep) -> Optional[str]:
     """
-    Handle NEW_SECTION type.
+    Handle NEW_SECTION type (Level 2 heading: ##).
 
     Args:
         script_store: Reference to ScriptStore instance
@@ -153,7 +153,7 @@ def handle_new_section(script_store, step: ExecutionStep) -> Optional[str]:
         script_store.add_action(ScriptAction(
             id=action_id,
             type='text',
-            content=f"### {step.content}",
+            content=f"## {step.content}",  # Fixed: Level 2 heading
             metadata=step.metadata or ActionMetadata()
         ))
         script_store.section_counter += 1
@@ -162,4 +162,36 @@ def handle_new_section(script_store, step: ExecutionStep) -> Optional[str]:
     except Exception as e:
         if hasattr(script_store, 'error'):
             script_store.error(f"[ContentHandler] Error handling NEW_SECTION: {e}", exc_info=True)
+        return None
+
+
+def handle_new_step(script_store, step: ExecutionStep) -> Optional[str]:
+    """
+    Handle NEW_STEP type (Level 3 heading: ###).
+
+    Args:
+        script_store: Reference to ScriptStore instance
+        step: Execution step containing step title
+
+    Returns:
+        Action ID if successful, None otherwise
+    """
+    try:
+        if not step or not step.content:
+            if hasattr(script_store, 'warning'):
+                script_store.warning("[ContentHandler] NEW_STEP requires content")
+            return None
+
+        action_id = step.store_id or str(uuid.uuid4())
+        script_store.add_action(ScriptAction(
+            id=action_id,
+            type='text',
+            content=f"### {step.content}",  # Level 3 heading
+            metadata=step.metadata or ActionMetadata()
+        ))
+        return action_id
+
+    except Exception as e:
+        if hasattr(script_store, 'error'):
+            script_store.error(f"[ContentHandler] Error handling NEW_STEP: {e}", exc_info=True)
         return None

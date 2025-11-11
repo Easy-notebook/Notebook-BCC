@@ -26,12 +26,14 @@ def handle_update_title(script_store, step: ExecutionStep) -> bool:
         True if successful, False otherwise
     """
     try:
-        if not step or not step.title:
+        # Title can be in either step.title or step.content (from action JSON)
+        title_text = step.title or step.content
+        if not step or not title_text:
             if hasattr(script_store, 'warning'):
-                script_store.warning("[WorkflowHandler] UPDATE_TITLE requires title")
+                script_store.warning("[WorkflowHandler] UPDATE_TITLE requires title or content")
             return False
 
-        cleaned_title = clean_content(step.title, 'text')
+        cleaned_title = clean_content(title_text, 'text')
         update_title(script_store, cleaned_title)
         return True
 

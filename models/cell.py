@@ -36,8 +36,7 @@ class CellOutput:
         """Convert to dictionary."""
         result = {'output_type': self.output_type}
 
-        if self.content:
-            result['content'] = self.content
+        # Only include text field (not content) for consistency with frontend
         if self.text:
             result['text'] = self.text
         if self.data:

@@ -21,6 +21,35 @@ class StateUpdater(ModernLogger):
         super().__init__("StateUpdater")
         self.parser = ResponseParser()
 
+    def _normalize_state_name(self, state_name: str) -> str:
+        """
+        Normalize state name from server format to local FSM format.
+
+        Examples:
+            STATE_Behavior_Running → behavior_running
+            STATE_Step_Running → step_running
+            BEHAVIOR_RUNNING → behavior_running
+            behavior_running → behavior_running (unchanged)
+        """
+        if not state_name:
+            return state_name
+
+        # Remove STATE_ prefix if present
+        if state_name.startswith('STATE_'):
+            state_name = state_name[6:]  # Remove 'STATE_'
+
+        # Convert from PascalCase/camelCase to snake_case
+        # E.g., Behavior_Running → behavior_running
+        import re
+        # Insert underscore before capital letters (except at start)
+        state_name = re.sub('([a-z])([A-Z])', r'\1_\2', state_name)
+        # Convert to lowercase
+        state_name = state_name.lower()
+        # Clean up multiple underscores
+        state_name = re.sub('_+', '_', state_name)
+
+        return state_name
+
     def apply_transition(
         self,
         state: Dict[str, Any],
@@ -50,6 +79,9 @@ class StateUpdater(ModernLogger):
             return self._apply_steps_transition(state, parsed['content'])
         elif parsed['type'] == 'behavior':
             return self._apply_behavior_transition(state, parsed['content'])
+        elif parsed['type'] == 'actions':
+            # Actions response from generating API
+            return self._apply_actions_transition(state, parsed['content'])
         elif parsed['type'] == 'reflection':
             return self._apply_reflection_transition(state, parsed['content'])
         elif parsed['type'] == 'json':
@@ -308,6 +340,37 @@ class StateUpdater(ModernLogger):
 
         return new_state
 
+    def _apply_actions_transition(
+        self,
+        state: Dict[str, Any],
+        content: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Apply actions transition (COMPLETE_ACTION from generating API).
+
+        Updates:
+        - FSM state to BEHAVIOR_COMPLETE
+        - Store actions in state for potential execution
+
+        Note: The state passed in may already have updated notebook and effects
+        from action execution. We should preserve them and only update FSM.
+        """
+        # Don't use deepcopy here! The state may already contain updated notebook/effects
+        # from _execute_actions_internal. We only need to update the FSM state.
+        actions = content.get('actions', [])
+        self.info(f"[StateUpdater] Applying actions transition: {len(actions)} actions received")
+
+        # Update FSM state to BEHAVIOR_COMPLETE (in-place)
+        fsm = state.get('state', {}).get('FSM', {})
+        fsm['state'] = 'BEHAVIOR_COMPLETE'
+        fsm['last_transition'] = 'COMPLETE_ACTION'
+
+        # Preserve the existing notebook and effects from action execution
+        # The state is already updated by _execute_actions_internal
+        self.info(f"[StateUpdater] FSM state updated: BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
+
+        return state  # Return the same state object (with FSM updated)
+
     def _apply_reflection_transition(
         self,
         state: Dict[str, Any],
@@ -350,9 +413,18 @@ class StateUpdater(ModernLogger):
         old_state = fsm.get('state', 'UNKNOWN')
 
         if next_state:
+            # Normalize state name from server format to local format
+            # Server may return: STATE_Behavior_Running, STATE_Step_Running, etc.
+            # Local expects: behavior_running, step_running, etc.
+            normalized_state = self._normalize_state_name(next_state)
+
             fsm['previous_state'] = old_state
-            fsm['state'] = next_state
-            self.info(f"[StateUpdater] FSM transition: {old_state} → {next_state}")
+            fsm['state'] = normalized_state
+
+            if normalized_state != next_state:
+                self.info(f"[StateUpdater] Normalized state: {next_state} → {normalized_state}")
+
+            self.info(f"[StateUpdater] FSM transition: {old_state} → {normalized_state}")
 
             # Determine transition name based on state change
             if 'Step' in next_state:

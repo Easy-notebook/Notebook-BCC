@@ -313,7 +313,9 @@ class WorkflowAPIClient(ModernLogger):
             if notebook_id:
                 payload['notebook_id'] = notebook_id
 
-            self.info(f"[API] Sending feedback for stage={stage_id}, step={step_index}")
+            # Note: stage_id and step_index are only for logging/tracking
+            # The actual state is sent via the 'observation' and 'state' fields in payload
+            self.info(f"[API] Sending feedback (context: stage={stage_id}, step={step_index})")
             self.debug(f"[API] Payload size: {len(json.dumps(payload))} chars")
 
             # Send request and capture response

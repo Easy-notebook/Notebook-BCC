@@ -251,12 +251,12 @@ class CodeExecutor(ModernLogger):
             output_type = output.get('type', 'stream')
 
             # Backend returns either 'text' or 'content' field depending on type
+            # Use only 'text' field for consistency with frontend format
             default_text = output.get('content', output.get('text', ''))
 
             cell_output = CellOutput(
                 output_type=output_type,
-                content=default_text,
-                text=default_text
+                text=default_text  # Only set text, not content
             )
 
             # Handle different output types

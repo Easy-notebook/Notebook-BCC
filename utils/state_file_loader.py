@@ -81,14 +81,18 @@ class StateFileLoader(ModernLogger):
             'FSM': state_data.get('FSM', {})
         }
 
+        # Extract FSM state for convenience
+        fsm_state = full_state.get('FSM', {}).get('state', 'UNKNOWN')
+
         self.info(f"[Parser] Extracted position: stage={stage_id}, step={step_id}, behavior={behavior_id}")
         self.info(f"[Parser] Variables: {len(full_state['variables'])}")
-        self.info(f"[Parser] FSM State: {full_state.get('FSM', {}).get('state')}")
+        self.info(f"[Parser] FSM State: {fsm_state}")
 
         return {
             'stage_id': stage_id,
             'step_id': step_id,
             'behavior_id': behavior_id,
+            'fsm_state': fsm_state,  # Add FSM state for easy access
             'state': full_state,
             'raw': state_json
         }

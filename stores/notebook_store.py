@@ -19,6 +19,7 @@ class NotebookStore(ModernLogger):
         self.cells: List[Cell] = []
         self.title: str = "Untitled Notebook"
         self.execution_count: int = 0
+        self.notebook_id: Optional[str] = None  # Add explicit notebook_id field
 
         # Track cell updates for context
         self._cell_snapshots: Dict[str, Dict[str, Any]] = {}  # cell_id -> snapshot
@@ -240,15 +241,36 @@ class NotebookStore(ModernLogger):
 
             cells_data.append(cell_dict)
 
-        return {
+        # Build base dict with required fields
+        result = {
             'title': self.title,
             'cells': cells_data,
             'execution_count': self.execution_count,
+            'cell_count': len(self.cells),
         }
+
+        # Add optional/dynamic fields if they exist
+        if hasattr(self, 'notebook_id') and self.notebook_id:
+            result['notebook_id'] = self.notebook_id
+
+        # Add last cell info if cells exist
+        if self.cells:
+            last_cell = self.cells[-1]
+            result['last_cell_type'] = last_cell.type.value
+            # Get last output if it's a code cell with outputs
+            if last_cell.type == CellType.CODE and last_cell.outputs:
+                last_output = last_cell.outputs[-1]
+                if hasattr(last_output, 'to_dict'):
+                    result['last_output'] = last_output.to_dict()
+                elif isinstance(last_output, dict):
+                    result['last_output'] = last_output
+
+        return result
 
     def from_dict(self, data: Dict[str, Any]):
         """Load notebook from dictionary."""
         self.title = data.get('title', 'Untitled Notebook')
         self.execution_count = data.get('execution_count', 0)
+        self.notebook_id = data.get('notebook_id')  # Load notebook_id if present
         self.cells = [Cell.from_dict(cell_data) for cell_data in data.get('cells', [])]
-        self.info(f"[NotebookStore] Loaded {len(self.cells)} cells from dict")
+        self.info(f"[NotebookStore] Loaded {len(self.cells)} cells from dict, notebook_id={self.notebook_id}")
