@@ -148,40 +148,80 @@ class APIDisplayHelper:
             table.add_column("Key", style="green bold")
             table.add_column("Value", style="white")
 
-            # Extract key information based on response type
-            if 'targetAchieved' in response:
-                table.add_row("Target Achieved",
-                             "[green]✓ Yes[/green]" if response['targetAchieved'] else "[yellow]○ No[/yellow]")
+            # Handle different response types
+            if isinstance(response, str):
+                # String response (XML or plain text)
+                response_type = "XML" if response.strip().startswith('<') else "Text"
+                table.add_row("Response Type", f"[cyan]{response_type}[/cyan]")
+                table.add_row("Response Size", f"{len(response)} chars")
 
-            if 'transition' in response:
-                transition = response['transition']
-                if 'continue_behaviors' in transition:
-                    table.add_row("Continue Behaviors",
-                                 "[yellow]Yes[/yellow]" if transition['continue_behaviors'] else "[green]No[/green]")
-                if 'target_achieved' in transition:
-                    table.add_row("Target Status",
-                                 "[green]Achieved[/green]" if transition['target_achieved'] else "[yellow]Pending[/yellow]")
+                self.console.print(Panel(
+                    table,
+                    title=f"[bold green]✅ {api_type.upper()} API Response Summary[/bold green]",
+                    border_style="green"
+                ))
 
-            if 'context_update' in response:
-                ctx_update = response['context_update']
-                if 'variables' in ctx_update:
-                    table.add_row("Variables Updated", str(len(ctx_update['variables'])))
+                # Display XML/Text response with syntax highlighting
+                if response_type == "XML":
+                    syntax = Syntax(response, "xml", theme="monokai", line_numbers=False)
+                else:
+                    syntax = Syntax(response, "text", theme="monokai", line_numbers=False)
 
-            if 'type' in response:
-                table.add_row("Response Type", f"[cyan]{response['type']}[/cyan]")
+                self.console.print(Panel(
+                    syntax,
+                    title=f"[bold white]Full Response ({response_type})[/bold white]",
+                    border_style="white",
+                    expand=False
+                ))
+            elif isinstance(response, dict):
+                # Dictionary response (JSON)
+                # Extract key information based on response type
+                if 'targetAchieved' in response:
+                    table.add_row("Target Achieved",
+                                 "[green]✓ Yes[/green]" if response['targetAchieved'] else "[yellow]○ No[/yellow]")
 
-            self.console.print(Panel(
-                table,
-                title=f"[bold green]✅ {api_type.upper()} API Response Summary[/bold green]",
-                border_style="green"
-            ))
+                if 'transition' in response:
+                    transition = response['transition']
+                    if 'continue_behaviors' in transition:
+                        table.add_row("Continue Behaviors",
+                                     "[yellow]Yes[/yellow]" if transition['continue_behaviors'] else "[green]No[/green]")
+                    if 'target_achieved' in transition:
+                        table.add_row("Target Status",
+                                     "[green]Achieved[/green]" if transition['target_achieved'] else "[yellow]Pending[/yellow]")
 
-            # Full JSON response
-            if response:
+                if 'context_update' in response:
+                    ctx_update = response['context_update']
+                    if 'variables' in ctx_update:
+                        table.add_row("Variables Updated", str(len(ctx_update['variables'])))
+
+                if 'type' in response:
+                    table.add_row("Response Type", f"[cyan]{response['type']}[/cyan]")
+
+                self.console.print(Panel(
+                    table,
+                    title=f"[bold green]✅ {api_type.upper()} API Response Summary[/bold green]",
+                    border_style="green"
+                ))
+
+                # Full JSON response
                 json_str = json.dumps(response, indent=2, ensure_ascii=False)
                 syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False)
                 self.console.print(Panel(
                     syntax,
+                    title="[bold white]Full Response (JSON)[/bold white]",
+                    border_style="white",
+                    expand=False
+                ))
+            else:
+                # Unknown type
+                table.add_row("Response Type", f"[yellow]{type(response).__name__}[/yellow]")
+                self.console.print(Panel(
+                    table,
+                    title=f"[bold green]✅ {api_type.upper()} API Response Summary[/bold green]",
+                    border_style="green"
+                ))
+                self.console.print(Panel(
+                    str(response),
                     title="[bold white]Full Response[/bold white]",
                     border_style="white",
                     expand=False
@@ -249,7 +289,9 @@ class APIDisplayHelper:
         if not RICH_AVAILABLE or not self.console:
             print(f"\n📝 Received {len(actions)} actions:")
             for i, action in enumerate(actions, 1):
-                print(f"   {i}. {action.get('action')} - {action.get('cell_type', 'unknown')}")
+                action_type = action.get('type', action.get('action', 'unknown'))
+                shot_type = action.get('shot_type', action.get('cell_type', 'unknown'))
+                print(f"   {i}. {action_type} - {shot_type}")
             return
 
         table = Table(box=box.ROUNDED)
@@ -260,13 +302,15 @@ class APIDisplayHelper:
 
         for i, action in enumerate(actions, 1):
             content = action.get('content', '')
-            preview = content[:50] + "..." if len(content) > 50 else content
+            if isinstance(content, dict):
+                content = str(content)
+            preview = content[:80] + "..." if len(content) > 80 else content
             preview = preview.replace('\n', ' ')
 
             table.add_row(
                 str(i),
-                action.get('action', 'unknown'),
-                action.get('cell_type', 'unknown'),
+                action.get('type', action.get('action', 'unknown')),  # Try 'type' first, then 'action'
+                action.get('shot_type', action.get('cell_type', 'unknown')),  # Try 'shot_type' first
                 preview
             )
 

@@ -84,41 +84,39 @@ class WorkflowAPIClient(ModernLogger):
             - context_update: dict - Updates to apply (variables, progress_update, etc.)
         """
         try:
-            # Compress state
-            compressed_state = self.compressor.compress_context(state)
-
-            # Extract progress information from state (new hierarchical format)
-            progress_info = state.get('progress_info')
-            fsm_info = state.get('FSM')
-
-            # Require progress_info (no backward compatibility)
-            if not progress_info:
-                raise ValueError("Missing required 'progress_info' in state. New POMDP protocol requires hierarchical progress information.")
-
-            # Build location with hierarchical progress structure
-            location = progress_info
-
-            # Build clean context (simplified format after refactoring)
-            clean_context = {
-                'variables': compressed_state.get('variables', {}),
-                'effects': compressed_state.get('effects', {'current': [], 'history': []}),
-                'notebook': compressed_state.get('notebook', {})
-            }
-
-            # Add FSM info to context
-            if fsm_info:
-                clean_context['FSM'] = fsm_info
-
-            # Build new payload structure (POMDP-compatible)
-            payload = {
-                'observation': {
-                    'location': location,
-                    'context': clean_context
-                },
-                'options': {
-                    'stream': False
+            # State should already be in the correct format (observation + state)
+            # Just add options field to the existing structure
+            if 'observation' in state and 'state' in state:
+                # State is already in correct format, use directly
+                payload = {
+                    'observation': state['observation'],
+                    'state': state['state'],
+                    'options': {
+                        'stream': False
+                    }
                 }
-            }
+            else:
+                # Legacy format: state contains progress_info
+                compressed_state = self.compressor.compress_context(state)
+                progress_info = state.get('progress_info')
+
+                if not progress_info:
+                    raise ValueError("Missing required 'progress_info' or 'observation' in state.")
+
+                payload = {
+                    'observation': {
+                        'location': progress_info
+                    },
+                    'state': {
+                        'variables': compressed_state.get('variables', {}),
+                        'effects': compressed_state.get('effects', {'current': [], 'history': []}),
+                        'notebook': compressed_state.get('notebook', {}),
+                        'FSM': state.get('FSM', {})
+                    },
+                    'options': {
+                        'stream': False
+                    }
+                }
 
             # Add behavior_feedback if provided
             if behavior_feedback:
@@ -127,52 +125,113 @@ class WorkflowAPIClient(ModernLogger):
             if notebook_id:
                 payload['notebook_id'] = notebook_id
 
-            # 📝 记录 API 调用详情到独立日志文件
-            log_file = self.api_logger.log_api_call(
-                api_url=Config.REFLECTING_API_URL,
-                method='POST',
-                payload=payload,
-                context_state=state,
-                extra_info={
-                    'api_type': 'reflecting',
-                    'stage_id': stage_id,
-                    'step_index': step_index,
-                    'notebook_id': notebook_id
-                }
-            )
-            if log_file:
-                self.info(f"[API] 调用日志已保存: {log_file}")
-
             self.info(f"[API] Sending reflection for stage={stage_id}, step={step_index}")
             self.debug(f"[API] Payload size: {len(json.dumps(payload))} chars")
 
-            # Send request
+            # Send request and capture response
             session = await self._get_session()
-            async with session.post(
-                Config.REFLECTING_API_URL,
-                json=payload,
-                headers={'Content-Type': 'application/json'}
-            ) as response:
-                response.raise_for_status()
+            response_data = None
+            response_status = None
+            response_error = None
 
-                # Check content type
-                content_type = response.headers.get('Content-Type', '')
+            try:
+                async with session.post(
+                    Config.REFLECTING_API_URL,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'}
+                ) as response:
+                    response_status = response.status
 
-                if 'xml' in content_type or 'text' in content_type:
-                    # XML response - parse as workflow definition
-                    xml_text = await response.text()
-                    parsed = response_parser.parse_response(xml_text)
-                    self.info(f"[API] Reflection response type: {parsed['type']}")
-                    return parsed
-                else:
-                    # JSON response - standard format
-                    result = await response.json()
-                    self.info(f"[API] Reflection response: targetAchieved={result.get('targetAchieved')}")
+                    # If error, try to read response body for details
+                    if response_status >= 400:
+                        try:
+                            error_body = await response.text()
+                            response_error = f"HTTP {response_status}: {error_body}"
+                        except:
+                            response_error = f"HTTP {response_status}: {response.reason}"
+
+                        # Log error with details
+                        log_file = self.api_logger.log_api_call(
+                            api_url=Config.REFLECTING_API_URL,
+                            method='POST',
+                            payload=payload,
+                            context_state=state,
+                            extra_info={
+                                'api_type': 'reflecting',
+                                'stage_id': stage_id,
+                                'step_index': step_index,
+                                'notebook_id': notebook_id
+                            },
+                            response=error_body if 'error_body' in locals() else None,
+                            response_status=response_status,
+                            response_error=response_error
+                        )
+                        if log_file:
+                            self.info(f"[API] 错误日志已保存: {log_file}")
+
+                        self.error(f"[API] Failed to send reflection: {response_error}")
+                        raise Exception(f"Reflecting API error: {response_error}")
+
+                    response.raise_for_status()
+
+                    # Check content type
+                    content_type = response.headers.get('Content-Type', '')
+
+                    if 'xml' in content_type or 'text' in content_type:
+                        # XML response - return raw XML string
+                        xml_text = await response.text()
+                        response_data = xml_text
+                        result = xml_text  # Return raw XML directly
+                        self.info(f"[API] Reflection response: XML ({len(xml_text)} chars)")
+                    else:
+                        # JSON response - standard format
+                        result = await response.json()
+                        response_data = result
+                        self.info(f"[API] Reflection response: targetAchieved={result.get('targetAchieved')}")
+
+                    # 📝 记录 API 调用详情（包含响应）
+                    log_file = self.api_logger.log_api_call(
+                        api_url=Config.REFLECTING_API_URL,
+                        method='POST',
+                        payload=payload,
+                        context_state=state,
+                        extra_info={
+                            'api_type': 'reflecting',
+                            'stage_id': stage_id,
+                            'step_index': step_index,
+                            'notebook_id': notebook_id
+                        },
+                        response=response_data,
+                        response_status=response_status
+                    )
+                    if log_file:
+                        self.info(f"[API] 调用日志已保存: {log_file}")
+
                     return result
 
-        except aiohttp.ClientError as e:
-            self.error(f"[API] Failed to send reflection: {e}")
-            raise Exception(f"Reflecting API error: {str(e)}")
+            except aiohttp.ClientError as e:
+                response_error = str(e)
+                # 记录失败的调用
+                log_file = self.api_logger.log_api_call(
+                    api_url=Config.REFLECTING_API_URL,
+                    method='POST',
+                    payload=payload,
+                    context_state=state,
+                    extra_info={
+                        'api_type': 'reflecting',
+                        'stage_id': stage_id,
+                        'step_index': step_index,
+                        'notebook_id': notebook_id
+                    },
+                    response_status=response_status,
+                    response_error=response_error
+                )
+                if log_file:
+                    self.info(f"[API] 错误日志已保存: {log_file}")
+
+                self.error(f"[API] Failed to send reflection: {e}")
+                raise Exception(f"Reflecting API error: {str(e)}")
+
         except Exception as e:
             self.error(f"[API] Unexpected error sending reflection: {e}", exc_info=True)
             raise
@@ -208,42 +267,44 @@ class WorkflowAPIClient(ModernLogger):
             - context_filter: dict - (Optional) Filtering instructions for next Generating API call
         """
         try:
-            # Compress state
-            compressed_state = self.compressor.compress_context(state)
-
-            # Extract progress information from state (new hierarchical format)
-            progress_info = state.get('progress_info')
-            fsm_info = state.get('FSM')
-
-            # Require progress_info (no backward compatibility)
-            if not progress_info:
-                raise ValueError("Missing required 'progress_info' in state. New POMDP protocol requires hierarchical progress information.")
-
-            # Build location with hierarchical progress structure
-            location = progress_info
-
-            # Build clean context (simplified format after refactoring)
-            # Note: Progress and focus are now in observation.location.progress.*.focus
-            clean_context = {
-                'variables': compressed_state.get('variables', {}),
-                'effects': compressed_state.get('effects', {'current': [], 'history': []}),
-                'notebook': compressed_state.get('notebook', {})
-            }
-
-            # Add FSM info to context
-            if fsm_info:
-                clean_context['FSM'] = fsm_info
-
-            # Build new payload structure (POMDP-compatible)
-            payload = {
-                'observation': {
-                    'location': location,
-                    'context': clean_context
-                },
-                'options': {
-                    'stream': False
+            # State should already be in the correct format (observation + state)
+            # as loaded from state files like 00_STATE_IDLE.json
+            # Just add options field to the existing structure
+            if 'observation' in state and 'state' in state:
+                # State is already in correct format, use directly
+                payload = {
+                    'observation': state['observation'],
+                    'state': state['state'],
+                    'options': {
+                        'stream': False
+                    }
                 }
-            }
+            else:
+                # Legacy format: state contains progress_info
+                # Compress state
+                compressed_state = self.compressor.compress_context(state)
+
+                # Extract progress information
+                progress_info = state.get('progress_info')
+
+                if not progress_info:
+                    raise ValueError("Missing required 'progress_info' or 'observation' in state.")
+
+                # Build payload structure
+                payload = {
+                    'observation': {
+                        'location': progress_info
+                    },
+                    'state': {
+                        'variables': compressed_state.get('variables', {}),
+                        'effects': compressed_state.get('effects', {'current': [], 'history': []}),
+                        'notebook': compressed_state.get('notebook', {}),
+                        'FSM': state.get('FSM', {})
+                    },
+                    'options': {
+                        'stream': False
+                    }
+                }
 
             # Add behavior_feedback if provided
             if behavior_feedback:
@@ -252,52 +313,113 @@ class WorkflowAPIClient(ModernLogger):
             if notebook_id:
                 payload['notebook_id'] = notebook_id
 
-            # 📝 记录 API 调用详情到独立日志文件
-            log_file = self.api_logger.log_api_call(
-                api_url=Config.FEEDBACK_API_URL,
-                method='POST',
-                payload=payload,
-                context_state=state,
-                extra_info={
-                    'api_type': 'feedback',
-                    'stage_id': stage_id,
-                    'step_index': step_index,
-                    'notebook_id': notebook_id
-                }
-            )
-            if log_file:
-                self.info(f"[API] 调用日志已保存: {log_file}")
-
             self.info(f"[API] Sending feedback for stage={stage_id}, step={step_index}")
             self.debug(f"[API] Payload size: {len(json.dumps(payload))} chars")
 
-            # Send request
+            # Send request and capture response
             session = await self._get_session()
-            async with session.post(
-                Config.FEEDBACK_API_URL,
-                json=payload,
-                headers={'Content-Type': 'application/json'}
-            ) as response:
-                response.raise_for_status()
+            response_data = None
+            response_status = None
+            response_error = None
 
-                # Check content type
-                content_type = response.headers.get('Content-Type', '')
+            try:
+                async with session.post(
+                    Config.FEEDBACK_API_URL,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'}
+                ) as response:
+                    response_status = response.status
 
-                if 'xml' in content_type or 'text' in content_type:
-                    # XML response - parse as workflow definition
-                    xml_text = await response.text()
-                    parsed = response_parser.parse_response(xml_text)
-                    self.info(f"[API] Planning response type: {parsed['type']}")
-                    return parsed
-                else:
-                    # JSON response - standard format
-                    result = await response.json()
-                    self.info(f"[API] Planning response: targetAchieved={result.get('targetAchieved')}")
+                    # If error, try to read response body for details
+                    if response_status >= 400:
+                        try:
+                            error_body = await response.text()
+                            response_error = f"HTTP {response_status}: {error_body}"
+                        except:
+                            response_error = f"HTTP {response_status}: {response.reason}"
+
+                        # Log error with details
+                        log_file = self.api_logger.log_api_call(
+                            api_url=Config.FEEDBACK_API_URL,
+                            method='POST',
+                            payload=payload,
+                            context_state=state,
+                            extra_info={
+                                'api_type': 'feedback',
+                                'stage_id': stage_id,
+                                'step_index': step_index,
+                                'notebook_id': notebook_id
+                            },
+                            response=error_body if 'error_body' in locals() else None,
+                            response_status=response_status,
+                            response_error=response_error
+                        )
+                        if log_file:
+                            self.info(f"[API] 错误日志已保存: {log_file}")
+
+                        self.error(f"[API] Failed to send feedback: {response_error}")
+                        raise Exception(f"Feedback API error: {response_error}")
+
+                    response.raise_for_status()
+
+                    # Check content type
+                    content_type = response.headers.get('Content-Type', '')
+
+                    if 'xml' in content_type or 'text' in content_type:
+                        # XML response - return raw XML string
+                        xml_text = await response.text()
+                        response_data = xml_text  # Store raw XML for logging
+                        result = xml_text  # Return raw XML directly
+                        self.info(f"[API] Planning response: XML ({len(xml_text)} chars)")
+                    else:
+                        # JSON response - standard format
+                        result = await response.json()
+                        response_data = result  # Store JSON for logging
+                        self.info(f"[API] Planning response: targetAchieved={result.get('targetAchieved')}")
+
+                    # 📝 记录 API 调用详情（包含响应）
+                    log_file = self.api_logger.log_api_call(
+                        api_url=Config.FEEDBACK_API_URL,
+                        method='POST',
+                        payload=payload,
+                        context_state=state,
+                        extra_info={
+                            'api_type': 'feedback',
+                            'stage_id': stage_id,
+                            'step_index': step_index,
+                            'notebook_id': notebook_id
+                        },
+                        response=response_data,
+                        response_status=response_status
+                    )
+                    if log_file:
+                        self.info(f"[API] 调用日志已保存: {log_file}")
+
                     return result
 
-        except aiohttp.ClientError as e:
-            self.error(f"[API] Failed to send feedback: {e}")
-            raise Exception(f"Feedback API error: {str(e)}")
+            except aiohttp.ClientError as e:
+                response_error = str(e)
+                # 记录失败的调用
+                log_file = self.api_logger.log_api_call(
+                    api_url=Config.FEEDBACK_API_URL,
+                    method='POST',
+                    payload=payload,
+                    context_state=state,
+                    extra_info={
+                        'api_type': 'feedback',
+                        'stage_id': stage_id,
+                        'step_index': step_index,
+                        'notebook_id': notebook_id
+                    },
+                    response_status=response_status,
+                    response_error=response_error
+                )
+                if log_file:
+                    self.info(f"[API] 错误日志已保存: {log_file}")
+
+                self.error(f"[API] Failed to send feedback: {e}")
+                raise Exception(f"Feedback API error: {str(e)}")
+
         except Exception as e:
             self.error(f"[API] Unexpected error sending feedback: {e}", exc_info=True)
             raise
@@ -337,42 +459,39 @@ class WorkflowAPIClient(ModernLogger):
             - update_title: Update notebook title
         """
         try:
-            # Compress state
-            compressed_state = self.compressor.compress_context(state)
-
-            # Extract progress information from state (new hierarchical format)
-            progress_info = state.get('progress_info')
-            fsm_info = state.get('FSM')
-
-            # Require progress_info (no backward compatibility)
-            if not progress_info:
-                raise ValueError("Missing required 'progress_info' in state. New POMDP protocol requires hierarchical progress information.")
-
-            # Build location with hierarchical progress structure
-            location = progress_info
-
-            # Build clean context (simplified format after refactoring)
-            # Note: Progress and focus are now in observation.location.progress.*.focus
-            clean_context = {
-                'variables': compressed_state.get('variables', {}),
-                'effects': compressed_state.get('effects', {'current': [], 'history': []}),
-                'notebook': compressed_state.get('notebook', {})
-            }
-
-            # Add FSM info to context
-            if fsm_info:
-                clean_context['FSM'] = fsm_info
-
-            # Build new payload structure (POMDP-compatible)
-            payload = {
-                'observation': {
-                    'location': location,
-                    'context': clean_context
-                },
-                'options': {
-                    'stream': stream
+            # State should already be in the correct format (observation + state)
+            # Just add options field to the existing structure
+            if 'observation' in state and 'state' in state:
+                # State is already in correct format, use directly
+                payload = {
+                    'observation': state['observation'],
+                    'state': state['state'],
+                    'options': {
+                        'stream': stream
+                    }
                 }
-            }
+            else:
+                # Legacy format: state contains progress_info
+                compressed_state = self.compressor.compress_context(state)
+                progress_info = state.get('progress_info')
+
+                if not progress_info:
+                    raise ValueError("Missing required 'progress_info' or 'observation' in state.")
+
+                payload = {
+                    'observation': {
+                        'location': progress_info
+                    },
+                    'state': {
+                        'variables': compressed_state.get('variables', {}),
+                        'effects': compressed_state.get('effects', {'current': [], 'history': []}),
+                        'notebook': compressed_state.get('notebook', {}),
+                        'FSM': state.get('FSM', {})
+                    },
+                    'options': {
+                        'stream': stream
+                    }
+                }
 
             # Add behavior_feedback if provided
             if behavior_feedback:
@@ -402,6 +521,38 @@ class WorkflowAPIClient(ModernLogger):
                 json=payload,
                 headers={'Content-Type': 'application/json'}
             ) as response:
+                response_status = response.status
+
+                # If error, try to read response body for details
+                if response_status >= 400:
+                    try:
+                        error_body = await response.text()
+                        response_error = f"HTTP {response_status}: {error_body}"
+                    except:
+                        response_error = f"HTTP {response_status}: {response.reason}"
+
+                    # Log error with details
+                    log_file = self.api_logger.log_api_call(
+                        api_url=Config.BEHAVIOR_API_URL,
+                        method='POST',
+                        payload=payload,
+                        context_state=state,
+                        extra_info={
+                            'api_type': 'behavior_actions',
+                            'stage_id': stage_id,
+                            'step_index': step_index,
+                            'stream': stream
+                        },
+                        response=error_body if 'error_body' in locals() else None,
+                        response_status=response_status,
+                        response_error=response_error
+                    )
+                    if log_file:
+                        self.info(f"[API] 错误日志已保存: {log_file}")
+
+                    self.error(f"[API] Failed to fetch behavior actions: {response_error}")
+                    raise Exception(f"Behavior API error: {response_error}")
+
                 response.raise_for_status()
 
                 if stream:

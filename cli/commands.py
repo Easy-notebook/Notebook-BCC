@@ -363,7 +363,8 @@ class WorkflowCLI(ModernLogger):
             # Extract parameters
             stage_id = parsed_state['stage_id'] or 'none'
             step_id = parsed_state['step_id'] or 'none'
-            state = parsed_state['state']
+            # Use original state JSON directly (already has observation + state)
+            state = state_json
 
             # Determine API URL
             api_url_map = {
@@ -540,7 +541,8 @@ class WorkflowCLI(ModernLogger):
             # Extract parameters
             stage_id = parsed_state['stage_id'] or 'none'
             step_id = parsed_state['step_id'] or 'none'
-            state = parsed_state['state']
+            # Use original state JSON directly (already has observation + state)
+            state = state_json
 
             # Determine API URL
             api_url_map = {

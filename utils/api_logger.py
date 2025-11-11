@@ -43,7 +43,10 @@ class APICallLogger:
         method: str,
         payload: Dict[str, Any],
         context_state: Optional[Dict[str, Any]] = None,
-        extra_info: Optional[Dict[str, Any]] = None
+        extra_info: Optional[Dict[str, Any]] = None,
+        response: Optional[Any] = None,
+        response_status: Optional[int] = None,
+        response_error: Optional[str] = None
     ) -> str:
         """
         记录 API 调用信息到独立的日志文件
@@ -54,6 +57,9 @@ class APICallLogger:
             payload: 请求负载
             context_state: 当前上下文状态（变量等）
             extra_info: 额外信息
+            response: API 响应内容 (可选)
+            response_status: HTTP 状态码 (可选)
+            response_error: 错误信息 (可选)
 
         Returns:
             日志文件路径
@@ -81,7 +87,10 @@ class APICallLogger:
             method=method,
             payload=payload,
             context_state=context_state,
-            extra_info=extra_info
+            extra_info=extra_info,
+            response=response,
+            response_status=response_status,
+            response_error=response_error
         )
 
         # 写入日志文件
@@ -102,7 +111,10 @@ class APICallLogger:
         method: str,
         payload: Dict[str, Any],
         context_state: Optional[Dict[str, Any]],
-        extra_info: Optional[Dict[str, Any]]
+        extra_info: Optional[Dict[str, Any]],
+        response: Optional[Any] = None,
+        response_status: Optional[int] = None,
+        response_error: Optional[str] = None
     ) -> str:
         """格式化日志内容"""
 
@@ -299,6 +311,53 @@ class APICallLogger:
         payload_size = len(json.dumps(payload))
         lines.append(f"Payload 大小: {payload_size} bytes ({payload_size/1024:.2f} KB)")
         lines.append("")
+
+        # API 响应
+        if response is not None or response_status is not None or response_error is not None:
+            lines.append("=" * 80)
+            lines.append(" API 响应 (Response)")
+            lines.append("=" * 80)
+            lines.append("")
+
+            if response_status is not None:
+                status_emoji = "✅" if 200 <= response_status < 300 else "❌"
+                lines.append(f"{status_emoji} HTTP 状态码: {response_status}")
+                lines.append("")
+
+            if response_error:
+                lines.append("❌ 错误信息:")
+                lines.append("-" * 80)
+                lines.append(response_error)
+                lines.append("")
+
+            if response is not None:
+                lines.append("📦 响应内容:")
+                lines.append("-" * 80)
+                try:
+                    if isinstance(response, str):
+                        # 字符串响应（可能是XML或纯文本）
+                        lines.append(response)
+                    elif isinstance(response, dict):
+                        # JSON响应
+                        response_json = json.dumps(response, indent=2, ensure_ascii=False)
+                        lines.append(response_json)
+                    else:
+                        # 其他类型
+                        lines.append(str(response))
+                except Exception as e:
+                    lines.append(f"⚠️  无法序列化响应: {e}")
+                    lines.append(str(response))
+                lines.append("")
+
+                # 响应大小统计
+                if isinstance(response, str):
+                    response_size = len(response.encode('utf-8'))
+                elif isinstance(response, dict):
+                    response_size = len(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+                else:
+                    response_size = len(str(response).encode('utf-8'))
+                lines.append(f"响应大小: {response_size} bytes ({response_size/1024:.2f} KB)")
+                lines.append("")
 
         lines.append("=" * 80)
         lines.append(f"日志记录时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")

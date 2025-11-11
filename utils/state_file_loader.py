@@ -126,8 +126,8 @@ class StateFileLoader(ModernLogger):
         - IDLE → planning (START_WORKFLOW)
         - STAGE_RUNNING → planning (START_STEP)
         - STEP_RUNNING → planning (check if target achieved)
-        - BEHAVIOR_RUNNING → reflecting (reflect on behavior execution)
-        - *_COMPLETED → planning (next step or complete)
+        - BEHAVIOR_RUNNING → generating (get actions to execute)
+        - *_COMPLETE(D) → reflecting (reflect on completion)
         """
         state_data = state_json.get('state', {})
         fsm = state_data.get('FSM', {})
@@ -137,14 +137,18 @@ class StateFileLoader(ModernLogger):
         fsm_state = fsm_state.upper()
 
         # Planning First Protocol:
-        # - Most states use planning to check/decide next step
-        # - Only BEHAVIOR_RUNNING uses reflecting
-        # - generating is rarely the default (user can override)
+        # - IDLE, STAGE_RUNNING, STEP_RUNNING → planning (check/decide next step)
+        # - BEHAVIOR_RUNNING → generating (get actions to execute)
+        # - *_COMPLETE(D) → reflecting (reflect on completed behaviors/steps/stages)
 
         if 'BEHAVIOR' in fsm_state and 'RUNNING' in fsm_state:
-            # BEHAVIOR_RUNNING → reflecting
+            # BEHAVIOR_RUNNING → generating (get actions)
+            inferred = 'generating'
+            self.info(f"[Infer] FSM={fsm_state} → API=generating (get behavior actions)")
+        elif 'COMPLETE' in fsm_state:
+            # BEHAVIOR_COMPLETE, STEP_COMPLETE, etc. → reflecting
             inferred = 'reflecting'
-            self.info(f"[Infer] FSM={fsm_state} → API=reflecting (behavior execution feedback)")
+            self.info(f"[Infer] FSM={fsm_state} → API=reflecting (reflect on completion)")
         elif 'STEP' in fsm_state and 'RUNNING' in fsm_state:
             # STEP_RUNNING → planning (check target achieved)
             inferred = 'planning'
