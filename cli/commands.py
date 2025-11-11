@@ -15,6 +15,16 @@ warnings.filterwarnings('ignore', category=ResourceWarning)
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import asyncio
+import json
+import logging
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich import box
+from utils.state_file_loader import state_file_loader
+from utils.api_client import workflow_api_client
+from utils.state_updater import state_updater
 from core.state_machine import WorkflowStateMachine
 from stores.pipeline_store import PipelineStore
 from stores.script_store import ScriptStore
@@ -391,7 +401,7 @@ class WorkflowCLI(ModernLogger):
 
         # If iterate mode is enabled, build initial IDLE state instead of starting execution
         if args.iterate:
-            print(f"✓ Building initial IDLE state for iteration")
+            print(f"Building initial IDLE state for iteration")
 
             # Build initial state JSON in IDLE state (ready for planning API)
             template_path = getattr(args, 'idle_template', None)
@@ -403,12 +413,12 @@ class WorkflowCLI(ModernLogger):
         else:
             # Traditional mode: initialize workflow and start execution
             workflow = self.pipeline_store.initialize_workflow(planning_request)
-            print(f"✓ Workflow initialized: {workflow.name}")
+            print(f"Workflow initialized: {workflow.name}")
             print(f"  Stages: {len(workflow.stages)}")
 
             # Start execution
             self.pipeline_store.start_workflow_execution(self.state_machine)
-            print(f"✓ Workflow started from config")
+            print(f"Workflow started from config")
             print(f"  Current state: {self.state_machine.state.value}")
 
     def _build_idle_state(self, user_problem, user_submit_files, template_path=None):
@@ -484,7 +494,7 @@ class WorkflowCLI(ModernLogger):
 
         fsm_state = parsed_state.get('fsm_state', 'UNKNOWN')
 
-        print(f"✓ State loaded")
+        print(f"State loaded")
         print(f"  FSM State: {fsm_state}")
         print(f"  Stage: {parsed_state.get('stage_id', 'None')}")
         print(f"  Step: {parsed_state.get('step_id', 'None')}")
@@ -516,12 +526,12 @@ class WorkflowCLI(ModernLogger):
         # Store original state file path for generating output paths
         self._original_state_file = state_path.resolve()
 
-        print(f"✓ Workflow started from state file")
+        print(f"Workflow started from state file")
 
         # Auto-enable iteration mode if state is not IDLE and --iterate not specified
         if not args.iterate and fsm_state.upper() != 'IDLE':
-            print(f"  ⚠️  State is {fsm_state} (not IDLE)")
-            print(f"  💡 Auto-enabling iteration mode to continue execution")
+            print(f"  Warning: State is {fsm_state} (not IDLE)")
+            print(f"  Auto-enabling iteration mode to continue execution")
             print(f"     (Use --iterate explicitly or add '--no-auto-iterate' to disable)")
             # Auto-enable iteration mode
             args.iterate = True
@@ -581,25 +591,11 @@ class WorkflowCLI(ModernLogger):
         return str(output_path)
 
     def _run_iteration_loop(self, max_iterations):
-        """Run automatic iteration loop: send API -> get response -> apply transition -> repeat."""
-        import asyncio
-        import json
-        import logging
-        from rich.console import Console
-        from rich.panel import Panel
-        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-        from rich.table import Table
-        from rich import box
-        from utils.state_file_loader import state_file_loader
-        from utils.api_client import workflow_api_client
-        from utils.state_updater import state_updater
-        from config import Config
-
         # Suppress verbose logging during iteration
         logging.getLogger('silantui').setLevel(logging.WARNING)
 
         if not hasattr(self, '_current_state'):
-            print("❌ No state loaded. Cannot iterate without initial state.")
+            print("Error: No state loaded. Cannot iterate without initial state.")
             print("   Use --state-file to provide initial state.")
             return
 
@@ -609,7 +605,7 @@ class WorkflowCLI(ModernLogger):
         parsed_next = None
 
         console.print(Panel.fit(
-            "[bold cyan]🔄 ITERATION LOOP[/bold cyan]\n"
+            "[bold cyan]ITERATION LOOP[/bold cyan]\n"
             f"Max iterations: {max_iterations}",
             border_style="cyan",
             box=box.ROUNDED
@@ -641,7 +637,7 @@ class WorkflowCLI(ModernLogger):
 
                 console.print(Panel(
                     header_table,
-                    title=f"[bold]🔁 Iteration {iteration}[/bold]",
+                    title=f"[bold]Iteration {iteration}[/bold]",
                     border_style="blue",
                     box=box.ROUNDED
                 ))
@@ -649,104 +645,97 @@ class WorkflowCLI(ModernLogger):
                 # Check if we've reached a terminal state
                 terminal_states = ['COMPLETE', 'ERROR', 'ABORTED']
                 if fsm_state in terminal_states:
-                    console.print(f"[green]✓ Reached terminal state: {fsm_state}[/green]")
+                    console.print(f"[green]Reached terminal state: {fsm_state}[/green]")
                     break
 
                 # Infer API type from FSM state
                 api_type = state_file_loader.infer_api_type(current_state)
 
-                try:
-                    # Send API request with spinner
-                    with console.status(f"[bold blue]Calling {api_type} API...[/bold blue]", spinner="dots"):
-                        if api_type == 'planning':
-                            response = await workflow_api_client.send_feedback(
-                                stage_id=stage_id or 'initial',
-                                step_index=step_id or 'none',
-                                state=current_state
-                            )
-                        elif api_type == 'generating':
-                            actions = []
-                            async for action in workflow_api_client.fetch_behavior_actions(
-                                stage_id=stage_id or 'unknown',
-                                step_index=step_id or 'unknown',
-                                state=current_state,
-                                stream=False
-                            ):
-                                actions.append(action)
-                            response = {'actions': actions, 'count': len(actions)}
-                            current_state = self._execute_actions_internal(actions, current_state)
-                        elif api_type == 'reflecting':
-                            response = await workflow_api_client.send_reflecting(
-                                stage_id=stage_id or 'unknown',
-                                step_index=step_id or 'unknown',
-                                state=current_state
-                            )
-                        else:
-                            raise ValueError(f"Unknown API type: {api_type}")
-
-                    console.print(f"[green]✓[/green] {api_type.capitalize()} response received")
-
-                    # Show actions info and execution for generating
-                    if api_type == 'generating':
-                        num_actions = len(response['actions'])
-                        console.print(f"  └─ Received [cyan]{num_actions}[/cyan] actions")
-                        console.print(f"  └─ [yellow]⚙️  Executing actions...[/yellow]")
-
-                    # Apply transition to get next state
-
-                    # Convert response to format for state_updater
+                # Send API request with spinner
+                with console.status(f"[bold blue]Calling {api_type} API...[/bold blue]", spinner="dots"):
                     if api_type == 'planning':
-                        # Planning response is already in XML format
-                        transition_content = response
+                        response = await workflow_api_client.send_feedback(
+                            stage_id=stage_id or 'initial',
+                            step_index=step_id or 'none',
+                            state=current_state
+                        )
                     elif api_type == 'generating':
-                        # Generating response needs to be converted
-                        transition_content = json.dumps(response)
+                        actions = []
+                        async for action in workflow_api_client.fetch_behavior_actions(
+                            stage_id=stage_id or 'unknown',
+                            step_index=step_id or 'unknown',
+                            state=current_state,
+                            stream=False
+                        ):
+                            actions.append(action)
+                        response = {'actions': actions, 'count': len(actions)}
+                        current_state = self._execute_actions_internal(actions, current_state)
                     elif api_type == 'reflecting':
-                        # Reflecting response is in XML format
-                        transition_content = response
+                        response = await workflow_api_client.send_reflecting(
+                            stage_id=stage_id or 'unknown',
+                            step_index=step_id or 'unknown',
+                            state=current_state
+                        )
                     else:
-                        transition_content = str(response)
+                        raise ValueError(f"Unknown API type: {api_type}")
 
-                    # Apply transition to update state
-                    next_state = state_updater.apply_transition(
-                        state=current_state,
-                        transition_response=transition_content,
-                        transition_type=api_type
-                    )
+                console.print(f"[green]OK[/green] {api_type.capitalize()} response received")
 
-                    # Update current state for next iteration
-                    current_state = next_state
-                    self._current_state = next_state
+                # Show actions info and execution for generating
+                if api_type == 'generating':
+                    num_actions = len(response['actions'])
+                    console.print(f"  └─ Received [cyan]{num_actions}[/cyan] actions")
+                    console.print(f"  └─ [yellow]Executing actions...[/yellow]")
 
-                    # Parse and display new state
-                    parsed_next = state_file_loader.parse_state_for_api(next_state)
-                    new_fsm_state = parsed_next.get('fsm_state', 'UNKNOWN')
-                    new_stage = parsed_next.get('stage_id')
-                    new_step = parsed_next.get('step_id')
+                # Apply transition to get next state
 
-                    # Show transition result
-                    result_table = Table(show_header=False, box=None, padding=(0, 1))
-                    result_table.add_column(style="dim")
-                    result_table.add_column(style="green")
-                    result_table.add_row("→ New State", f"[bold]{new_fsm_state}[/bold]")
-                    if new_stage and new_stage != stage_id:
-                        result_table.add_row("→ Stage", new_stage)
-                    if new_step and new_step != step_id:
-                        result_table.add_row("→ Step", new_step)
+                # Convert response to format for state_updater
+                if api_type == 'planning':
+                    # Planning response is already in XML format
+                    transition_content = response
+                elif api_type == 'generating':
+                    # Generating response needs to be converted
+                    transition_content = json.dumps(response)
+                elif api_type == 'reflecting':
+                    # Reflecting response is in XML format
+                    transition_content = response
+                else:
+                    transition_content = str(response)
 
-                    console.print(result_table)
+                # Apply transition to update state
+                next_state = state_updater.apply_transition(
+                    state=current_state,
+                    transition_response=transition_content,
+                    transition_type=api_type
+                )
 
-                    # Save state snapshot with smart path generation
-                    snapshot_file = self._generate_output_path(new_fsm_state, iteration)
-                    with open(snapshot_file, 'w', encoding='utf-8') as f:
-                        json.dump(next_state, f, indent=2, ensure_ascii=False)
-                    console.print(f"[dim]💾 Snapshot: {snapshot_file}[/dim]\n")
+                # Update current state for next iteration
+                current_state = next_state
+                self._current_state = next_state
 
-                except Exception as e:
-                    console.print(f"[red]❌ Error: {e}[/red]")
-                    logging.getLogger('silantui').setLevel(logging.INFO)  # Re-enable for traceback
-                    self.error(f"Iteration failed: {e}", exc_info=True)
-                    break
+                # Parse and display new state
+                parsed_next = state_file_loader.parse_state_for_api(next_state)
+                new_fsm_state = parsed_next.get('fsm_state', 'UNKNOWN')
+                new_stage = parsed_next.get('stage_id')
+                new_step = parsed_next.get('step_id')
+
+                # Show transition result
+                result_table = Table(show_header=False, box=None, padding=(0, 1))
+                result_table.add_column(style="dim")
+                result_table.add_column(style="green")
+                result_table.add_row("-> New State", f"[bold]{new_fsm_state}[/bold]")
+                if new_stage and new_stage != stage_id:
+                    result_table.add_row("-> Stage", new_stage)
+                if new_step and new_step != step_id:
+                    result_table.add_row("-> Step", new_step)
+
+                console.print(result_table)
+
+                # Save state snapshot with smart path generation
+                snapshot_file = self._generate_output_path(new_fsm_state, iteration)
+                with open(snapshot_file, 'w', encoding='utf-8') as f:
+                    json.dump(next_state, f, indent=2, ensure_ascii=False)
+                console.print(f"[dim]Snapshot: {snapshot_file}[/dim]\n")
 
 
         asyncio.run(run_all_iterations())
@@ -766,7 +755,7 @@ class WorkflowCLI(ModernLogger):
 
         console.print(Panel(
             summary,
-            title="[bold green]✅ Iteration Complete[/bold green]",
+            title="[bold green]Iteration Complete[/bold green]",
             border_style="green",
             box=box.ROUNDED
         ))
@@ -774,10 +763,9 @@ class WorkflowCLI(ModernLogger):
         # Restore logging
         logging.getLogger('silantui').setLevel(logging.INFO)
 
-    def cmd_status(self, args=None):
+    def cmd_status(self, _args=None):
         """Show workflow status."""
-        _ = args  # Unused
-        print("\n📊 Workflow Status")
+        print("\nWorkflow Status")
         print("=" * 60)
 
         # State machine status
@@ -789,17 +777,17 @@ class WorkflowCLI(ModernLogger):
 
         # Execution control status
         exec_status = self.state_machine.get_execution_status()
-        print(f"\n🎮 Execution Control")
+        print(f"\nExecution Control")
         print(f"Steps: {exec_status['current_step']}" + (f"/{exec_status['max_steps']}" if exec_status['max_steps'] > 0 else " (unlimited)"))
         print(f"Protocol: Planning First (always checks /planning API before execution)")
         print(f"Interactive: {'Yes' if exec_status['interactive'] else 'No'}")
         print(f"Paused: {'Yes' if exec_status['paused'] else 'No'}")
 
-        print("\n📝 Notebook Status")
+        print("\nNotebook Status")
         print(f"Title: {self.notebook_store.title}")
         print(f"Cells: {self.notebook_store.get_cell_count()}")
 
-        print("\n🎯 AI Context")
+        print("\nAI Context")
         context = self.ai_context_store.get_context()
         print(f"Variables: {len(context.variables)}")
         print(f"TODO List: {len(context.to_do_list)}")
@@ -809,7 +797,7 @@ class WorkflowCLI(ModernLogger):
         if context.to_do_list:
             print("\nPending TODOs:")
             for todo in context.to_do_list:
-                print(f"  • {todo}")
+                print(f"  - {todo}")
 
         print()
 
@@ -819,7 +807,7 @@ class WorkflowCLI(ModernLogger):
             # Load from file
             notebook_data = self.notebook_manager.load_notebook(args.notebook)
             if not notebook_data:
-                print(f"❌ Notebook not found: {args.notebook}")
+                print(f"Error: Notebook not found: {args.notebook}")
                 return
 
             cells = [cell for cell in self.notebook_store.cells]
@@ -838,17 +826,16 @@ class WorkflowCLI(ModernLogger):
         else:
             print("No cells to display.")
 
-    def cmd_list(self, args=None):
+    def cmd_list(self, _args=None):
         """List all notebooks."""
-        _ = args  # Unused
         notebooks = self.notebook_manager.list_notebooks()
 
-        print(f"\n📚 Notebooks ({len(notebooks)})")
+        print(f"\nNotebooks ({len(notebooks)})")
         print("=" * 60)
 
         if notebooks:
             for nb in notebooks:
-                print(f"  • {nb}")
+                print(f"  - {nb}")
         else:
             print("  No notebooks found.")
 
@@ -859,7 +846,7 @@ class WorkflowCLI(ModernLogger):
         notebook_data = self.notebook_manager.load_notebook(args.notebook)
 
         if not notebook_data:
-            print(f"❌ Notebook not found: {args.notebook}")
+            print(f"Error: Notebook not found: {args.notebook}")
             return
 
         output_path = self.notebook_manager.export_to_markdown(
@@ -867,11 +854,10 @@ class WorkflowCLI(ModernLogger):
             output_file=args.output
         )
 
-        print(f"✓ Exported to: {output_path}")
+        print(f"Exported to: {output_path}")
 
-    def cmd_repl(self, args=None):
+    def cmd_repl(self, _args=None):
         """Start interactive REPL."""
-        _ = args  # Unused
         from .repl import WorkflowREPL
         repl = WorkflowREPL(self)
         repl.run()
@@ -884,173 +870,150 @@ class WorkflowCLI(ModernLogger):
         from utils.api_display import api_display
         from config import Config
 
-        try:
-            # Load state file using unified helper
-            print(f"📂 Loading state from: {args.state_file}")
-            state_json, parsed_state = self._load_state_file(args.state_file)
+        # Load state file using unified helper
+        print(f"Loading state from: {args.state_file}")
+        state_json, parsed_state = self._load_state_file(args.state_file)
 
-            # Display state info
-            api_display.display_state_info(parsed_state)
+        # Display state info
+        api_display.display_state_info(parsed_state)
 
-            # Infer API type using unified helper
-            api_type = self._infer_api_type(state_json, args.api_type)
-            if args.api_type:
-                print(f"\n🎯 Using specified API type: {api_type}")
-            else:
-                print(f"\n🔍 Auto-inferred API type: {api_type}")
-                print(f"   (You can override with --api-type)")
+        # Infer API type using unified helper
+        api_type = self._infer_api_type(state_json, args.api_type)
+        if args.api_type:
+            print(f"\nUsing specified API type: {api_type}")
+        else:
+            print(f"\nAuto-inferred API type: {api_type}")
+            print(f"   (You can override with --api-type)")
 
-            # Extract parameters
-            stage_id = parsed_state['stage_id'] or 'none'
-            step_id = parsed_state['step_id'] or 'none'
-            # Use original state JSON directly (already has observation + state)
-            state = state_json
+        # Extract parameters
+        stage_id = parsed_state['stage_id'] or 'none'
+        step_id = parsed_state['step_id'] or 'none'
+        # Use original state JSON directly (already has observation + state)
+        state = state_json
 
-            # Determine API URL
-            api_url_map = {
-                'planning': Config.FEEDBACK_API_URL,
-                'generating': Config.BEHAVIOR_API_URL,
-                'reflecting': Config.REFLECTING_API_URL
-            }
-            api_url = api_url_map[api_type]
+        # Determine API URL
+        api_url_map = {
+            'planning': Config.FEEDBACK_API_URL,
+            'generating': Config.BEHAVIOR_API_URL,
+            'reflecting': Config.REFLECTING_API_URL
+        }
+        api_url = api_url_map[api_type]
 
-            # Display request info
-            payload_json = json.dumps(state, ensure_ascii=False)
-            api_display.display_api_request(
-                api_type=api_type,
-                api_url=api_url,
-                stage_id=stage_id,
-                step_id=step_id,
-                payload_size=len(payload_json)
-            )
+        # Display request info
+        payload_json = json.dumps(state, ensure_ascii=False)
+        api_display.display_api_request(
+            api_type=api_type,
+            api_url=api_url,
+            stage_id=stage_id,
+            step_id=step_id,
+            payload_size=len(payload_json)
+        )
 
-            # Send request with progress display
-            async def send_request():
-                try:
-                    if api_type == 'planning':
-                        # Planning API
-                        with api_display.display_sending_progress('planning') or DummyContext():
-                            result = await workflow_api_client.send_feedback(
-                                stage_id=stage_id,
-                                step_index=step_id,
-                                state=state
-                            )
-                        api_display.display_api_response('planning', result, success=True)
-                        return result
+        # Send request with progress display
+        async def send_request():
+            if api_type == 'planning':
+                # Planning API
+                with api_display.display_sending_progress('planning') or DummyContext():
+                    result = await workflow_api_client.send_feedback(
+                        stage_id=stage_id,
+                        step_index=step_id,
+                        state=state
+                    )
+                api_display.display_api_response('planning', result, success=True)
+                return result
 
-                    elif api_type == 'generating':
-                        # Generating API
-                        actions = []
-                        with api_display.display_sending_progress('generating') or DummyContext():
-                            async for action in workflow_api_client.fetch_behavior_actions(
-                                stage_id=stage_id,
-                                step_index=step_id,
-                                state=state,
-                                stream=args.stream
-                            ):
-                                actions.append(action)
+            elif api_type == 'generating':
+                # Generating API
+                actions = []
+                with api_display.display_sending_progress('generating') or DummyContext():
+                    async for action in workflow_api_client.fetch_behavior_actions(
+                        stage_id=stage_id,
+                        step_index=step_id,
+                        state=state,
+                        stream=args.stream
+                    ):
+                        actions.append(action)
 
-                        # Display actions
-                        api_display.display_actions(actions)
+                # Display actions
+                api_display.display_actions(actions)
 
-                        result = {'actions': actions, 'count': len(actions)}
-                        api_display.display_api_response('generating', result, success=True)
-                        return result
+                result = {'actions': actions, 'count': len(actions)}
+                api_display.display_api_response('generating', result, success=True)
+                return result
 
-                    elif api_type == 'reflecting':
-                        # Reflecting API
-                        with api_display.display_sending_progress('reflecting') or DummyContext():
-                            result = await workflow_api_client.send_reflecting(
-                                stage_id=stage_id,
-                                step_index=step_id,
-                                state=state
-                            )
-                        api_display.display_api_response('reflecting', result, success=True)
-                        return result
+            elif api_type == 'reflecting':
+                # Reflecting API
+                with api_display.display_sending_progress('reflecting') or DummyContext():
+                    result = await workflow_api_client.send_reflecting(
+                        stage_id=stage_id,
+                        step_index=step_id,
+                        state=state
+                    )
+                api_display.display_api_response('reflecting', result, success=True)
+                return result
 
-                except Exception as e:
-                    api_display.display_api_response(api_type, {}, success=False, error=str(e))
-                    raise
+        # Run async request
+        result = asyncio.run(send_request())
 
-            # Run async request
-            result = asyncio.run(send_request())
+        # Save to output file if specified
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                json.dump(result, f, indent=2, ensure_ascii=False)
+            print(f"\nResponse saved to: {args.output}")
 
-            # Save to output file if specified
-            if args.output:
-                with open(args.output, 'w', encoding='utf-8') as f:
-                    json.dump(result, f, indent=2, ensure_ascii=False)
-                print(f"\n💾 Response saved to: {args.output}")
-
-            print("\n✅ API request completed successfully")
-
-        except FileNotFoundError as e:
-            print(f"\n❌ Error: {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            self.error(f"send-api failed: {e}", exc_info=True)
-            sys.exit(1)
+        print("\nAPI request completed successfully")
 
     def cmd_resume(self, args):
         """Resume workflow from state file."""
         import json
         from utils.api_display import api_display
 
-        try:
-            # Load state file using unified helper
-            print(f"📂 Loading state from: {args.state_file}")
-            state_json, parsed_state = self._load_state_file(args.state_file)
+        # Load state file using unified helper
+        print(f"Loading state from: {args.state_file}")
+        state_json, parsed_state = self._load_state_file(args.state_file)
 
-            # Display state info
-            api_display.display_state_info(parsed_state)
+        # Display state info
+        api_display.display_state_info(parsed_state)
 
-            # Extract context
-            from utils.state_file_loader import state_file_loader
-            context_data = state_file_loader.extract_context(state_json)
+        # Extract context
+        from utils.state_file_loader import state_file_loader
+        context_data = state_file_loader.extract_context(state_json)
 
-            # Restore AI context
-            print("\n📦 Restoring AI context...")
-            self.ai_context_store.set_variables(context_data.get('variables', {}))
+        # Restore AI context
+        print("\nRestoring AI context...")
+        self.ai_context_store.set_variables(context_data.get('variables', {}))
 
-            effects = context_data.get('effects', {})
-            self.ai_context_store.set_effect(effects)
+        effects = context_data.get('effects', {})
+        self.ai_context_store.set_effect(effects)
 
-            print(f"   ✓ Variables: {len(context_data.get('variables', {}))}")
-            print(f"   ✓ Current Effects: {len(effects.get('current', []))}")
-            print(f"   ✓ Effect History: {len(effects.get('history', []))}")
+        print(f"   Variables: {len(context_data.get('variables', {}))}")
+        print(f"   Current Effects: {len(effects.get('current', []))}")
+        print(f"   Effect History: {len(effects.get('history', []))}")
 
-            # Restore FSM state info
-            fsm = context_data.get('FSM', {})
-            fsm_state = fsm.get('state', 'UNKNOWN')
-            print(f"   ✓ FSM State: {fsm_state}")
+        # Restore FSM state info
+        fsm = context_data.get('FSM', {})
+        fsm_state = fsm.get('state', 'UNKNOWN')
+        print(f"   FSM State: {fsm_state}")
 
-            # Extract workflow position
-            stage_id = parsed_state.get('stage_id')
-            step_id = parsed_state.get('step_id')
+        # Extract workflow position
+        stage_id = parsed_state.get('stage_id')
+        step_id = parsed_state.get('step_id')
 
-            print(f"\n📍 Workflow Position:")
-            print(f"   Stage: {stage_id or 'None'}")
-            print(f"   Step: {step_id or 'None'}")
+        print(f"\nWorkflow Position:")
+        print(f"   Stage: {stage_id or 'None'}")
+        print(f"   Step: {step_id or 'None'}")
 
-            # Check if should continue execution
-            if args.continue_execution:
-                print("\n🚀 Continuing workflow execution...")
-                # TODO: Implement workflow continuation logic
-                # This would require restoring the full workflow state and resuming execution
-                print("⚠️  Workflow continuation not fully implemented yet")
-                print("   Use 'send-api' to manually send requests from this state")
-            else:
-                print("\n✅ State loaded successfully")
-                print("   Use --continue to resume execution")
-                print("   Or use 'send-api' to send manual API requests")
-
-        except FileNotFoundError as e:
-            print(f"\n❌ Error: {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            self.error(f"resume failed: {e}", exc_info=True)
-            sys.exit(1)
+        # Check if should continue execution
+        if args.continue_execution:
+            print("\nContinuing workflow execution...")
+            # TODO: Implement workflow continuation logic
+            # This would require restoring the full workflow state and resuming execution
+            print("Warning: Workflow continuation not fully implemented yet")
+            print("   Use 'send-api' to manually send requests from this state")
+        else:
+            print("\nState loaded successfully")
+            print("   Use --continue to resume execution")
+            print("   Or use 'send-api' to send manual API requests")
 
     def cmd_test_request(self, args):
         """Preview API request without sending."""
@@ -1058,132 +1021,119 @@ class WorkflowCLI(ModernLogger):
         from utils.api_display import api_display
         from config import Config
 
-        try:
-            # Load state file using unified helper
-            print(f"📂 Loading state from: {args.state_file}")
-            state_json, parsed_state = self._load_state_file(args.state_file)
+        # Load state file using unified helper
+        print(f"Loading state from: {args.state_file}")
+        state_json, parsed_state = self._load_state_file(args.state_file)
 
-            # Display state info
-            api_display.display_state_info(parsed_state)
+        # Display state info
+        api_display.display_state_info(parsed_state)
 
-            # Infer API type using unified helper
-            api_type = self._infer_api_type(state_json, args.api_type)
-            if args.api_type:
-                print(f"\n🎯 Using specified API type: {api_type}")
-            else:
-                print(f"\n🔍 Auto-inferred API type: {api_type}")
-                print(f"   (You can override with --api-type)")
+        # Infer API type using unified helper
+        api_type = self._infer_api_type(state_json, args.api_type)
+        if args.api_type:
+            print(f"\nUsing specified API type: {api_type}")
+        else:
+            print(f"\nAuto-inferred API type: {api_type}")
+            print(f"   (You can override with --api-type)")
 
-            # Extract parameters
-            stage_id = parsed_state['stage_id'] or 'none'
-            step_id = parsed_state['step_id'] or 'none'
-            # Use original state JSON directly (already has observation + state)
-            state = state_json
+        # Extract parameters
+        stage_id = parsed_state['stage_id'] or 'none'
+        step_id = parsed_state['step_id'] or 'none'
+        # Use original state JSON directly (already has observation + state)
+        state = state_json
 
-            # Determine API URL
-            api_url_map = {
-                'planning': Config.FEEDBACK_API_URL,
-                'generating': Config.BEHAVIOR_API_URL,
-                'reflecting': Config.REFLECTING_API_URL
-            }
-            api_url = api_url_map[api_type]
+        # Determine API URL
+        api_url_map = {
+            'planning': Config.FEEDBACK_API_URL,
+            'generating': Config.BEHAVIOR_API_URL,
+            'reflecting': Config.REFLECTING_API_URL
+        }
+        api_url = api_url_map[api_type]
 
-            # Build request payload (same as actual API call)
-            # Extract progress information
-            progress_info = state.get('progress_info')
-            if not progress_info:
-                print("\n⚠️  Warning: State does not contain progress_info")
-                progress_info = {}
+        # Build request payload (same as actual API call)
+        # Extract progress information
+        progress_info = state.get('progress_info')
+        if not progress_info:
+            print("\nWarning: State does not contain progress_info")
+            progress_info = {}
 
-            # Build payload
-            payload = {
-                'observation': {
-                    'location': progress_info,
-                    'context': {
-                        'variables': state.get('variables', {}),
-                        'effects': state.get('effects', {'current': [], 'history': []}),
-                        'notebook': state.get('notebook', {})
-                    }
-                },
-                'options': {
-                    'stream': False
+        # Build payload
+        payload = {
+            'observation': {
+                'location': progress_info,
+                'context': {
+                    'variables': state.get('variables', {}),
+                    'effects': state.get('effects', {'current': [], 'history': []}),
+                    'notebook': state.get('notebook', {})
                 }
+            },
+            'options': {
+                'stream': False
             }
+        }
 
-            # Add FSM if present
-            if 'FSM' in state:
-                payload['observation']['context']['FSM'] = state['FSM']
+        # Add FSM if present
+        if 'FSM' in state:
+            payload['observation']['context']['FSM'] = state['FSM']
 
-            # Display request preview
-            print("\n" + "="*70)
-            print(" REQUEST PREVIEW (Will NOT be sent)")
-            print("="*70)
+        # Display request preview
+        print("\n" + "="*70)
+        print(" REQUEST PREVIEW (Will NOT be sent)")
+        print("="*70)
 
-            # Display request info
-            api_display.display_api_request(
-                api_type=api_type,
-                api_url=api_url,
-                stage_id=stage_id,
-                step_id=step_id,
-                payload_size=len(json.dumps(payload, ensure_ascii=False))
-            )
+        # Display request info
+        api_display.display_api_request(
+            api_type=api_type,
+            api_url=api_url,
+            stage_id=stage_id,
+            step_id=step_id,
+            payload_size=len(json.dumps(payload, ensure_ascii=False))
+        )
 
-            # Format output based on format argument
-            if args.format == 'json':
-                # Compact JSON
-                output_text = json.dumps(payload, ensure_ascii=False)
-            else:
-                # Pretty formatted JSON
-                output_text = json.dumps(payload, indent=2, ensure_ascii=False)
+        # Format output based on format argument
+        if args.format == 'json':
+            # Compact JSON
+            output_text = json.dumps(payload, ensure_ascii=False)
+        else:
+            # Pretty formatted JSON
+            output_text = json.dumps(payload, indent=2, ensure_ascii=False)
 
-            # Display payload
-            print("\n" + "="*70)
-            print(" REQUEST PAYLOAD")
-            print("="*70)
+        # Display payload
+        print("\n" + "="*70)
+        print(" REQUEST PAYLOAD")
+        print("="*70)
 
-            try:
-                from rich.syntax import Syntax
-                from rich.console import Console
-                console = Console()
-                syntax = Syntax(output_text, "json", theme="monokai", line_numbers=True)
-                console.print(syntax)
-            except ImportError:
-                # Fallback without rich
-                print(output_text)
+        from rich.syntax import Syntax
+        from rich.console import Console
+        console = Console()
+        syntax = Syntax(output_text, "json", theme="monokai", line_numbers=True)
+        console.print(syntax)
 
-            # Display statistics
-            print("\n" + "="*70)
-            print("📊 REQUEST STATISTICS")
-            print("="*70)
-            print(f"API Type:       {api_type.upper()}")
-            print(f"API URL:        {api_url}")
-            print(f"Stage ID:       {stage_id}")
-            print(f"Step ID:        {step_id}")
-            print(f"Payload Size:   {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
-            print(f"Variables:      {len(state.get('variables', {}))}")
-            print(f"Current Effects: {len(state.get('effects', {}).get('current', []))}")
-            print(f"Effect History:  {len(state.get('effects', {}).get('history', []))}")
+        # Display statistics
+        print("\n" + "="*70)
+        print("REQUEST STATISTICS")
+        print("="*70)
+        print(f"API Type:       {api_type.upper()}")
+        print(f"API URL:        {api_url}")
+        print(f"Stage ID:       {stage_id}")
+        print(f"Step ID:        {step_id}")
+        print(f"Payload Size:   {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
+        print(f"Variables:      {len(state.get('variables', {}))}")
+        print(f"Current Effects: {len(state.get('effects', {}).get('current', []))}")
+        print(f"Effect History:  {len(state.get('effects', {}).get('history', []))}")
 
-            # Export to file if requested
-            if args.output:
-                with open(args.output, 'w', encoding='utf-8') as f:
-                    f.write(output_text)
-                print(f"\n💾 Request payload exported to: {args.output}")
-                print(f"   Format: {args.format}")
+        # Export to file if requested
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(output_text)
+            print(f"\nRequest payload exported to: {args.output}")
+            print(f"   Format: {args.format}")
 
-            print("\n" + "="*70)
-            print("✅ Request preview completed (NOT sent to server)")
-            print("="*70)
-            print("\nTo actually send this request, use:")
-            print(f"  python main.py send-api --state-file {args.state_file} --api-type {api_type}")
-
-        except FileNotFoundError as e:
-            print(f"\n❌ Error: {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            self.error(f"test-request failed: {e}", exc_info=True)
-            sys.exit(1)
+        print("\n" + "="*70)
+        print("Request preview completed (NOT sent to server)")
+        print("="*70)
+        print("\nTo actually send this request, use:")
+        print(f"  python main.py send-api --state-file {args.state_file} --api-type {api_type}")
 
     def cmd_apply_transition(self, args):
         """Apply transition to state and export updated state."""
@@ -1199,15 +1149,15 @@ class WorkflowCLI(ModernLogger):
         api_display.display_state_info(parsed_state)
 
         # Load transition file
-        print(f"\n📄 Loading transition from: {args.transition_file}")
+        print(f"\nLoading transition from: {args.transition_file}")
         with open(args.transition_file, 'r', encoding='utf-8') as f:
             transition_content = f.read()
 
         # Display transition info
-        print(f"   ✓ Loaded {len(transition_content)} bytes")
+        print(f"   Loaded {len(transition_content)} bytes")
 
         # Apply transition
-        print("\n🔄 Applying transition...")
+        print("\nApplying transition...")
         updated_state = state_updater.apply_transition(
             state=state_json,
             transition_response=transition_content,
@@ -1215,32 +1165,32 @@ class WorkflowCLI(ModernLogger):
         )
 
         # Display updated state info
-        print("\n✅ Transition Applied Successfully!")
+        print("\nTransition Applied Successfully!")
         from utils.state_file_loader import state_file_loader
         parsed_updated = state_file_loader.parse_state_for_api(updated_state)
         print("\n Updated State:")
         api_display.display_state_info(parsed_updated)
 
         # Show what changed
-        print("\n📊 Changes:")
+        print("\nChanges:")
         original_fsm = state_json.get('state', {}).get('FSM', {})
         updated_fsm = updated_state.get('state', {}).get('FSM', {})
 
         if original_fsm.get('state') != updated_fsm.get('state'):
-            print(f"   FSM State: {original_fsm.get('state', 'UNKNOWN')} → {updated_fsm.get('state', 'UNKNOWN')}")
+            print(f"   FSM State: {original_fsm.get('state', 'UNKNOWN')} -> {updated_fsm.get('state', 'UNKNOWN')}")
 
         if original_fsm.get('last_transition') != updated_fsm.get('last_transition'):
-            print(f"   Last Transition: {original_fsm.get('last_transition', 'None')} → {updated_fsm.get('last_transition', 'None')}")
+            print(f"   Last Transition: {original_fsm.get('last_transition', 'None')} -> {updated_fsm.get('last_transition', 'None')}")
 
         original_stage = parsed_state.get('stage_id')
         updated_stage = parsed_updated.get('stage_id')
         if original_stage != updated_stage:
-            print(f"   Stage ID: {original_stage or 'None'} → {updated_stage or 'None'}")
+            print(f"   Stage ID: {original_stage or 'None'} -> {updated_stage or 'None'}")
 
         original_step = parsed_state.get('step_id')
         updated_step = parsed_updated.get('step_id')
         if original_step != updated_step:
-            print(f"   Step ID: {original_step or 'None'} → {updated_step or 'None'}")
+            print(f"   Step ID: {original_step or 'None'} -> {updated_step or 'None'}")
 
         # Format output based on format argument
         if args.format == 'json':
@@ -1254,12 +1204,12 @@ class WorkflowCLI(ModernLogger):
         with open(args.output, 'w', encoding='utf-8') as f:
             f.write(output_text)
 
-        print(f"\n💾 Updated state exported to: {args.output}")
+        print(f"\nUpdated state exported to: {args.output}")
         print(f"   Format: {args.format}")
         print(f"   Size: {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
 
         print("\n" + "="*70)
-        print("✅ Transition applied and state exported successfully")
+        print("Transition applied and state exported successfully")
         print("="*70)
 
     def cmd_test_actions(self, args):
@@ -1275,39 +1225,39 @@ class WorkflowCLI(ModernLogger):
         console = Console()
 
         # Load files using unified helper
-        console.print("\n[bold cyan]📂 加载输入文件...[/bold cyan]")
+        console.print("\n[bold cyan]Loading input files...[/bold cyan]")
 
         with open(args.actions_file, 'r', encoding='utf-8') as f:
             actions_data = json.load(f)
 
-        state_json, parsed_state = self._load_state_file(args.state_file)
+        state_json, _parsed_state = self._load_state_file(args.state_file)
 
         # Extract and set notebook_id from state
         notebook_id = state_json.get('state', {}).get('notebook', {}).get('notebook_id')
         if notebook_id:
-            console.print(f"[cyan]📓 Using notebook_id from state: {notebook_id}[/cyan]")
+            console.print(f"[cyan]Using notebook_id from state: {notebook_id}[/cyan]")
             self.code_executor.notebook_id = notebook_id
             self.code_executor.is_kernel_ready = True
             # CRITICAL: Also set notebook_id in notebook_store for consistency
             self.notebook_store.notebook_id = notebook_id
         else:
-            console.print("[yellow]⚠️  Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
+            console.print("[yellow]Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
 
         # Display info table
         table = Table(show_header=False, box=box.ROUNDED)
-        table.add_row("Actions 文件", args.actions_file)
-        table.add_row("Actions 数量", f"[green]{len(actions_data)}[/green]")
-        table.add_row("State 文件", args.state_file)
-        table.add_row("当前 FSM 状态", f"[yellow]{state_json['state']['FSM']['state']}[/yellow]")
+        table.add_row("Actions File", args.actions_file)
+        table.add_row("Actions Count", f"[green]{len(actions_data)}[/green]")
+        table.add_row("State File", args.state_file)
+        table.add_row("Current FSM State", f"[yellow]{state_json['state']['FSM']['state']}[/yellow]")
         table.add_row("Notebook ID", f"[cyan]{notebook_id or 'Will initialize'}[/cyan]")
-        table.add_row("输出文件", args.output)
+        table.add_row("Output File", args.output)
         console.print(table)
 
         # Execution statistics
         stats = {'actions_executed': 0, 'errors': 0}
 
         # Execute actions using ScriptStore
-        console.print(f"\n[bold cyan]⚙️  开始执行 {len(actions_data)} 个动作 (使用 ScriptStore)[/bold cyan]\n")
+        console.print(f"\n[bold cyan]Starting execution of {len(actions_data)} actions (using ScriptStore)[/bold cyan]\n")
 
         with Progress(
             SpinnerColumn(),
@@ -1316,36 +1266,29 @@ class WorkflowCLI(ModernLogger):
             TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
             console=console
         ) as progress:
-            task = progress.add_task("[cyan]执行动作...", total=len(actions_data))
+            task = progress.add_task("[cyan]Executing actions...", total=len(actions_data))
 
             for idx, action_data in enumerate(actions_data):
                 action = action_data.get('action', {})
                 action_type = action.get('type')
 
-                progress.update(task, advance=1, description=f"[cyan]动作 {idx+1}/{len(actions_data)}: {action_type}")
+                progress.update(task, advance=1, description=f"[cyan]Action {idx+1}/{len(actions_data)}: {action_type}")
 
-                try:
-                    # Convert to ExecutionStep and execute using ScriptStore
-                    step = self._convert_action_to_step(action_data)
-                    self.script_store.exec_action(step)
-                    stats['actions_executed'] += 1
+                # Convert to ExecutionStep and execute using ScriptStore
+                step = self._convert_action_to_step(action_data)
+                self.script_store.exec_action(step)
+                stats['actions_executed'] += 1
 
-                    # Optional: Display action result
-                    if not args.no_display:
-                        # Simple display for each action
-                        console.print(f"  [green]✓[/green] {action_type}")
-
-                except Exception as e:
-                    stats['errors'] += 1
-                    if not args.no_display:
-                        console.print(f"  [red]✗[/red] {action_type}: {str(e)}")
-                    self.error(f"Action failed: {action_type} - {e}", exc_info=True)
+                # Optional: Display action result
+                if not args.no_display:
+                    # Simple display for each action
+                    console.print(f"  [green]OK[/green] {action_type}")
 
                 # Delay between actions
                 if not args.no_display and args.delay > 0:
                     time.sleep(args.delay)
 
-        console.print("\n[bold green]✅ 所有动作执行完成[/bold green]\n")
+        console.print("\n[bold green]All actions executed successfully[/bold green]\n")
 
         # Build output state from stores (ScriptStore already updated everything)
         output_state = self._build_output_state_for_test_actions(state_json, stats, len(actions_data))
@@ -1356,27 +1299,27 @@ class WorkflowCLI(ModernLogger):
 
         # Display summary
         console.print(Panel(
-            f"[green]✓[/green] 文件已保存: [cyan]{args.output}[/cyan]\n"
-            f"[green]✓[/green] FSM 状态: [magenta]BEHAVIOR_COMPLETE[/magenta]",
-            title="[bold green]💾 输出已保存[/bold green]",
+            f"[green]OK[/green] File saved: [cyan]{args.output}[/cyan]\n"
+            f"[green]OK[/green] FSM State: [magenta]BEHAVIOR_COMPLETE[/magenta]",
+            title="[bold green]Output Saved[/bold green]",
             border_style="green",
             box=box.DOUBLE
         ))
 
         # Summary table
-        summary_table = Table(box=box.DOUBLE, title="执行摘要", title_style="bold cyan")
-        summary_table.add_column("项目", style="cyan", width=30)
-        summary_table.add_column("数值", style="green", justify="right")
+        summary_table = Table(box=box.DOUBLE, title="Execution Summary", title_style="bold cyan")
+        summary_table.add_column("Item", style="cyan", width=30)
+        summary_table.add_column("Value", style="green", justify="right")
 
-        summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
-        summary_table.add_row("执行的动作数", str(stats['actions_executed']))
-        summary_table.add_row("创建的单元格数", str(len(self.notebook_store.cells)))
-        summary_table.add_row("执行的代码数", str(self.notebook_store.execution_count))
-        summary_table.add_row("错误数", str(stats['errors']))
-        summary_table.add_row("验收检查", "✓ 全部通过" if stats['errors'] == 0 else "✗ 有错误")
+        summary_table.add_row("FSM State Transition", "BEHAVIOR_RUNNING -> BEHAVIOR_COMPLETE")
+        summary_table.add_row("Actions Executed", str(stats['actions_executed']))
+        summary_table.add_row("Cells Created", str(len(self.notebook_store.cells)))
+        summary_table.add_row("Code Executions", str(self.notebook_store.execution_count))
+        summary_table.add_row("Errors", str(stats['errors']))
+        summary_table.add_row("Acceptance Checks", "All Passed" if stats['errors'] == 0 else "Has Errors")
 
         console.print(summary_table)
-        console.print("\n[bold green]🎉 执行完成！[/bold green]\n")
+        console.print("\n[bold green]Execution Complete![/bold green]\n")
 
 
 
@@ -1405,31 +1348,22 @@ class WorkflowCLI(ModernLogger):
 
     def cmd_export_markdown(self, args):
         """Export notebook from state file to markdown."""
-        try:
-            from utils.notebook_exporter import NotebookExporter
+        from utils.notebook_exporter import NotebookExporter
 
-            print(f"\n📂 Loading state file: {args.state_file}")
+        print(f"\nLoading state file: {args.state_file}")
 
-            # Export to markdown
-            markdown = NotebookExporter.export_from_state_file(
-                args.state_file,
-                args.output
-            )
+        # Export to markdown
+        markdown = NotebookExporter.export_from_state_file(
+            args.state_file,
+            args.output
+        )
 
-            if args.output:
-                print(f"✅ Markdown exported to: {args.output}")
-            else:
-                print("\n" + "="*60)
-                print(markdown)
-                print("="*60)
-
-        except FileNotFoundError as e:
-            print(f"\n❌ Error: File not found - {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            self.error(f"export-markdown failed: {e}", exc_info=True)
-            sys.exit(1)
+        if args.output:
+            print(f"Markdown exported to: {args.output}")
+        else:
+            print("\n" + "="*60)
+            print(markdown)
+            print("="*60)
 
     def run(self, argv=None):
         """Run the CLI."""
@@ -1441,15 +1375,15 @@ class WorkflowCLI(ModernLogger):
         import json
 
         if args.backend_url:
-            print(f"⚙️  Setting backend URL: {args.backend_url}")
+            print(f"Setting backend URL: {args.backend_url}")
             Config.set_backend_url(args.backend_url)
 
         if args.dslc_url:
-            print(f"⚙️  Setting DSLC URL: {args.dslc_url}")
+            print(f"Setting DSLC URL: {args.dslc_url}")
             Config.set_dslc_url(args.dslc_url)
 
         if args.notebook_id:
-            print(f"⚙️  Setting notebook ID: {args.notebook_id}")
+            print(f"Setting notebook ID: {args.notebook_id}")
             Config.set_notebook_id(args.notebook_id)
             # Also set it on the code executor
             self.code_executor.notebook_id = args.notebook_id
@@ -1457,35 +1391,23 @@ class WorkflowCLI(ModernLogger):
 
         # Apply execution control settings
         if args.max_steps:
-            print(f"⚙️  Max steps: {args.max_steps}")
+            print(f"Max steps: {args.max_steps}")
             self.state_machine.set_max_steps(args.max_steps)
 
         if args.interactive:
-            print("⚙️  Interactive mode: enabled")
+            print("Interactive mode: enabled")
             self.state_machine.interactive = True
 
         # Apply custom context
         if args.custom_context:
-            try:
-                # Try to parse as JSON string
-                custom_ctx = json.loads(args.custom_context)
-                print(f"⚙️  Custom context loaded: {list(custom_ctx.keys())}")
+            # First attempt: parse as JSON string
+            custom_ctx = json.loads(args.custom_context)
+            if custom_ctx:
+                print(f"Custom context loaded: {list(custom_ctx.keys())}")
                 self.ai_context_store.set_custom_context(custom_ctx)
                 # Also add all custom context variables to the variables dict
                 for key, value in custom_ctx.items():
                     self.ai_context_store.add_variable(key, value)
-            except json.JSONDecodeError:
-                # Try to read as file path
-                try:
-                    with open(args.custom_context, 'r') as f:
-                        custom_ctx = json.load(f)
-                    print(f"⚙️  Custom context loaded from file: {list(custom_ctx.keys())}")
-                    self.ai_context_store.set_custom_context(custom_ctx)
-                    # Also add all custom context variables to the variables dict
-                    for key, value in custom_ctx.items():
-                        self.ai_context_store.add_variable(key, value)
-                except Exception as e:
-                    print(f"⚠️  Failed to load custom context: {e}")
 
         if not args.command:
             parser.print_help()
@@ -1509,12 +1431,7 @@ class WorkflowCLI(ModernLogger):
 
         handler = command_handlers.get(args.command)
         if handler:
-            try:
-                handler(args)
-            except Exception as e:
-                self.error(f"Command failed: {e}", exc_info=True)
-                print(f"\n❌ Error: {e}")
-                sys.exit(1)
+            handler(args)
         else:
             print(f"Unknown command: {args.command}")
             parser.print_help()
