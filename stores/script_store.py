@@ -449,6 +449,11 @@ class ScriptStore(ModernLogger):
         for json_key, python_key in field_mappings.items():
             if json_key in data:
                 step_kwargs[python_key] = data[json_key]
+            else:
+                # Also check for snake_case version (e.g., codecell_id instead of codecellId)
+                snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in json_key]).lstrip('_')
+                if snake_key in data:
+                    step_kwargs[python_key] = data[snake_key]
 
         return ExecutionStep(**step_kwargs)
 

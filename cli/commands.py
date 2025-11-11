@@ -302,11 +302,11 @@ class WorkflowCLI(ModernLogger):
         # Determine input mode
         if args.state_file:
             # Mode 1: Start from state file
-            print(f"📂 Loading initial state from: {args.state_file}")
+            print(f"Loading initial state from: {args.state_file}")
             self._start_from_state_file(args)
         elif args.config:
             # Mode 2: Start from config file
-            print(f"📂 Loading config from: {args.config}")
+            print(f"Loading config from: {args.config}")
             self._start_from_config(args)
         else:
             # Mode 3: Traditional mode (--problem and --context)
@@ -314,7 +314,7 @@ class WorkflowCLI(ModernLogger):
 
         # Enter iteration loop if requested
         if args.iterate:
-            print(f"\n🔄 Entering iteration mode (max: {args.max_iterations} iterations)")
+            print(f"\nEntering iteration mode (max: {args.max_iterations} iterations)")
             self._run_iteration_loop(args.max_iterations)
 
     def _start_traditional(self, args):
@@ -336,7 +336,7 @@ class WorkflowCLI(ModernLogger):
 
         workflow = self.pipeline_store.initialize_workflow(planning_request)
 
-        print(f"✓ Workflow initialized: {workflow.name}")
+        print(f"Workflow initialized: {workflow.name}")
         print(f"  Stages: {len(workflow.stages)}")
 
         # Only add planning variables if they're not already set
@@ -348,9 +348,9 @@ class WorkflowCLI(ModernLogger):
         # Start execution
         self.pipeline_store.start_workflow_execution(self.state_machine)
 
-        print(f"✓ Workflow started")
+        print(f"Workflow started")
         print(f"  Current state: {self.state_machine.state.value}")
-        print(f"📝 Notebook will be saved to: {self.notebook_manager.notebooks_dir}/")
+        print(f"Notebook will be saved to: {self.notebook_manager.notebooks_dir}/")
 
     def _start_from_config(self, args):
         """Start workflow from config file (e.g., housing_config.json)."""
@@ -364,7 +364,7 @@ class WorkflowCLI(ModernLogger):
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
 
-        print(f"✓ Config loaded")
+        print(f"Config loaded")
 
         # Extract config fields
         user_problem = config.get('user_problem', 'Data Analysis Task')
@@ -1190,215 +1190,195 @@ class WorkflowCLI(ModernLogger):
         import json
         from utils.state_updater import state_updater
         from utils.api_display import api_display
+        # Load state file using unified helper
+        print(f"Loading state from: {args.state_file}")
+        state_json, parsed_state = self._load_state_file(args.state_file)
 
-        try:
-            # Load state file using unified helper
-            print(f"📂 Loading state from: {args.state_file}")
-            state_json, parsed_state = self._load_state_file(args.state_file)
+        # Display original state info
+        print("\n Original State:")
+        api_display.display_state_info(parsed_state)
 
-            # Display original state info
-            print("\n Original State:")
-            api_display.display_state_info(parsed_state)
+        # Load transition file
+        print(f"\n📄 Loading transition from: {args.transition_file}")
+        with open(args.transition_file, 'r', encoding='utf-8') as f:
+            transition_content = f.read()
 
-            # Load transition file
-            print(f"\n📄 Loading transition from: {args.transition_file}")
-            with open(args.transition_file, 'r', encoding='utf-8') as f:
-                transition_content = f.read()
+        # Display transition info
+        print(f"   ✓ Loaded {len(transition_content)} bytes")
 
-            # Display transition info
-            print(f"   ✓ Loaded {len(transition_content)} bytes")
+        # Apply transition
+        print("\n🔄 Applying transition...")
+        updated_state = state_updater.apply_transition(
+            state=state_json,
+            transition_response=transition_content,
+            transition_type='auto'
+        )
 
-            # Apply transition
-            print("\n🔄 Applying transition...")
-            updated_state = state_updater.apply_transition(
-                state=state_json,
-                transition_response=transition_content,
-                transition_type='auto'
-            )
+        # Display updated state info
+        print("\n✅ Transition Applied Successfully!")
+        from utils.state_file_loader import state_file_loader
+        parsed_updated = state_file_loader.parse_state_for_api(updated_state)
+        print("\n Updated State:")
+        api_display.display_state_info(parsed_updated)
 
-            # Display updated state info
-            print("\n✅ Transition Applied Successfully!")
-            from utils.state_file_loader import state_file_loader
-            parsed_updated = state_file_loader.parse_state_for_api(updated_state)
-            print("\n Updated State:")
-            api_display.display_state_info(parsed_updated)
+        # Show what changed
+        print("\n📊 Changes:")
+        original_fsm = state_json.get('state', {}).get('FSM', {})
+        updated_fsm = updated_state.get('state', {}).get('FSM', {})
 
-            # Show what changed
-            print("\n📊 Changes:")
-            original_fsm = state_json.get('state', {}).get('FSM', {})
-            updated_fsm = updated_state.get('state', {}).get('FSM', {})
+        if original_fsm.get('state') != updated_fsm.get('state'):
+            print(f"   FSM State: {original_fsm.get('state', 'UNKNOWN')} → {updated_fsm.get('state', 'UNKNOWN')}")
 
-            if original_fsm.get('state') != updated_fsm.get('state'):
-                print(f"   FSM State: {original_fsm.get('state', 'UNKNOWN')} → {updated_fsm.get('state', 'UNKNOWN')}")
+        if original_fsm.get('last_transition') != updated_fsm.get('last_transition'):
+            print(f"   Last Transition: {original_fsm.get('last_transition', 'None')} → {updated_fsm.get('last_transition', 'None')}")
 
-            if original_fsm.get('last_transition') != updated_fsm.get('last_transition'):
-                print(f"   Last Transition: {original_fsm.get('last_transition', 'None')} → {updated_fsm.get('last_transition', 'None')}")
+        original_stage = parsed_state.get('stage_id')
+        updated_stage = parsed_updated.get('stage_id')
+        if original_stage != updated_stage:
+            print(f"   Stage ID: {original_stage or 'None'} → {updated_stage or 'None'}")
 
-            original_stage = parsed_state.get('stage_id')
-            updated_stage = parsed_updated.get('stage_id')
-            if original_stage != updated_stage:
-                print(f"   Stage ID: {original_stage or 'None'} → {updated_stage or 'None'}")
+        original_step = parsed_state.get('step_id')
+        updated_step = parsed_updated.get('step_id')
+        if original_step != updated_step:
+            print(f"   Step ID: {original_step or 'None'} → {updated_step or 'None'}")
 
-            original_step = parsed_state.get('step_id')
-            updated_step = parsed_updated.get('step_id')
-            if original_step != updated_step:
-                print(f"   Step ID: {original_step or 'None'} → {updated_step or 'None'}")
+        # Format output based on format argument
+        if args.format == 'json':
+            # Compact JSON
+            output_text = json.dumps(updated_state, ensure_ascii=False)
+        else:
+            # Pretty formatted JSON
+            output_text = json.dumps(updated_state, indent=2, ensure_ascii=False)
 
-            # Format output based on format argument
-            if args.format == 'json':
-                # Compact JSON
-                output_text = json.dumps(updated_state, ensure_ascii=False)
-            else:
-                # Pretty formatted JSON
-                output_text = json.dumps(updated_state, indent=2, ensure_ascii=False)
+        # Export to file
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(output_text)
 
-            # Export to file
-            with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(output_text)
+        print(f"\n💾 Updated state exported to: {args.output}")
+        print(f"   Format: {args.format}")
+        print(f"   Size: {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
 
-            print(f"\n💾 Updated state exported to: {args.output}")
-            print(f"   Format: {args.format}")
-            print(f"   Size: {len(output_text)} bytes ({len(output_text)/1024:.2f} KB)")
-
-            print("\n" + "="*70)
-            print("✅ Transition applied and state exported successfully")
-            print("="*70)
-
-        except FileNotFoundError as e:
-            print(f"\n❌ Error: File not found - {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            self.error(f"apply-transition failed: {e}", exc_info=True)
-            sys.exit(1)
+        print("\n" + "="*70)
+        print("✅ Transition applied and state exported successfully")
+        print("="*70)
 
     def cmd_test_actions(self, args):
         """Execute actions from JSON file using ScriptStore (refactored to use existing tools)."""
         import json
         import time
-        from datetime import datetime, timezone
+        from rich.console import Console
+        from rich.panel import Panel
+        from rich.table import Table
+        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+        from rich import box
 
-        try:
-            # Import rich for display
-            from rich.console import Console
-            from rich.panel import Panel
-            from rich.table import Table
-            from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-            from rich import box
+        console = Console()
 
-            console = Console()
+        # Load files using unified helper
+        console.print("\n[bold cyan]📂 加载输入文件...[/bold cyan]")
 
-            # Load files using unified helper
-            console.print("\n[bold cyan]📂 加载输入文件...[/bold cyan]")
+        with open(args.actions_file, 'r', encoding='utf-8') as f:
+            actions_data = json.load(f)
 
-            with open(args.actions_file, 'r', encoding='utf-8') as f:
-                actions_data = json.load(f)
+        state_json, parsed_state = self._load_state_file(args.state_file)
 
-            state_json, parsed_state = self._load_state_file(args.state_file)
+        # Extract and set notebook_id from state
+        notebook_id = state_json.get('state', {}).get('notebook', {}).get('notebook_id')
+        if notebook_id:
+            console.print(f"[cyan]📓 Using notebook_id from state: {notebook_id}[/cyan]")
+            self.code_executor.notebook_id = notebook_id
+            self.code_executor.is_kernel_ready = True
+            # CRITICAL: Also set notebook_id in notebook_store for consistency
+            self.notebook_store.notebook_id = notebook_id
+        else:
+            console.print("[yellow]⚠️  Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
 
-            # Extract and set notebook_id from state
-            notebook_id = state_json.get('state', {}).get('notebook', {}).get('notebook_id')
-            if notebook_id:
-                console.print(f"[cyan]📓 Using notebook_id from state: {notebook_id}[/cyan]")
-                self.code_executor.notebook_id = notebook_id
-                self.code_executor.is_kernel_ready = True
-                # CRITICAL: Also set notebook_id in notebook_store for consistency
-                self.notebook_store.notebook_id = notebook_id
-            else:
-                console.print("[yellow]⚠️  Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
+        # Display info table
+        table = Table(show_header=False, box=box.ROUNDED)
+        table.add_row("Actions 文件", args.actions_file)
+        table.add_row("Actions 数量", f"[green]{len(actions_data)}[/green]")
+        table.add_row("State 文件", args.state_file)
+        table.add_row("当前 FSM 状态", f"[yellow]{state_json['state']['FSM']['state']}[/yellow]")
+        table.add_row("Notebook ID", f"[cyan]{notebook_id or 'Will initialize'}[/cyan]")
+        table.add_row("输出文件", args.output)
+        console.print(table)
 
-            # Display info table
-            table = Table(show_header=False, box=box.ROUNDED)
-            table.add_row("Actions 文件", args.actions_file)
-            table.add_row("Actions 数量", f"[green]{len(actions_data)}[/green]")
-            table.add_row("State 文件", args.state_file)
-            table.add_row("当前 FSM 状态", f"[yellow]{state_json['state']['FSM']['state']}[/yellow]")
-            table.add_row("Notebook ID", f"[cyan]{notebook_id or 'Will initialize'}[/cyan]")
-            table.add_row("输出文件", args.output)
-            console.print(table)
+        # Execution statistics
+        stats = {'actions_executed': 0, 'errors': 0}
 
-            # Execution statistics
-            stats = {'actions_executed': 0, 'errors': 0}
+        # Execute actions using ScriptStore
+        console.print(f"\n[bold cyan]⚙️  开始执行 {len(actions_data)} 个动作 (使用 ScriptStore)[/bold cyan]\n")
 
-            # Execute actions using ScriptStore
-            console.print(f"\n[bold cyan]⚙️  开始执行 {len(actions_data)} 个动作 (使用 ScriptStore)[/bold cyan]\n")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console
+        ) as progress:
+            task = progress.add_task("[cyan]执行动作...", total=len(actions_data))
 
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                console=console
-            ) as progress:
-                task = progress.add_task("[cyan]执行动作...", total=len(actions_data))
+            for idx, action_data in enumerate(actions_data):
+                action = action_data.get('action', {})
+                action_type = action.get('type')
 
-                for idx, action_data in enumerate(actions_data):
-                    action = action_data.get('action', {})
-                    action_type = action.get('type')
+                progress.update(task, advance=1, description=f"[cyan]动作 {idx+1}/{len(actions_data)}: {action_type}")
 
-                    progress.update(task, advance=1, description=f"[cyan]动作 {idx+1}/{len(actions_data)}: {action_type}")
+                try:
+                    # Convert to ExecutionStep and execute using ScriptStore
+                    step = self._convert_action_to_step(action_data)
+                    self.script_store.exec_action(step)
+                    stats['actions_executed'] += 1
 
-                    try:
-                        # Convert to ExecutionStep and execute using ScriptStore
-                        step = self._convert_action_to_step(action_data)
-                        self.script_store.exec_action(step)
-                        stats['actions_executed'] += 1
+                    # Optional: Display action result
+                    if not args.no_display:
+                        # Simple display for each action
+                        console.print(f"  [green]✓[/green] {action_type}")
 
-                        # Optional: Display action result
-                        if not args.no_display:
-                            # Simple display for each action
-                            console.print(f"  [green]✓[/green] {action_type}")
+                except Exception as e:
+                    stats['errors'] += 1
+                    if not args.no_display:
+                        console.print(f"  [red]✗[/red] {action_type}: {str(e)}")
+                    self.error(f"Action failed: {action_type} - {e}", exc_info=True)
 
-                    except Exception as e:
-                        stats['errors'] += 1
-                        if not args.no_display:
-                            console.print(f"  [red]✗[/red] {action_type}: {str(e)}")
-                        self.error(f"Action failed: {action_type} - {e}", exc_info=True)
+                # Delay between actions
+                if not args.no_display and args.delay > 0:
+                    time.sleep(args.delay)
 
-                    # Delay between actions
-                    if not args.no_display and args.delay > 0:
-                        time.sleep(args.delay)
+        console.print("\n[bold green]✅ 所有动作执行完成[/bold green]\n")
 
-            console.print("\n[bold green]✅ 所有动作执行完成[/bold green]\n")
+        # Build output state from stores (ScriptStore already updated everything)
+        output_state = self._build_output_state_for_test_actions(state_json, stats, len(actions_data))
 
-            # Build output state from stores (ScriptStore already updated everything)
-            output_state = self._build_output_state_for_test_actions(state_json, stats, len(actions_data))
+        # Save output
+        with open(args.output, 'w', encoding='utf-8') as f:
+            json.dump(output_state, f, indent=2, ensure_ascii=False)
 
-            # Save output
-            with open(args.output, 'w', encoding='utf-8') as f:
-                json.dump(output_state, f, indent=2, ensure_ascii=False)
+        # Display summary
+        console.print(Panel(
+            f"[green]✓[/green] 文件已保存: [cyan]{args.output}[/cyan]\n"
+            f"[green]✓[/green] FSM 状态: [magenta]BEHAVIOR_COMPLETE[/magenta]",
+            title="[bold green]💾 输出已保存[/bold green]",
+            border_style="green",
+            box=box.DOUBLE
+        ))
 
-            # Display summary
-            console.print(Panel(
-                f"[green]✓[/green] 文件已保存: [cyan]{args.output}[/cyan]\n"
-                f"[green]✓[/green] FSM 状态: [magenta]BEHAVIOR_COMPLETE[/magenta]",
-                title="[bold green]💾 输出已保存[/bold green]",
-                border_style="green",
-                box=box.DOUBLE
-            ))
+        # Summary table
+        summary_table = Table(box=box.DOUBLE, title="执行摘要", title_style="bold cyan")
+        summary_table.add_column("项目", style="cyan", width=30)
+        summary_table.add_column("数值", style="green", justify="right")
 
-            # Summary table
-            summary_table = Table(box=box.DOUBLE, title="执行摘要", title_style="bold cyan")
-            summary_table.add_column("项目", style="cyan", width=30)
-            summary_table.add_column("数值", style="green", justify="right")
+        summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
+        summary_table.add_row("执行的动作数", str(stats['actions_executed']))
+        summary_table.add_row("创建的单元格数", str(len(self.notebook_store.cells)))
+        summary_table.add_row("执行的代码数", str(self.notebook_store.execution_count))
+        summary_table.add_row("错误数", str(stats['errors']))
+        summary_table.add_row("验收检查", "✓ 全部通过" if stats['errors'] == 0 else "✗ 有错误")
 
-            summary_table.add_row("FSM 状态转换", "BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
-            summary_table.add_row("执行的动作数", str(stats['actions_executed']))
-            summary_table.add_row("创建的单元格数", str(len(self.notebook_store.cells)))
-            summary_table.add_row("执行的代码数", str(self.notebook_store.execution_count))
-            summary_table.add_row("错误数", str(stats['errors']))
-            summary_table.add_row("验收检查", "✓ 全部通过" if stats['errors'] == 0 else "✗ 有错误")
+        console.print(summary_table)
+        console.print("\n[bold green]🎉 执行完成！[/bold green]\n")
 
-            console.print(summary_table)
-            console.print("\n[bold green]🎉 执行完成！[/bold green]\n")
 
-        except FileNotFoundError as e:
-            print(f"\n❌ Error: File not found - {e}")
-            sys.exit(1)
-        except Exception as e:
-            print(f"\n❌ Error: {e}")
-            self.error(f"test-actions failed: {e}", exc_info=True)
-            sys.exit(1)
 
     def _build_output_state_for_test_actions(self, base_state, stats, total_actions):
         """
