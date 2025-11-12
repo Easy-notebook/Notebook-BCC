@@ -31,6 +31,7 @@ class WorkflowAPIClient(ModernLogger):
         )
         self.session: Optional[aiohttp.ClientSession] = None
         self.api_logger = get_api_logger()  # API 调用日志记录器
+        self.last_api_log_file: Optional[str] = None  # 最后一次 API 调用的日志文件路径
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -55,6 +56,32 @@ class WorkflowAPIClient(ModernLogger):
         # Session will be garbage collected automatically
         # ResourceWarnings are suppressed globally
         pass
+
+    def update_last_log_with_final_state(self, final_state: Dict[str, Any]) -> bool:
+        """
+        更新最后一次 API 调用的日志文件，添加最终状态
+
+        Args:
+            final_state: 最终状态数据
+
+        Returns:
+            是否更新成功
+        """
+        if not self.last_api_log_file:
+            self.warning("[API] No last log file to update")
+            return False
+
+        success = self.api_logger.update_log_with_final_state(
+            self.last_api_log_file,
+            final_state
+        )
+
+        if success:
+            self.info(f"[API] 已更新日志文件添加最终状态: {self.last_api_log_file}")
+        else:
+            self.warning(f"[API] 更新日志文件失败: {self.last_api_log_file}")
+
+        return success
 
     async def send_reflecting(
         self,
@@ -205,6 +232,7 @@ class WorkflowAPIClient(ModernLogger):
                         response_status=response_status
                     )
                     if log_file:
+                        self.last_api_log_file = log_file
                         self.info(f"[API] 调用日志已保存: {log_file}")
 
                     return result
@@ -395,6 +423,7 @@ class WorkflowAPIClient(ModernLogger):
                         response_status=response_status
                     )
                     if log_file:
+                        self.last_api_log_file = log_file
                         self.info(f"[API] 调用日志已保存: {log_file}")
 
                     return result
@@ -513,6 +542,7 @@ class WorkflowAPIClient(ModernLogger):
                 }
             )
             if log_file:
+                self.last_api_log_file = log_file
                 self.info(f"[API] 调用日志已保存: {log_file}")
 
             self.info(f"[API] Fetching behavior actions for stage={stage_id}, step={step_index}")
@@ -571,9 +601,16 @@ class WorkflowAPIClient(ModernLogger):
                                 if line:
                                     try:
                                         message = json.loads(line)
+                                        # Response format: {"action": {"type": "...", "content": "..."}}
                                         if 'action' in message:
-                                            self.debug(f"[API] Received action: {message['action'].get('action')}")
-                                            yield message['action']
+                                            action = message['action']
+                                            action_type = action.get('type') or action.get('action', 'unknown')
+                                            self.debug(f"[API] Received action: {action_type}")
+                                            yield action
+                                        else:
+                                            # Fallback: if message is the action itself
+                                            self.debug(f"[API] Received direct action: {message.get('type', 'unknown')}")
+                                            yield message
                                     except json.JSONDecodeError as e:
                                         self.warning(f"[API] Failed to parse line: {line[:100]}")
                 else:

@@ -195,6 +195,62 @@ class WorkflowCLI(ModernLogger):
             self.ai_context_store
         )
 
+    def _sync_state_to_stores(self, state):
+        """
+        Sync state dict to stores (notebook_store and ai_context_store).
+        Critical for iteration loop to maintain state consistency.
+
+        Args:
+            state: State dict containing notebook and effects data
+        """
+        if 'state' not in state:
+            return
+
+        state_data = state['state']
+
+        # Sync notebook
+        if 'notebook' in state_data:
+            notebook_data = state_data['notebook']
+            # Clear existing cells
+            self.notebook_store.cells.clear()
+
+            # Load cells from state
+            last_code_cell_id = None
+            for cell_data in notebook_data.get('cells', []):
+                cell = self.notebook_store.add_cell(cell_data)
+                # Track last code cell for lastAddedCellId reference
+                if cell and cell.type.value == 'code':  # CellType.CODE
+                    last_code_cell_id = cell.id
+
+            # Update script_store's last_added_action_id to point to last code cell
+            if last_code_cell_id:
+                self.script_store.last_added_action_id = last_code_cell_id
+                self.script_store.debug(f"[Commands] Updated last_added_action_id: {last_code_cell_id}")
+
+            # Update metadata
+            if 'title' in notebook_data:
+                self.notebook_store.title = notebook_data['title']
+            if 'execution_count' in notebook_data:
+                self.notebook_store.execution_count = notebook_data['execution_count']
+
+            # Sync notebook_id to both NotebookStore and CodeExecutor
+            if 'notebook_id' in notebook_data:
+                existing_notebook_id = notebook_data['notebook_id']
+                # Sync to NotebookStore (so it gets saved back to state)
+                self.notebook_store.notebook_id = existing_notebook_id
+                # Sync to CodeExecutor (so it uses the same kernel)
+                if self.script_store.code_executor:
+                    self.script_store.code_executor.notebook_id = existing_notebook_id
+                    self.script_store.code_executor.is_kernel_ready = True  # Mark as ready since notebook exists
+                    self.script_store.info(f"[Commands] ✅ Synced notebook_id: {existing_notebook_id}")
+
+        # Sync effects to AI context
+        if 'effects' in state_data:
+            effects = state_data['effects']
+            self.ai_context_store.set_effect(effects)
+
+        self.script_store.debug(f"[Commands] Synced state to stores: {len(self.notebook_store.cells)} cells, {len(self.ai_context_store.get_context().effect.get('current', []))} effects")
+
     def create_parser(self) -> argparse.ArgumentParser:
         """Create argument parser."""
         parser = argparse.ArgumentParser(
@@ -618,6 +674,10 @@ class WorkflowCLI(ModernLogger):
             while iteration < max_iterations:
                 iteration += 1
 
+                # 🔄 Sync current_state to stores before each iteration
+                # This ensures stores reflect the latest state from previous iteration
+                self._sync_state_to_stores(current_state)
+
                 # Parse current state
                 parsed_state = state_file_loader.parse_state_for_api(current_state)
                 fsm_state = parsed_state.get('fsm_state', 'UNKNOWN')
@@ -667,9 +727,10 @@ class WorkflowCLI(ModernLogger):
                             state=current_state,
                             stream=False
                         ):
+                            print(action)
                             actions.append(action)
-                        response = {'actions': actions, 'count': len(actions)}
-                        current_state = self._execute_actions_internal(actions, current_state)
+                            response = {'actions': actions, 'count': len(actions)}
+                            current_state = self._execute_actions_internal(actions, current_state)
                     elif api_type == 'reflecting':
                         response = await workflow_api_client.send_reflecting(
                             stage_id=stage_id or 'unknown',
@@ -715,7 +776,7 @@ class WorkflowCLI(ModernLogger):
 
                 # Parse and display new state
                 parsed_next = state_file_loader.parse_state_for_api(next_state)
-                new_fsm_state = parsed_next.get('fsm_state', 'UNKNOWN')
+                new_fsm_state = parsed_next.get('fsm_state')
                 new_stage = parsed_next.get('stage_id')
                 new_step = parsed_next.get('step_id')
 

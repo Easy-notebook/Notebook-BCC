@@ -97,14 +97,14 @@ class CodeExecutor(ModernLogger):
             self.error(f"[CodeExecutor] Failed to restart kernel: {e}", exc_info=True)
             return False
 
-    def execute(self, code: str, cell_id: Optional[str] = None) -> Dict[str, Any]:
+    def execute(self, code: str, codecell_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Execute Python code on the remote kernel.
         Replicates: NotebookApiService.executeCode() + codeStore.executeCell()
 
         Args:
             code: The Python code to execute
-            cell_id: Optional cell ID for tracking
+            codecell_id: Optional code cell ID for tracking
 
         Returns:
             Dict containing execution results
@@ -128,19 +128,26 @@ class CodeExecutor(ModernLogger):
             }
 
         try:
-            self.info(f"[CodeExecutor] Executing code on remote kernel (cell: {cell_id})")
+            self.info(f"[CodeExecutor] Executing code on remote kernel (cell: {codecell_id})")
 
-            # Execute code (synchronous API call)
+            # Prepare request
+            url = f"{Config.BACKEND_BASE_URL}/execute"
+            payload = {
+                'code': code,
+                'notebook_id': self.notebook_id,
+                'codecell_id': codecell_id  # Pass codecell_id to backend (matches frontend API)
+            }
+
+            # Execute code (SYNCHRONOUS - backend returns outputs immediately)
             response = requests.post(
-                f"{Config.BACKEND_BASE_URL}/execute",
-                json={
-                    'code': code,
-                    'notebook_id': self.notebook_id
-                },
+                url,
+                json=payload,
                 headers={'Content-Type': 'application/json'}
             )
             response.raise_for_status()
             result = response.json()
+
+            self.debug(f"[CodeExecutor] Backend response status: {result.get('status')}")
 
             if result.get('status') != 'ok':
                 error_msg = result.get('message', 'Execution failed')
@@ -152,8 +159,25 @@ class CodeExecutor(ModernLogger):
                     'execution_count': self.execution_count
                 }
 
-            # Parse outputs from response (API returns outputs directly)
+            # Backend returns outputs directly in the response
             raw_outputs = result.get('outputs', [])
+
+            # WORKAROUND: Backend has a bug where first execution returns empty outputs
+            # Retry once if outputs are empty
+            if len(raw_outputs) == 0 and result.get('status') == 'ok':
+                self.debug("[CodeExecutor] First execution returned empty outputs, retrying...")
+                time.sleep(0.1)  # Small delay before retry
+
+                response = requests.post(
+                    url,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'}
+                )
+                response.raise_for_status()
+                result = response.json()
+                raw_outputs = result.get('outputs', [])
+                self.debug(f"[CodeExecutor] Retry: Backend returned {len(raw_outputs)} outputs")
+
             outputs = self._parse_outputs(raw_outputs)
             self.execution_count += 1
 
@@ -198,8 +222,12 @@ class CodeExecutor(ModernLogger):
         outputs = []
         start_time = time.time()
         interval = Config.STATUS_CHECK_INTERVAL  # Default 1 second
+        poll_count = 0
+
+        self.info(f"[CodeExecutor] Starting status polling for notebook_id={self.notebook_id}")
 
         while True:
+            poll_count += 1
             # Check timeout
             if time.time() - start_time > timeout:
                 self.error("[CodeExecutor] Execution timeout")
@@ -207,18 +235,21 @@ class CodeExecutor(ModernLogger):
 
             try:
                 # Get status
-                response = requests.get(
-                    f"{Config.BACKEND_BASE_URL}/execution_status/{self.notebook_id}"
-                )
+                status_url = f"{Config.BACKEND_BASE_URL}/execution_status/{self.notebook_id}"
+                self.debug(f"[CodeExecutor] Poll #{poll_count}: GET {status_url}")
+
+                response = requests.get(status_url)
                 response.raise_for_status()
                 status = response.json()
+
+                self.debug(f"[CodeExecutor] Poll #{poll_count} status: is_running={status.get('is_running')}, outputs_count={len(status.get('data', {}).get('outputs', []))}")
 
                 # Check if execution is complete
                 if not status.get('is_running', False):
                     # Execution complete
                     if status.get('data', {}).get('outputs'):
                         outputs = self._parse_outputs(status['data']['outputs'])
-                    self.info(f"[CodeExecutor] Execution complete, {len(outputs)} outputs")
+                    self.info(f"[CodeExecutor] Execution complete after {poll_count} polls, {len(outputs)} outputs")
                     break
 
                 # Update outputs if available

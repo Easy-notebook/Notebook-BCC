@@ -46,12 +46,16 @@ class CompleteStageHandler(ModernLogger):
 
             current_state = build_api_state(state_machine, require_progress_info=True)
 
+            # Extract notebook_id from state
+            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+
             self.info(f"[Handler] Calling Reflecting API for stage completion")
 
             reflecting_response = workflow_api_client.send_reflecting_sync(
                 stage_id=ctx.current_stage_id,
                 step_index=ctx.current_step_id or "completed",
-                state=current_state
+                state=current_state,
+                notebook_id=notebook_id
             )
 
             response_type = reflecting_response.get('type')

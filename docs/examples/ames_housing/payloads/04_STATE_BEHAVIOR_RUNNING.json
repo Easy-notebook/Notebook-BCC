@@ -408,9 +408,10 @@
       }
     },
     "FSM": {
-      "state": "BEHAVIOR_COMPLETE",
-      "last_transition": "COMPLETE_ACTION",
-      "timestamp": "2025-11-04T02:54:07.042Z"
+      "state": "behavior_running",
+      "last_transition": "TRANSITION_TO_STATE_Behavior_Running",
+      "timestamp": "2025-11-04T02:54:07.042Z",
+      "previous_state": "BEHAVIOR_COMPLETE"
     }
   }
 }

@@ -111,13 +111,13 @@ class RemoteCodeExecutor(ModernLogger):
             self.error(f"[RemoteCodeExecutor] Failed to restart kernel: {e}", exc_info=True)
             return False
 
-    async def execute(self, code: str, cell_id: Optional[str] = None) -> Dict[str, Any]:
+    async def execute(self, code: str, codecell_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Execute Python code remotely.
 
         Args:
             code: The Python code to execute
-            cell_id: Optional cell ID for tracking
+            codecell_id: Optional code cell ID for tracking
 
         Returns:
             Execution result dictionary
@@ -134,7 +134,7 @@ class RemoteCodeExecutor(ModernLogger):
             }
 
         try:
-            self.info(f"[RemoteCodeExecutor] Executing code (cell: {cell_id})")
+            self.info(f"[RemoteCodeExecutor] Executing code (cell: {codecell_id})")
             session = await self._get_session()
 
             # Start execution
@@ -142,7 +142,8 @@ class RemoteCodeExecutor(ModernLogger):
                 Config.NOTEBOOK_EXECUTE_URL,
                 json={
                     'code': code,
-                    'notebook_id': self.notebook_id
+                    'notebook_id': self.notebook_id,
+                    'codecell_id': codecell_id  # Pass codecell_id to backend
                 },
                 headers={'Content-Type': 'application/json'}
             ) as response:
@@ -282,10 +283,10 @@ class RemoteCodeExecutor(ModernLogger):
     # Synchronous Wrappers
     # ==============================================
 
-    def execute_sync(self, code: str, cell_id: Optional[str] = None) -> Dict[str, Any]:
+    def execute_sync(self, code: str, codecell_id: Optional[str] = None) -> Dict[str, Any]:
         """Synchronous wrapper for execute."""
         loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.execute(code, cell_id))
+        return loop.run_until_complete(self.execute(code, codecell_id))
 
     def initialize_kernel_sync(self) -> bool:
         """Synchronous wrapper for initialize_kernel."""

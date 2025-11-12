@@ -43,12 +43,16 @@ class StartWorkflowHandler(ModernLogger):
 
             current_state = build_api_state(state_machine, require_progress_info=True)
 
+            # Extract notebook_id from state
+            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+
             self.info("[Handler] Calling Planning API for stages definition...")
 
             planning_response = workflow_api_client.send_feedback_sync(
                 stage_id="",  # Empty for initial request
                 step_index="",
-                state=current_state
+                state=current_state,
+                notebook_id=notebook_id
             )
 
             # Parse response

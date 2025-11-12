@@ -46,7 +46,8 @@ class APICallLogger:
         extra_info: Optional[Dict[str, Any]] = None,
         response: Optional[Any] = None,
         response_status: Optional[int] = None,
-        response_error: Optional[str] = None
+        response_error: Optional[str] = None,
+        final_state: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         记录 API 调用信息到独立的日志文件
@@ -60,6 +61,7 @@ class APICallLogger:
             response: API 响应内容 (可选)
             response_status: HTTP 状态码 (可选)
             response_error: 错误信息 (可选)
+            final_state: 处理完成后的最终状态 (可选)
 
         Returns:
             日志文件路径
@@ -90,7 +92,8 @@ class APICallLogger:
             extra_info=extra_info,
             response=response,
             response_status=response_status,
-            response_error=response_error
+            response_error=response_error,
+            final_state=final_state
         )
 
         # 写入日志文件
@@ -114,7 +117,8 @@ class APICallLogger:
         extra_info: Optional[Dict[str, Any]],
         response: Optional[Any] = None,
         response_status: Optional[int] = None,
-        response_error: Optional[str] = None
+        response_error: Optional[str] = None,
+        final_state: Optional[Dict[str, Any]] = None
     ) -> str:
         """格式化日志内容"""
 
@@ -359,11 +363,159 @@ class APICallLogger:
                 lines.append(f"响应大小: {response_size} bytes ({response_size/1024:.2f} KB)")
                 lines.append("")
 
+        # 最终状态（处理完成后）
+        if final_state:
+            lines.append("=" * 80)
+            lines.append("🏁 最终状态 (Final State)")
+            lines.append("=" * 80)
+            lines.append("")
+
+            # Variables
+            if 'variables' in final_state:
+                lines.append(f"📊 变量 (Variables): {len(final_state['variables'])} 个")
+                if final_state['variables']:
+                    for key, value in final_state['variables'].items():
+                        value_str = str(value)
+                        if len(value_str) > 100:
+                            value_str = value_str[:100] + "..."
+                        lines.append(f"  - {key}: {value_str}")
+                else:
+                    lines.append("  (无变量)")
+                lines.append("")
+
+            # FSM State
+            if 'FSM' in final_state:
+                fsm = final_state['FSM']
+                lines.append(f"🎯 状态机 (FSM):")
+                lines.append(f"  当前状态: {fsm.get('currentState', 'N/A')}")
+                lines.append(f"  阶段: {fsm.get('currentStageId', 'N/A')}")
+                lines.append(f"  步骤: {fsm.get('currentStepId', 'N/A')}")
+                lines.append(f"  Behavior: {fsm.get('currentBehaviorId', 'N/A')}")
+                lines.append("")
+
+            # Effects
+            if 'effects' in final_state:
+                effects = final_state['effects']
+                current_effects = effects.get('current', [])
+                lines.append(f"⚡ 执行效果 (Effects): {len(current_effects)} 条")
+                for effect_item in current_effects:
+                    lines.append(f"  - {effect_item}")
+                lines.append("")
+
+            # Notebook summary
+            if 'notebook' in final_state:
+                notebook = final_state['notebook']
+                cells = notebook.get('cells', [])
+                lines.append(f"📓 Notebook 状态:")
+                lines.append(f"  Cells 总数: {len(cells)}")
+                lines.append(f"  执行计数: {notebook.get('execution_count', 0)}")
+                lines.append("")
+
         lines.append("=" * 80)
         lines.append(f"日志记录时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
         lines.append("=" * 80)
 
         return "\n".join(lines)
+
+    def update_log_with_final_state(
+        self,
+        log_file_path: str,
+        final_state: Dict[str, Any]
+    ) -> bool:
+        """
+        更新已有日志文件，添加最终状态信息
+
+        Args:
+            log_file_path: 日志文件路径
+            final_state: 最终状态数据
+
+        Returns:
+            是否更新成功
+        """
+        try:
+            from pathlib import Path
+            log_path = Path(log_file_path)
+
+            if not log_path.exists():
+                print(f"⚠️  日志文件不存在: {log_file_path}")
+                return False
+
+            # 读取现有内容
+            with open(log_path, 'r', encoding='utf-8') as f:
+                existing_content = f.read()
+
+            # 移除旧的结束标记
+            lines = existing_content.split('\n')
+            # 找到最后的 "=" * 80 行并移除
+            while lines and lines[-1].strip() == '=' * 80:
+                lines.pop()
+            while lines and '日志记录时间:' in lines[-1]:
+                lines.pop()
+            while lines and lines[-1].strip() == '=' * 80:
+                lines.pop()
+
+            # 添加最终状态
+            lines.append("")
+            lines.append("=" * 80)
+            lines.append("🏁 最终状态 (Final State)")
+            lines.append("=" * 80)
+            lines.append("")
+
+            # Variables
+            if 'variables' in final_state:
+                lines.append(f"📊 变量 (Variables): {len(final_state['variables'])} 个")
+                if final_state['variables']:
+                    for key, value in final_state['variables'].items():
+                        value_str = str(value)
+                        if len(value_str) > 100:
+                            value_str = value_str[:100] + "..."
+                        lines.append(f"  - {key}: {value_str}")
+                else:
+                    lines.append("  (无变量)")
+                lines.append("")
+
+            # FSM State
+            if 'FSM' in final_state:
+                fsm = final_state['FSM']
+                lines.append(f"🎯 状态机 (FSM):")
+                lines.append(f"  当前状态: {fsm.get('currentState', 'N/A')}")
+                lines.append(f"  阶段: {fsm.get('currentStageId', 'N/A')}")
+                lines.append(f"  步骤: {fsm.get('currentStepId', 'N/A')}")
+                lines.append(f"  Behavior: {fsm.get('currentBehaviorId', 'N/A')}")
+                lines.append("")
+
+            # Effects
+            if 'effects' in final_state:
+                effects = final_state['effects']
+                current_effects = effects.get('current', [])
+                lines.append(f"⚡ 执行效果 (Effects): {len(current_effects)} 条")
+                for effect_item in current_effects:
+                    lines.append(f"  - {effect_item}")
+                lines.append("")
+
+            # Notebook summary
+            if 'notebook' in final_state:
+                notebook = final_state['notebook']
+                cells = notebook.get('cells', [])
+                lines.append(f"📓 Notebook 状态:")
+                lines.append(f"  Cells 总数: {len(cells)}")
+                lines.append(f"  执行计数: {notebook.get('execution_count', 0)}")
+                lines.append("")
+
+            # 添加更新时间标记
+            lines.append("=" * 80)
+            lines.append(f"最终状态更新时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
+            lines.append("=" * 80)
+
+            # 写回文件
+            with open(log_path, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(lines))
+
+            return True
+
+        except Exception as e:
+            print(f"⚠️  更新日志文件失败: {e}")
+            return False
 
 
 # 全局单例

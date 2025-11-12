@@ -111,7 +111,7 @@ def exec_code_cell(
             return None
 
         # Execute code
-        result = script_store.code_executor.execute(cell.content, cell_id=codecell_id)
+        result = script_store.code_executor.execute(cell.content, codecell_id=codecell_id)
 
         if result.get('success'):
             # Add outputs to cell

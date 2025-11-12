@@ -46,12 +46,16 @@ class CompleteBehaviorHandler(ModernLogger):
             current_state = build_api_state(state_machine, require_progress_info=True)
             behavior_feedback = build_behavior_feedback(state_machine)
 
+            # Extract notebook_id from state
+            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+
             self.info(f"[Handler] Calling Reflecting API for behavior completion")
 
             reflecting_response = workflow_api_client.send_reflecting_sync(
                 stage_id=ctx.current_stage_id,
                 step_index=ctx.current_step_id,
                 state=current_state,
+                notebook_id=notebook_id,
                 behavior_feedback=behavior_feedback
             )
 
@@ -61,6 +65,14 @@ class CompleteBehaviorHandler(ModernLogger):
             # Update context from response
             from utils.workflow_updater import workflow_updater
             workflow_updater.update_from_response(state_machine, reflecting_response)
+
+            # 📝 更新 API 日志，添加最终状态
+            try:
+                from utils.state_builder import build_api_state
+                final_state = build_api_state(state_machine, require_progress_info=False)
+                workflow_api_client.update_last_log_with_final_state(final_state)
+            except Exception as e:
+                self.warning(f"[Handler] Failed to update log with final state: {e}")
 
             # Mark current behavior as completed
             if ctx.current_behavior_id and ctx.current_behavior_id not in ctx.completed_behaviors:

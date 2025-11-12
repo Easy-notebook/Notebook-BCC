@@ -4,6 +4,7 @@ Handles: action_running, action_completed
 """
 
 from typing import Any
+from utils.action_logger import get_action_logger
 
 
 def effect_action_running(state_machine, payload: Any = None):
@@ -32,10 +33,17 @@ def effect_action_running(state_machine, payload: Any = None):
     current_action = ctx.current_behavior_actions[ctx.current_action_index]
     state_machine.info(f"[FSM Effect] Executing action #{ctx.current_action_index + 1}: {current_action}")
 
+    # 📝 记录 action 开始执行
+    action_logger = get_action_logger()
+    action_logger.log_action_start(ctx.current_action_index, current_action)
+
     # Execute the action via script store
     if state_machine.script_store:
         try:
             result = state_machine.script_store.exec_action(current_action)
+
+            # 📝 记录 action 执行成功
+            action_logger.log_action_complete(ctx.current_action_index, result=result)
 
             # Check if there's a pending workflow update
             if isinstance(result, dict) and result.get('workflow_update_pending'):
@@ -49,6 +57,10 @@ def effect_action_running(state_machine, payload: Any = None):
 
         except Exception as e:
             state_machine.error(f"[FSM Effect] Action execution failed: {e}", exc_info=True)
+
+            # 📝 记录 action 执行失败
+            action_logger.log_action_complete(ctx.current_action_index, error=str(e))
+
             from core.events import WorkflowEvent
             state_machine.transition(WorkflowEvent.FAIL, {'error': str(e)})
             return
@@ -88,10 +100,14 @@ def effect_action_completed(state_machine, payload: Any = None):
             current_state = build_api_state(state_machine, require_progress_info=True)
             behavior_feedback = build_behavior_feedback(state_machine)
 
+            # Extract notebook_id from state
+            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+
             feedback_response = workflow_api_client.send_feedback_sync(
                 stage_id=ctx.current_stage_id,
                 step_index=ctx.current_step_id,
                 state=current_state,
+                notebook_id=notebook_id,
                 behavior_feedback=behavior_feedback
             )
 
@@ -99,10 +115,32 @@ def effect_action_completed(state_machine, payload: Any = None):
             from utils.workflow_updater import workflow_updater
             workflow_updater.update_from_response(state_machine, feedback_response)
 
+            # 📝 完成 action 日志并保存最终状态
+            final_state = build_api_state(state_machine, require_progress_info=False)
+            action_logger = get_action_logger()
+            action_logger.finalize_behavior_log(final_state=final_state)
+            state_machine.info(f"[FSM Effect] Finalized action execution log with final state")
+
+            # 📝 更新 API 日志，添加最终状态
+            try:
+                workflow_api_client.update_last_log_with_final_state(final_state)
+            except Exception as e:
+                state_machine.warning(f"[FSM Effect] Failed to update API log with final state: {e}")
+
             # Planning API confirms behavior can be completed
             state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)
 
         except Exception as e:
             state_machine.error(f"[FSM Effect] Failed to call Planning API: {e}", exc_info=True)
+
+            # 📝 完成 action 日志（即使出错）
+            try:
+                from utils.state_builder import build_api_state
+                final_state = build_api_state(state_machine, require_progress_info=False)
+                action_logger = get_action_logger()
+                action_logger.finalize_behavior_log(final_state=final_state)
+            except:
+                pass
+
             # Fallback: complete behavior anyway
             state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)

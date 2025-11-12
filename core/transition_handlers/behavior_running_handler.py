@@ -11,6 +11,7 @@ Responsibilities:
 
 from typing import Any
 from silantui import ModernLogger
+from utils.action_logger import get_action_logger
 
 
 class BehaviorRunningHandler(ModernLogger):
@@ -70,6 +71,15 @@ class BehaviorRunningHandler(ModernLogger):
             # Store actions in context
             ctx.current_behavior_actions = actions
             ctx.current_action_index = 0
+
+            if actions:
+                action_logger = get_action_logger()
+                log_file = action_logger.start_behavior_log(
+                    behavior_id=ctx.current_behavior_id,
+                    stage_id=ctx.current_stage_id,
+                    step_id=ctx.current_step_id
+                )
+                self.info(f"[Handler] Started action log: {log_file}")
 
             from core.events import WorkflowEvent
             if actions:
