@@ -1,136 +1,106 @@
 <stages>
-  <stage id="data_existence_establishment" title="Data Existence Establishment">
-    <goal>
-      Establish and verify the existence, structure, and relevance of the housing dataset to ensure readiness for predictive modeling. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: `os.path.exists("./assets/housing.csv")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.
-    </goal>
-    <verified_artifacts>
-      <variable name="data_existence_report">Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics.</variable>
-      <variable name="data_structure_document">Schema of the dataset, describing each column, type, and potential target variable.</variable>
-      <variable name="variable_analysis_report">Variable-level semantic mapping and correlation summary with the target (price).</variable>
-      <variable name="pcs_hypothesis_framework">Hypothesis document linking data characteristics to PCS testability requirements.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="user_submit_files">Raw housing dataset file path.</variable>
-    </required_variables>
-  </stage>
+    <remaining>
+        <stage id="data_existence_establishment" title="Data Existence Establishment">
+            <goal>Establish data existence through systematic discovery and analysis to ensure it supports project objectives. Artifacts: Complete data inventory and quality assessment, Schema and relationships analysis, Semantic mapping and ranking, Testable PCS hypotheses; Acceptance: All required data obtained and mapped, confirmed by domain experts, specific testable hypotheses generated.</goal>
+            <verified_artifacts>
+                <variable name="data_existence_report">Complete data inventory and quality assessment</variable>
+                <variable name="data_structure_document">Schema, relationships, type analysis</variable>
+                <variable name="variable_analysis_report">Semantic mapping, importance ranking</variable>
+                <variable name="pcs_hypothesis_framework">Testable hypotheses for validation</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="housing_data">Housing data from the CSV file provided</variable>
+            </required_variables>
+        </stage>
 
-  <stage id="data_integrity_assurance" title="Data Integrity Assurance">
-    <goal>
-      Clean and validate the housing dataset to ensure completeness, accuracy, and reproducibility. Artifacts: df_cleaned, data_quality_report, processing_pipeline_doc, integrity_verification_report; Acceptance: `df_cleaned.isnull().sum().sum()==0` and `len(df_cleaned.columns)==len(df_raw.columns)` and `df_cleaned.duplicated().sum()==0`.
-    </goal>
-    <verified_artifacts>
-      <variable name="df_cleaned">Pandas DataFrame with no missing values or duplicates, correct dtypes, and valid ranges.</variable>
-      <variable name="data_quality_report">Quality metrics summary with before/after cleaning comparisons.</variable>
-      <variable name="processing_pipeline_doc">Document outlining reproducible data cleaning operations and parameters.</variable>
-      <variable name="integrity_verification_report">Formal validation log ensuring full data integrity under PCS checks.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="df_raw">Initial dataset loaded from housing.csv.</variable>
-    </required_variables>
-  </stage>
+        <stage id="data_integrity_assurance" title="Data Integrity Assurance" insert_after="data_existence_establishment">
+            <goal>Ensure data integrity, accuracy, and consistency through validation and cleaning to prepare analysis-ready datasets. Artifacts: Cleaned DataFrame with no missing values, Quality metrics report, Reproducibility documentation, Integrity verification report; Acceptance: df_cleaned.isnull().sum().sum() == 0, all dtypes and indexes validated, processing pipeline documented.</goal>
+            <verified_artifacts>
+                <variable name="df_cleaned">DataFrame (no missing values, correct dtypes)</variable>
+                <variable name="data_quality_report">Comprehensive quality metrics and processing log</variable>
+                <variable name="processing_pipeline_doc">Reproducibility documentation (seeds, versions)</variable>
+                <variable name="integrity_verification_report">Quality assurance certification</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="housing_data">Housing data for integrity checks</variable>
+            </required_variables>
+        </stage>
 
-  <stage id="exploratory_data_analysis" title="Exploratory Data Analysis">
-    <goal>
-      Explore variable distributions and relationships to uncover predictive patterns and modeling insights. Artifacts: eda_summary, correlation_matrix, distribution_analysis, modeling_recommendations, ./outputs/eda/; Acceptance: `os.path.exists("./outputs/eda/")==True` and `len(correlation_matrix.columns)>3` and `len(modeling_recommendations)>0`.
-    </goal>
-    <verified_artifacts>
-      <variable name="eda_summary">Comprehensive statistical overview for each variable, including min, max, mean, std.</variable>
-      <variable name="correlation_matrix">Matrix of variable correlations, highlighting top correlated features with price.</variable>
-      <variable name="distribution_analysis">Dictionary summarizing target and feature distribution shapes.</variable>
-      <variable name="modeling_recommendations">Suggested feature engineering methods and model families.</variable>
-      <variable name="./outputs/eda/">Visualization folder containing at least 6 distribution/correlation plots.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="df_cleaned">Cleaned dataset ready for analysis.</variable>
-    </required_variables>
-  </stage>
+        <stage id="exploratory_data_analysis" title="Exploratory Data Analysis" insert_after="data_integrity_assurance">
+            <goal>Conduct in-depth exploratory data analysis to understand patterns, distributions, and relationships for modeling strategy. Artifacts: Comprehensive statistics, correlation analysis, distribution recommendations, modeling suggestions, visualization charts; Acceptance: All variables analyzed, relationships explored, business questions answered, modeling recommendations with evidence, charts saved at ./outputs/eda/.</goal>
+            <verified_artifacts>
+                <variable name="eda_summary">Comprehensive statistics per variable</variable>
+                <variable name="correlation_matrix">Full variable correlation analysis</variable>
+                <variable name="distribution_analysis">Target distribution, transform recommendations</variable>
+                <variable name="modeling_recommendations">Feature engineering and method suggestions</variable>
+                <variable name="visualizations">Saved charts under ./outputs/eda/</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="df_cleaned">Cleaned dataset with necessary variables</variable>
+            </required_variables>
+        </stage>
 
-  <stage id="methodology_strategy_formulation" title="Methodology Strategy Formulation">
-    <goal>
-      Design a modeling methodology covering feature engineering, model selection, and evaluation standards. Artifacts: feature_engineering_strategy, model_method_candidates, evaluation_framework, methodology_document; Acceptance: `len(model_method_candidates)>2` and `("RMSE" in evaluation_framework)` and `("R²" in evaluation_framework)`.
-    </goal>
-    <verified_artifacts>
-      <variable name="feature_engineering_strategy">Detailed plan describing feature transformation and encoding methods.</variable>
-      <variable name="model_method_candidates">List of algorithms considered (e.g., Linear Regression, RandomForest, XGBoost).</variable>
-      <variable name="evaluation_framework">Evaluation metrics and validation scheme ensuring PCS compliance.</variable>
-      <variable name="methodology_document">Consolidated modeling strategy ready for implementation.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="eda_summary">Exploratory analysis results.</variable>
-      <variable name="modeling_recommendations">Modeling insights and transformation guidelines.</variable>
-    </required_variables>
-  </stage>
+        <stage id="methodology_strategy_formulation" title="Methodology Strategy Formulation" insert_after="exploratory_data_analysis">
+            <goal>Develop comprehensive modeling strategy including feature engineering, model selection, and evaluation. Artifacts: Feature engineering strategy, Model candidates list, Evaluation framework, Methodology document; Acceptance: Strategy matches data characteristics, meets business needs, integrated PCS framework, feasible implementation plan.</goal>
+            <verified_artifacts>
+                <variable name="feature_engineering_strategy">Detailed feature engineering plan</variable>
+                <variable name="model_method_candidates">List of candidate algorithms with rationale</variable>
+                <variable name="evaluation_framework">Comprehensive evaluation metrics and validation strategy</variable>
+                <variable name="methodology_document">Complete modeling methodology and implementation plan</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="modeling_recommendations">Feature engineering and method suggestions based on EDA</variable>
+            </required_variables>
+        </stage>
 
-  <stage id="model_implementation_execution" title="Model Implementation Execution">
-    <goal>
-      Implement and train models following the defined strategy to produce a robust housing price predictor. Artifacts: feature_pipeline, trained_models, final_model, training_history, best_params, ./models/model.pkl; Acceptance: `os.path.exists("./models/model.pkl")==True` and `final_rmse<25000` and `final_r2>0.85`.
-    </goal>
-    <verified_artifacts>
-      <variable name="feature_pipeline">Reusable feature transformation pipeline consistent with strategy.</variable>
-      <variable name="trained_models">Collection of trained models with varying algorithms and parameters.</variable>
-      <variable name="final_model">Optimized model object chosen by PCS metrics.</variable>
-      <variable name="training_history">Training and validation performance logs across iterations.</variable>
-      <variable name="best_params">Hyperparameter configuration yielding best results.</variable>
-      <variable name="./models/model.pkl">Serialized model file for deployment.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="feature_engineering_strategy">Defined feature transformation plan.</variable>
-      <variable name="evaluation_framework">Evaluation metrics and validation scheme.</variable>
-    </required_variables>
-  </stage>
+        <stage id="model_implementation_execution" title="Model Implementation Execution" insert_after="methodology_strategy_formulation">
+            <goal>Execute modeling strategy to train and optimize predictive models. Artifacts: Reusable feature engineering pipeline, Collection of trained models, Optimized production-ready model, Training process logs, Saved model file; Acceptance: Feature engineering steps implemented, modeling methods trained, optimization converged, model performance meets RMSE < 25000, R² > 0.85, ./models/model.pkl loads without errors.</goal>
+            <verified_artifacts>
+                <variable name="feature_pipeline">Reusable feature engineering pipeline</variable>
+                <variable name="trained_models">Collection of trained models with different algorithms</variable>
+                <variable name="final_model">Optimized production-ready model</variable>
+                <variable name="training_history">Complete training process logs</variable>
+                <variable name="model_file">Saved model file at ./models/model.pkl</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="evaluation_framework">Validated metrics and strategy from methodology strategy</variable>
+            </required_variables>
+        </stage>
 
-  <stage id="predictability_validation" title="Predictability Validation">
-    <goal>
-      Validate model generalization using cross-validation and independent test sets to ensure performance consistency. Artifacts: cv_scores, test_performance, temporal_validation_report, domain_generalization_report, business_impact_report; Acceptance: `test_performance["RMSE"]<25000` and `test_performance["R²"]>0.85` and `len(cv_scores)>=5`.
-    </goal>
-    <verified_artifacts>
-      <variable name="cv_scores">Cross-validation scores array covering multiple folds.</variable>
-      <variable name="test_performance">Performance metrics dict including RMSE, R², and MAE on unseen data.</variable>
-      <variable name="temporal_validation_report">Time-based performance analysis ensuring stability.</variable>
-      <variable name="domain_generalization_report">Cross-domain performance and robustness testing results.</variable>
-      <variable name="business_impact_report">Summary of predictive model’s business impact (ROI, decisions).</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="final_model">Trained model for evaluation.</variable>
-      <variable name="df_cleaned">Cleaned dataset with target variable.</variable>
-    </required_variables>
-  </stage>
+        <stage id="predictability_validation" title="Predictability Validation" insert_after="model_implementation_execution">
+            <goal>Validate model predictive capability to ensure generalization performance. Artifacts: CV scores array, Test set metrics, Temporal validation report, Generalization report, Business impact report; Acceptance: CV and test set evaluations meet RMSE < 25000, R² > 0.85, test set independent, temporal and domain validations conducted.</goal>
+            <verified_artifacts>
+                <variable name="cv_scores">Cross-validation fold scores</variable>
+                <variable name="test_performance">Test set metrics: RMSE, R², MAE</variable>
+                <variable name="temporal_validation_report">Time-based generalization analysis</variable>
+                <variable name="domain_generalization_report">Cross-domain performance</variable>
+                <variable name="business_impact_report">ROI and business value quantification</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="final_model">Optimized production-ready model</variable>
+            </required_variables>
+        </stage>
 
-  <stage id="stability_assessment" title="Stability Assessment">
-    <goal>
-      Conduct perturbation and sensitivity analysis to assess model stability under varying data and hyperparameter conditions. Artifacts: perturbation_test_results, sensitivity_analysis_report, stability_metrics, stability_certification, improvement_recommendations; Acceptance: `stability_metrics["variation_coefficient"]<0.05` and `len(improvement_recommendations)>0`.
-    </goal>
-    <verified_artifacts>
-      <variable name="perturbation_test_results">Results from noise-injected and resampled data tests.</variable>
-      <variable name="sensitivity_analysis_report">Ranking of influential features and hyperparameters.</variable>
-      <variable name="stability_metrics">Dictionary of robustness metrics including variation coefficient.</variable>
-      <variable name="stability_certification">Formal statement ensuring stability bounds and validity range.</variable>
-      <variable name="improvement_recommendations">Recommended stability enhancement strategies.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="final_model">Trained model to assess stability.</variable>
-      <variable name="test_performance">Evaluation results as baseline reference.</variable>
-    </required_variables>
-  </stage>
-
-  <stage id="results_communication" title="Results Communication">
-    <goal>
-      Communicate final outcomes to technical and business audiences effectively through reports, documentation, and dashboards. Artifacts: technical_documentation, executive_summary, visualization_package, implementation_guide, model_card; Acceptance: `os.path.exists("./reports/")==True` and `len(executive_summary)>300` and `("RMSE" in model_card)`.
-    </goal>
-    <verified_artifacts>
-      <variable name="technical_documentation">Complete methodology and reproducibility documentation.</variable>
-      <variable name="executive_summary">Concise business-level explanation of model results and insights.</variable>
-      <variable name="visualization_package">Interactive dashboards summarizing performance and stability.</variable>
-      <variable name="implementation_guide">Deployment and usage instructions.</variable>
-      <variable name="model_card">Model transparency document with metrics, use cases, and caveats.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="test_performance">Validated model results.</variable>
-      <variable name="stability_metrics">Stability findings for inclusion in model card.</variable>
-    </required_variables>
-  </stage>
-
-  <focus>
-    RMSE < 25000; R² > 0.85; CV folds ≥ 5; PCS compliance verified at all stages; stability variation_coefficient < 0.05; reproducibility logs complete; all artifacts saved deterministically under ./outputs and ./models/.
-  </focus>
+        <stage id="results_communication" title="Results Communication" optional>
+            <goal>Communicate project results effectively to stakeholders for understanding and action. Artifacts: Methodology documentation, Executive summary, Visualization package, Deployment guide, Model card; Acceptance: All audiences' needs addressed, documentation detailed, executive summary actionable, visualizations clear, stakeholder feedback positive.</goal>
+            <verified_artifacts>
+                <variable name="technical_documentation">Complete methodology and implementation documentation</variable>
+                <variable name="executive_summary">Concise high-level summary for decision-makers</variable>
+                <variable name="visualization_package">Comprehensive charts and interactive dashboards</variable>
+                <variable name="implementation_guide">Deployment instructions and user training materials</variable>
+                <variable name="model_card">Model performance, usage instructions, limitations documentation</variable>
+            </verified_artifacts>
+            <required_variables>
+                <variable name="business_impact_report">Validated business value quantification</variable>
+            </required_variables>
+        </stage>
+    </remaining>
+    <focus>
+        - RMSE < 25000
+        - R² > 0.85
+        - PCS alignment and standards
+        - Reproducibility in pipeline
+        - Comprehensive validation strategy
+        - Ensuring no data leakage
+    </focus>
 </stages>

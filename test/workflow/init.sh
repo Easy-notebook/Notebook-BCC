@@ -1,2 +1,0 @@
-python main.py --custom-context '{"csv_file_path": "AmesHousing.csv", "problem_description": "请帮我训练一个模型预测房价", "context_description": "No additional context provided", "problem_name": "VDS Analysis", "user_goal": 
-  "请帮我训练一个模型预测房价"}' start

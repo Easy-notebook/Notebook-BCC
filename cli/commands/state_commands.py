@@ -61,7 +61,11 @@ class StateCommands:
             print("   Or use 'send-api' to send manual API requests")
 
     def cmd_test_request(self, args):
-        """Preview API request without sending."""
+        """
+        Preview API request without sending.
+
+        Now uses state machine for API type inference.
+        """
         from config import Config
 
         # Load state file using unified helper
@@ -71,9 +75,12 @@ class StateCommands:
         # Display state info
         api_display.display_state_info(parsed_state)
 
-        # Infer API type using unified helper
-        api_type = self._infer_api_type(state_json, args.api_type)
+        # Use state machine to infer API type (NEW)
+        api_type = self.state_machine.infer_api_type_from_state(state_json)
+
+        # Allow override if specified
         if args.api_type:
+            api_type = args.api_type
             print(f"\nUsing specified API type: {api_type}")
         else:
             print(f"\nAuto-inferred API type: {api_type}")

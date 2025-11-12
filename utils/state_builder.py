@@ -51,8 +51,12 @@ def build_api_state(
         raise RuntimeError("Failed to generate progress_info for POMDP observation")
 
     # Add FSM tracking to context
+    # Convert state to uppercase format expected by API
+    # Internal format: step_running, External format: STEP_RUNNING
+    state_value = state_machine.current_state.value.upper()
+
     current_state['FSM'] = {
-        'state': state_machine.current_state.value,
+        'state': state_value,
         'transition': [entry.to_dict() for entry in state_machine.execution_context.execution_history]
     }
 

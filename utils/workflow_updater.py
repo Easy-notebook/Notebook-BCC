@@ -41,11 +41,8 @@ class WorkflowUpdater(ModernLogger):
             self._update_steps(state_machine, content)
         elif response_type == 'behavior':
             self._update_behavior(state_machine, content)
-        elif response_type == 'json':
-            # Standard JSON response with context_update
-            if 'context_update' in content:
-                from core.state_effects.behavior_effects import _apply_context_update
-                _apply_context_update(state_machine, content['context_update'])
+        elif response_type == 'reflection':
+            self._update_reflection(state_machine, content)
         else:
             self.warning(f"[Updater] Unknown response type: {response_type}")
 
@@ -186,6 +183,33 @@ class WorkflowUpdater(ModernLogger):
             state_machine.update_progress_focus('behaviors', task)
 
             self.info(f"[Updater] Set current behavior: {behavior_id}, iteration: {ctx.behavior_iteration}")
+
+    def _update_reflection(self, state_machine, content: Dict[str, Any]) -> None:
+        """
+        Update state based on reflection response.
+
+        Args:
+            state_machine: State machine instance
+            content: Parsed reflection content
+        """
+        behavior_is_complete = content.get('behavior_is_complete', False)
+        next_state = content.get('next_state')
+        variables_produced = content.get('variables_produced', {})
+
+        self.info(f"[Updater] Processing reflection: behavior_complete={behavior_is_complete}, next_state={next_state}")
+
+        if not state_machine.execution_context:
+            self.error("[Updater] No execution context available")
+            return
+
+        # Add new variables to variables store
+        if variables_produced and state_machine.script_store:
+            for var_name, var_value in variables_produced.items():
+                state_machine.script_store.add_variable(var_name, var_value)
+                self.info(f"[Updater] Added variable: {var_name}")
+
+        # Note: FSM state transition is handled by the state machine itself
+        # via WorkflowEvent.COMPLETE_STEP or WorkflowEvent.NEXT_BEHAVIOR
 
 
 # Create singleton instance

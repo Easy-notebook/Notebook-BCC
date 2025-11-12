@@ -355,7 +355,7 @@ Reflection是行为完成后的状态转换机制，通过XML格式文件描述�
 ### Reflection XML 格式
 
 ```xml
-<reflection current_behavior_is_complete="true">
+<reflection current_step_is_complete="true">
   <evaluation>
     <artifacts_produced>
       <artifact name="data_existence_report" status="complete">
@@ -595,7 +595,7 @@ USE_REMOTE_EXECUTION=true
 ### Reflection Mechanism
 
 - [ ] 生成Reflection XML文件
-- [ ] 包含`current_behavior_is_complete`属性
+- [ ] 包含`current_step_is_complete`属性
 - [ ] 包含`<decision><next_state>`节点
 - [ ] 包含`<context_for_next><variables_produced>`
 - [ ] 包含`<outputs_tracking_update>`

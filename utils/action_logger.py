@@ -15,7 +15,7 @@ class ActionExecutionLogger:
     记录每个 action 的执行状态
     """
 
-    def __init__(self, log_dir: str = "api_logs"):
+    def __init__(self, log_dir: str = "logs"):
         """
         初始化 Action 执行日志记录器
 
@@ -298,7 +298,7 @@ class ActionExecutionLogger:
 _action_logger = None
 
 
-def get_action_logger(log_dir: str = "api_logs") -> ActionExecutionLogger:
+def get_action_logger(log_dir: str = "logs") -> ActionExecutionLogger:
     """获取全局 Action 执行日志记录器单例"""
     global _action_logger
     if _action_logger is None:

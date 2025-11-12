@@ -270,23 +270,90 @@
       "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
       "user_submit_files": [
         "./assets/housing.csv"
-      ]
+      ],
+      "housing_data": "Loaded dataframe from './assets/housing.csv'"
     },
     "effects": {
-      "current": [],
+      "current": [
+        "Dataset shape: (2930, 82)\n"
+      ],
       "history": []
     },
     "notebook": {
+      "title": "Housing Price Prediction Project",
+      "cells": [
+        {
+          "id": "ff1f6d5c-e1d4-4f25-bfab-4b7861c275e6",
+          "type": "markdown",
+          "content": "In this project, we are aiming to build a housing price prediction model using the Housing dataset. Our goal is to ensure the model achieves a Root Mean Square Error (RMSE) of less than 25,000 and an R² of greater than 0.85, complying with PCS standards.\n\nThe first step is to verify the existence of the dataset and gather essential information to form the basis of our analysis.",
+          "outputs": [],
+          "enable_edit": true,
+          "description": "",
+          "metadata": {
+            "is_step": false,
+            "is_chapter": false,
+            "is_section": false,
+            "finished_thinking": false
+          },
+          "language": "python",
+          "could_visible_in_writing_mode": true,
+          "isUpdate": true
+        },
+        {
+          "id": "4362f1f0-9dff-4bff-919a-2c1b30dde4c5",
+          "type": "markdown",
+          "content": "## Data Verification and Basic Analysis",
+          "outputs": [],
+          "enable_edit": true,
+          "description": "",
+          "metadata": {
+            "is_step": false,
+            "is_chapter": false,
+            "is_section": false,
+            "finished_thinking": false
+          },
+          "language": "python",
+          "could_visible_in_writing_mode": true,
+          "isUpdate": true
+        },
+        {
+          "id": "46dae0bb-7d39-4634-9f15-ae55ba80c7f6",
+          "type": "code",
+          "content": "import pandas as pd\n\n# Load Housing dataset\nhousing_data = pd.read_csv('./assets/housing.csv')\n\n# Display basic information about the dataset\nprint(f\"Dataset shape: {housing_data.shape}\")",
+          "outputs": [
+            {
+              "output_type": "stream",
+              "text": "Dataset shape: (2930, 82)\n"
+            }
+          ],
+          "enable_edit": true,
+          "description": "",
+          "metadata": {
+            "is_step": false,
+            "is_chapter": false,
+            "is_section": false,
+            "finished_thinking": false
+          },
+          "language": "python",
+          "could_visible_in_writing_mode": true,
+          "execution_count": 1,
+          "isUpdate": true
+        }
+      ],
+      "execution_count": 1,
+      "cell_count": 3,
       "notebook_id": "f9559c1623154ca1b16b1cd83f7faea3",
-      "title": null,
-      "cell_count": 0,
-      "last_cell_type": null,
-      "last_output": null
+      "last_cell_type": "code",
+      "last_output": {
+        "output_type": "stream",
+        "text": "Dataset shape: (2930, 82)\n"
+      }
     },
     "FSM": {
-      "state": "BEHAVIOR_RUNNING",
-      "last_transition": "START_BEHAVIOR",
-      "timestamp": "2025-11-12T08:12:23.060562+00:00"
+      "state": "step_running",
+      "last_transition": "TRANSITION_TO_STEP_RUNNING",
+      "timestamp": "2025-11-12T08:12:23.060562+00:00",
+      "previous_state": "BEHAVIOR_COMPLETED"
     }
   }
 }

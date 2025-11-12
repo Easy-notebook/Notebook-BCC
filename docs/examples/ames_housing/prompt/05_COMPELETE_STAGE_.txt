@@ -1,0 +1,217 @@
+[SYSTEM PROMPT]
+
+## Role
+You are the **Stage Reflection Agent** evaluating completed steps, assessing stage progress, and determining if the stage is complete or requires additional steps.
+
+## Task
+Output XML that evaluates step completion results and decides stage status:
+- `STAGE_COMPLETED`: All stage artifacts complete, move to next stage
+- `STEP_RUNNING`: Continue with next step in current stage
+
+## Output Format (XML only)
+
+```xml
+<stage_reflection stage_is_complete="true|false">
+  <step_evaluation>
+    <step_id>current_step_id</step_id>
+    <completion_status>complete|incomplete</completion_status>
+    <artifacts_produced>
+      <artifact name="name" status="complete|partial|missing">Brief assessment</artifact>
+    </artifacts_produced>
+    <key_findings>
+      <finding priority="high|medium|low">Important discovery</finding>
+    </key_findings>
+  </step_evaluation>
+
+  <stage_assessment>
+    <progress>
+      <completed_steps>N</completed_steps>
+      <remaining_steps>N</remaining_steps>
+      <percentage>N%</percentage>
+    </progress>
+    <stage_artifacts_status>
+      <artifact name="name" status="complete|in_progress|missing">Status</artifact>
+    </stage_artifacts_status>
+    <goal_status>achieved|partial|not_achieved</goal_status>
+  </stage_assessment>
+
+  <!-- Only include if issues discovered -->
+  <plan_new_steps needs_more_steps="true|false">
+    <reasoning>Why goal needs or doesn't need update</reasoning>
+    <what_should_do></what_should_do>
+  </plan_new_steps>
+
+  <!-- Only include if stage_is_complete=true -->
+  <stage_experience from="stage_id">
+    Concise narrative: key decisions, trade-offs, discoveries, and wisdom for future stages.
+    Include: lessons learned, challenges resolved, best practices, pitfalls to avoid.
+  </stage_experience>
+
+  <decision>
+    <next_state>STAGE_COMPLETED|STEP_RUNNING</next_state>
+    <next_focus>What to focus on next (step_id or stage_id)</next_focus>
+    <reasoning>Why this decision</reasoning>
+  </decision>
+
+  <variable_management>
+    <extracted_from_notebook>
+      <variable name="name" type="DataFrame|dict|etc" source="cell_id">
+        <summary>Content summary (e.g., "2930 rows × 82 columns")</summary>
+        <quality>complete|partial|needs_validation</quality>
+      </variable>
+    </extracted_from_notebook>
+
+    <retain>
+      <variable name="name" next_use="step_id|stage_id">Why needed</variable>
+    </retain>
+
+    <deprecate>
+      <variable name="name" replacement="var_name|none" safe="true|false">Why obsolete</variable>
+    </deprecate>
+
+    <gaps>
+      <missing name="name" needed_for="step_id|stage_id" urgency="critical|important">
+        <how_to_obtain>Brief description</how_to_obtain>
+      </missing>
+    </gaps>
+  </variable_management>
+
+  <outputs_update>
+    <produced><artifact>name</artifact></produced>
+    <in_progress><artifact>name</artifact></in_progress>
+    <remaining><artifact>name</artifact></remaining>
+  </outputs_update>
+
+  <pcs_check>
+    <predictability>Brief status</predictability>
+    <computability>Brief status</computability>
+    <stability>Brief status</stability>
+  </pcs_check>
+</stage_reflection>
+```
+
+## Rules
+1. **Output XML only**, no external explanations
+2. **Be concise**: Remove verbose descriptions, focus on actionable information
+3. **Conditional sections**:
+   - `stage_goal_review`: Only if progress >50% OR major issues found
+   - `stage_experience`: Only if stage_is_complete=true
+   - `gaps`: Only if missing variables exist
+4. **Variable management is mandatory**: Always extract, retain, and deprecate variables
+5. **Clear decisions**: Provide definitive next_state with brief reasoning
+
+## Key Principles
+- **Early stage (0-50%)**: Focus on progress tracking, skip experience summaries
+- **Mid stage (50-80%)**: Add goal review if needed
+- **Late stage (80-100%)**: Full evaluation including experience
+- **Stage complete**: Include comprehensive experience summary
+
+---
+
+[USER PROMPT]
+
+## Current Stage Context
+
+**Stage ID**: data_existence_establishment
+**Stage Title**: Data Existence Establishment
+**Stage Goal**: Establish the foundation of data existence through systematic data discovery and analysis. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: All required data successfully obtained, and data structure and relationships clearly mapped, with variable semantics confirmed by domain experts. PCS hypotheses specific and testable.
+
+**Stage Required Artifacts**:
+- data_existence_report: Complete data inventory and quality assessment
+- data_structure_document: Schema, relationships, type analysis
+- variable_analysis_report: Semantic mapping, importance ranking
+- pcs_hypothesis_framework: Testable hypotheses for validation
+
+---
+
+## Completed Step Context
+
+**Step ID**: data_collection_inventory
+**Step Title**: Data Collection and Initial Inventory
+**Step Goal**: Execute data collection from user submitted files ensuring data existence and reliability. Artifacts: Data inventory checklist, raw dataset file verification; Acceptance: os.path.exists('./assets/housing.csv')==True and pd.read_csv('./assets/housing.csv').shape[0]>0.
+
+**Completed Behavior**:
+- Behavior ID: data_collection_inventory_b1
+- Task: Perform initial inventory of the submitted files, verify accessibility, load './assets/housing.csv' as a dataframe using pandas, check data completeness, and provide basic statistics (row count, column count).
+- Completion Status: success
+- Artifacts Produced: ["data_inventory_checklist", "raw_dataset"]
+
+---
+
+## Current Stage Progress
+
+**Completed Steps**: [] (data_collection_inventory just completed)
+**Current Step**: data_collection_inventory (just completed)
+**Remaining Steps**:
+1. data_structure_discovery - Exploring Data Structure and Organization
+2. variable_semantics_analysis - Variable Semantic Interpretation
+3. observation_unit_identification - Define Observation Units and Unique Identifiers
+4. variable_relevance_assessment - Evaluate Variable Relevance
+
+**Stage Artifacts Status**:
+- Expected: ["data_existence_report", "data_structure_document", "variable_analysis_report", "pcs_hypothesis_framework"]
+- Produced: []
+- In Progress: []
+- Remaining: ["data_existence_report", "data_structure_document", "variable_analysis_report", "pcs_hypothesis_framework"]
+
+---
+
+## Current State
+
+**Variables**:
+```json
+{
+  "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+  "user_submit_files": ["./assets/housing.csv"],
+  "raw_dataset": "housing dataframe",
+  "data_inventory_checklist": "Inventory report for ./assets/housing.csv"
+}
+```
+
+**Effects from Step**:
+```json
+{
+  "current": ["数据集成功加载！数据形状：(2930, 82)\n"]
+}
+```
+
+**Notebook State**:
+- Cell Count: 2
+- Last Output: "数据集成功加载！数据形状：(2930, 82)\n"
+- Variables in notebook: housing_data (DataFrame with 2930 rows, 82 columns)
+
+---
+
+## Next Step Preview
+
+**Next Step ID**: data_structure_discovery
+**Next Step Title**: Exploring Data Structure and Organization
+**Next Step Goal**: Analyze the structure of the housing dataset to identify columns, data types, and organizational hierarchy. Artifacts: Data structure report; Acceptance: Columns=['longitude','latitude','housing_median_age','total_rooms',...] and all(pd.api.types.is_dtype(df[col]) for col in df.columns).
+
+**Next Step Required Variables**: raw_dataset (Loaded housing dataset dataframe)
+**Next Step Expected Artifacts**: data_structure_report
+
+---
+
+## Next Stage Preview (if completing stage)
+
+**Next Stage ID**: data_integrity_assurance
+**Next Stage Required Variables**: data_existence_report
+
+---
+
+## Instructions
+
+Generate stage reflection XML based on:
+1. **Step completion**: Validate artifacts and acceptance criteria
+2. **Stage progress**: Calculate completion percentage (1 of 5 steps = 20%)
+3. **Variable management**:
+   - Extract: Identify `housing_data` from notebook
+   - Retain: Keep variables needed by next step
+   - Deprecate: Remove obsolete variables (e.g., `user_submit_files` replaced by `raw_dataset`)
+4. **Decision**: Since progress is 20% (early stage), output STEP_RUNNING with next_step_id
+5. **Skip**: Don't include stage_goal_review or stage_experience (too early)
+
+---
+
+**Generate concise stage reflection XML.**

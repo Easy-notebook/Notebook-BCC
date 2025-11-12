@@ -286,8 +286,8 @@ class WorkflowREPL(cmd.Cmd):
             api_type = args[0]
             print(f"\n🎯 Using specified API type: {api_type}")
         else:
-            # Auto-infer API type from state
-            api_type = state_file_loader.infer_api_type(self._loaded_state_json)
+            # Auto-infer API type from state (NEW: using state machine)
+            api_type = self.cli.state_machine.infer_api_type_from_state(self._loaded_state_json)
             print(f"\n🤖 Auto-inferred API type: {api_type}")
             print(f"   (You can override with: send_api <planning|generating|reflecting>)")
 
@@ -348,11 +348,35 @@ class WorkflowREPL(cmd.Cmd):
                         return result
 
                     elif api_type == 'reflecting':
+                        # 使用 state class 来确定 transition_name
+                        from core.state_classes.state_factory import StateFactory
+
+                        fsm = state.get('state', {}).get('FSM', {})
+                        current_fsm_state = fsm.get('state', '')
+
+                        transition_name = None
+                        state_instance = StateFactory.get_state(current_fsm_state)
+                        if state_instance:
+                            next_transition_event = state_instance.determine_next_transition(state)
+                            if next_transition_event:
+                                transition_name = next_transition_event.value
+
+                        # 如果没有确定 transition_name，使用默认值
+                        if not transition_name:
+                            # 简单的 fallback 逻辑
+                            if 'BEHAVIOR_COMPLETED' in current_fsm_state:
+                                transition_name = 'COMPLETE_STEP'  # 默认假设
+                            elif 'STEP_COMPLETED' in current_fsm_state:
+                                transition_name = 'COMPLETE_STAGE'
+                            else:
+                                transition_name = 'REFLECTING'
+
                         with api_display.display_sending_progress('reflecting') or DummyContext():
                             result = await workflow_api_client.send_reflecting(
                                 stage_id=stage_id,
                                 step_index=step_id,
-                                state=state
+                                state=state,
+                                transition_name=transition_name
                             )
                         api_display.display_api_response('reflecting', result, success=True)
                         return result
@@ -391,8 +415,8 @@ class WorkflowREPL(cmd.Cmd):
             print(f"\n🎯 Using specified API type: {api_type}")
             start_idx = 1
         else:
-            # Auto-infer API type from state
-            api_type = state_file_loader.infer_api_type(self._loaded_state_json)
+            # Auto-infer API type from state (NEW: using state machine)
+            api_type = self.cli.state_machine.infer_api_type_from_state(self._loaded_state_json)
             print(f"\n🤖 Auto-inferred API type: {api_type}")
             print(f"   (You can override with: test_request <planning|generating|reflecting>)")
             start_idx = 0

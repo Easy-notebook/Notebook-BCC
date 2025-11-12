@@ -1,105 +1,30 @@
 """
-Execution context for the workflow.
-Contains the state needed during workflow execution.
+Workflow Context (Minimal)
+Provides minimal context classes for legacy state_machine compatibility.
+
+Note: This module exists for backward compatibility with the old state_machine.
+The new architecture uses stores directly instead of context objects.
 """
 
-from dataclasses import dataclass, field
-from typing import List, Any, Optional
+from typing import List, Dict, Any, Optional
 
 
-@dataclass
-class SectionProgress:
-    """
-    Tracks section completion progress within a notebook.
-    Helps organize content structure and track what has been completed.
-    """
-    current_section_id: Optional[str] = None
-    current_section_number: Optional[int] = None
-    completed_sections: List[str] = field(default_factory=list)
-    all: List[str] = field(default_factory=list)  # All planned sections (set by workflow update)
-
-    def to_dict(self) -> dict:
-        """Convert to dictionary."""
-        return {
-            'current_section_id': self.current_section_id,
-            'current_section_number': self.current_section_number,
-            'completed_sections': self.completed_sections,
-            'all': self.all
-        }
-
-
-@dataclass
 class WorkflowContext:
-    """
-    Context maintained by the state machine during execution.
-    Maps to TypeScript's WorkflowContext interface.
-    """
-    current_stage_id: Optional[str] = None
-    current_step_id: Optional[str] = None
-    current_behavior_id: Optional[str] = None
-    behavior_iteration: int = 0  # Added: tracks which behavior iteration we're on
-    current_behavior_actions: List[Any] = field(default_factory=list)
-    current_action_index: int = 0
-    completed_behaviors: List[str] = field(default_factory=list)  # Track completed behavior IDs
+    """Minimal workflow context for state machine."""
 
-    def reset_for_new_step(self):
-        """Reset context for a new step."""
-        self.current_behavior_id = None
-        self.behavior_iteration = 0  # Reset behavior counter for new step
-        self.current_behavior_actions = []
-        self.current_action_index = 0
-        self.completed_behaviors = []  # Clear completed behaviors for new step
-
-    def reset_for_new_behavior(self):
-        """Reset context for a new behavior."""
-        self.current_behavior_actions = []
-        self.current_action_index = 0
+    def __init__(self):
+        self.current_stage_id: Optional[str] = None
+        self.current_step_id: Optional[str] = None
+        self.current_behavior_id: Optional[str] = None
 
 
-@dataclass
-class ExecutionHistoryEntry:
-    """
-    Represents a single entry in the execution history.
-    Maps to TypeScript's ExecutionHistoryEntry interface.
-    """
-    timestamp: float
-    from_state: str
-    to_state: str
-    event: str
-    payload: Any = None
-    hierarchical_id: Optional[str] = None
-    stage_id: Optional[str] = None
-    step_id: Optional[str] = None
-    step_index: Optional[int] = None
-    behavior_counter: Optional[int] = None
-    action_counter: Optional[int] = None
-
-    def to_dict(self):
-        """Convert to dictionary."""
-        return {
-            'timestamp': self.timestamp,
-            'from_state': self.from_state,
-            'to_state': self.to_state,
-            'event': self.event,
-            'payload': self.payload,
-            'hierarchical_id': self.hierarchical_id,
-            'stage_id': self.stage_id,
-            'step_id': self.step_id,
-            'step_index': self.step_index,
-            'behavior_counter': self.behavior_counter,
-            'action_counter': self.action_counter,
-        }
-
-
-@dataclass
 class ExecutionContext:
-    """
-    Full execution context including workflow context and history.
-    Used by the state machine to track execution state.
-    """
-    workflow_context: WorkflowContext = field(default_factory=WorkflowContext)
-    execution_history: List[ExecutionHistoryEntry] = field(default_factory=list)
-    pending_workflow_data: Optional[Any] = None
+    """Minimal execution context for state machine."""
+
+    def __init__(self):
+        self.workflow_context = WorkflowContext()
+        self.history: List[Dict[str, Any]] = []
+        self.pending_workflow_data: Any = None
 
     def add_history_entry(
         self,
@@ -108,21 +33,12 @@ class ExecutionContext:
         to_state: str,
         event: str,
         payload: Any = None
-    ):
-        """Add an entry to the execution history."""
-        entry = ExecutionHistoryEntry(
-            timestamp=timestamp,
-            from_state=from_state,
-            to_state=to_state,
-            event=event,
-            payload=payload,
-            stage_id=self.workflow_context.current_stage_id,
-            step_id=self.workflow_context.current_step_id,
-        )
-        self.execution_history.append(entry)
-
-    def reset(self):
-        """Reset the execution context."""
-        self.workflow_context = WorkflowContext()
-        self.execution_history = []
-        self.pending_workflow_data = None
+    ) -> None:
+        """Add entry to history."""
+        self.history.append({
+            'timestamp': timestamp,
+            'from_state': from_state,
+            'to_state': to_state,
+            'event': event,
+            'payload': payload
+        })

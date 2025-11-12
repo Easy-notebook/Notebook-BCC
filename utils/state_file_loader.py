@@ -116,62 +116,6 @@ class StateFileLoader(ModernLogger):
             'FSM': state_data.get('FSM', {})
         }
 
-    def infer_api_type(self, state_json: Dict[str, Any]) -> str:
-        """
-        Infer the appropriate API type based on FSM state.
-
-        Args:
-            state_json: Raw state JSON
-
-        Returns:
-            API type: 'planning', 'generating', or 'reflecting'
-
-        Logic (based on Planning First protocol):
-        - IDLE → planning (START_WORKFLOW)
-        - STAGE_RUNNING → planning (START_STEP)
-        - STEP_RUNNING → planning (check if target achieved)
-        - BEHAVIOR_RUNNING → generating (get actions to execute)
-        - *_COMPLETE(D) → reflecting (reflect on completion)
-        """
-        state_data = state_json.get('state', {})
-        fsm = state_data.get('FSM', {})
-        fsm_state = fsm.get('state', 'UNKNOWN')
-
-        # Normalize state name
-        fsm_state = fsm_state.upper()
-
-        # Planning First Protocol:
-        # - IDLE, STAGE_RUNNING, STEP_RUNNING → planning (check/decide next step)
-        # - BEHAVIOR_RUNNING → generating (get actions to execute)
-        # - *_COMPLETE(D) → reflecting (reflect on completed behaviors/steps/stages)
-
-        if 'BEHAVIOR' in fsm_state and 'RUNNING' in fsm_state:
-            # BEHAVIOR_RUNNING → generating (get actions)
-            inferred = 'generating'
-            self.info(f"[Infer] FSM={fsm_state} → API=generating (get behavior actions)")
-        elif 'COMPLETE' in fsm_state:
-            # BEHAVIOR_COMPLETE, STEP_COMPLETE, etc. → reflecting
-            inferred = 'reflecting'
-            self.info(f"[Infer] FSM={fsm_state} → API=reflecting (reflect on completion)")
-        elif 'STEP' in fsm_state and 'RUNNING' in fsm_state:
-            # STEP_RUNNING → planning (check target achieved)
-            inferred = 'planning'
-            self.info(f"[Infer] FSM={fsm_state} → API=planning (check target achieved)")
-        elif 'STAGE' in fsm_state and 'RUNNING' in fsm_state:
-            # STAGE_RUNNING → planning (start step)
-            inferred = 'planning'
-            self.info(f"[Infer] FSM={fsm_state} → API=planning (start step)")
-        elif fsm_state == 'IDLE':
-            # IDLE → planning (start workflow)
-            inferred = 'planning'
-            self.info(f"[Infer] FSM={fsm_state} → API=planning (start workflow)")
-        else:
-            # Default to planning for all other states
-            inferred = 'planning'
-            self.info(f"[Infer] FSM={fsm_state} → API=planning (default)")
-
-        return inferred
-
 
 # Global singleton
 state_file_loader = StateFileLoader()

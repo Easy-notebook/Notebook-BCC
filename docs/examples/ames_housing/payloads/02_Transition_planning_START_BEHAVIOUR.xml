@@ -1,22 +1,15 @@
 <behavior id="data_collection_inventory_b1" step_id="data_collection_inventory">
-  <agent>ExploreAgent</agent>
-  <task behavior_id="behavior_2_initial_inventory_and_access_check">
-    Verify accessibility and completeness of the user-submitted housing dataset located at ./assets/housing.csv, record file metadata (size, timestamp), and generate a comprehensive data_existence_report including version traceability and validation results.
-  </task>
+  <agent>behavior_2_initial_inventory_and_access_check</agent>
+  <task behavior_id="data_collection_inventory_b1">Perform initial inventory of the submitted files, verify accessibility, load './assets/housing.csv' as a dataframe using pandas, check data completeness, and provide basic statistics (row count, column count).</task>
   <inputs>
-    <variable name="user_problem">基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准</variable>
     <variable name="user_submit_files">["./assets/housing.csv"]</variable>
   </inputs>
   <effects>False</effects>
   <outputs>
-    <artifact name="data_existence_report">Comprehensive record confirming dataset presence, file metadata (size, timestamp), and accessibility path, type: report (JSON/Markdown), quality: must match provided file path and be accessible.</artifact>
+    <artifact name="data_inventory_checklist">Inventory report of data files, text-based, completeness verification standards</artifact>
+    <artifact name="raw_dataset">Raw housing dataset loaded into memory, dataframe type, non-empty standards</artifact>
   </outputs>
   <acceptance>
-    <criterion>os.path.exists("./assets/housing.csv")==True</criterion>
-    <criterion>os.path.getsize("./assets/housing.csv")>0</criterion>
+    <criterion>os.path.exists('./assets/housing.csv')==True and pd.read_csv('./assets/housing.csv').shape[0]>0</criterion>
   </acceptance>
-  <whathappened>
-    <overview>The dataset existence stage has begun. The housing dataset was submitted by the user and now needs to be validated for accessibility, completeness, and traceability.</overview>
-    <background>No prior steps have been executed yet; this is the first verification step under data_existence_establishment.</background>
-  </whathappened>
 </behavior>

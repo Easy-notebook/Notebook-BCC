@@ -1,9 +1,10 @@
 """
 CLI helper methods - unified utilities to reduce code duplication.
-"""
 
-from stores.script_store import ScriptStore
-from stores.state_builder import state_builder
+All legacy methods have been removed (2025-11-12).
+Commands now use AsyncStateMachineAdapter from core/async_state_machine.py
+or state_machine methods directly.
+"""
 
 
 class CLIHelpers:
@@ -25,82 +26,6 @@ class CLIHelpers:
         state_json = state_file_loader.load_state_file(state_file)
         parsed_state = state_file_loader.parse_state_for_api(state_json)
         return state_json, parsed_state
-
-    def _infer_api_type(self, state_json, override=None):
-        """
-        Infer API type from state with optional override.
-
-        Args:
-            state_json: State JSON dict
-            override: Optional explicit API type override
-
-        Returns:
-            API type string ('planning', 'generating', or 'reflecting')
-        """
-        from utils.state_file_loader import state_file_loader
-        if override:
-            return override
-        return state_file_loader.infer_api_type(state_json)
-
-    def _convert_action_to_step(self, action_data):
-        """
-        Convert action JSON to ExecutionStep.
-        Uses ScriptStore._dict_to_execution_step to avoid code duplication.
-
-        Args:
-            action_data: Action dict from API response
-
-        Returns:
-            ExecutionStep object
-        """
-        # Debug: Log the incoming action_data structure
-        self.script_store.debug(f"[Commands] Converting action_data keys: {list(action_data.keys())[:10]}")
-        if 'action' in action_data:
-            # Nested structure: {action: {type: ..., content: ...}}
-            actual_action = action_data['action']
-        else:
-            # Flat structure: {type: ..., content: ...}
-            actual_action = action_data
-
-        self.script_store.debug(f"[Commands] Actual action keys: {list(actual_action.keys())[:10]}")
-        return ScriptStore._dict_to_execution_step(actual_action)
-
-    def _execute_actions_internal(self, actions, current_state):
-        """
-        Execute actions using ScriptStore and return updated state with effects.
-
-        Args:
-            actions: List of action dicts from API response
-            current_state: Current state dict
-
-        Returns:
-            Updated state dict with executed actions and effects
-        """
-        # Execute all actions using ScriptStore
-        for action_data in actions:
-            step = self._convert_action_to_step(action_data)
-            self.script_store.exec_action(step)
-
-        # Build updated state from stores
-        return self._build_state_from_stores(current_state)
-
-    def _build_state_from_stores(self, base_state):
-        """
-        Build updated state from current store states.
-        Uses StateBuilder to avoid code duplication.
-
-        Args:
-            base_state: Base state dict to update
-
-        Returns:
-            Updated state dict with current notebook and effects
-        """
-        # Use StateBuilder to avoid duplication
-        return state_builder.build_state_from_stores(
-            base_state,
-            self.notebook_store,
-            self.ai_context_store
-        )
 
     def _sync_state_to_stores(self, state):
         """

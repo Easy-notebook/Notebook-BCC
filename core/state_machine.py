@@ -6,11 +6,10 @@ Replicates the TypeScript workflowStateMachine.ts
 import time
 from typing import Dict, Optional, Any, Callable, List
 from silantui import ModernLogger
-from .events import WorkflowEvent, EVENTS
-from .states import WorkflowState, WORKFLOW_STATES
+from .events import WorkflowEvent
+from .states import WorkflowState
 from .context import WorkflowContext, ExecutionContext
 from .state_transitions import STATE_TRANSITIONS
-from .state_effects import register_effects
 
 
 class WorkflowStateMachine(ModernLogger):
@@ -76,7 +75,6 @@ class WorkflowStateMachine(ModernLogger):
 
         # State effect handlers (will be populated)
         self._state_effects: Dict[WorkflowState, Callable] = {}
-        register_effects(self)
 
     # ==============================================
     # Execution Control Methods
@@ -483,6 +481,109 @@ class WorkflowStateMachine(ModernLogger):
 
         variables = self.ai_context_store.get_context().variables
         return all(variables.get(var) for var in self._stage_focus)
+
+    # ==============================================
+    # Event Inference
+    # ==============================================
+
+    def infer_next_event_from_state(self, state_json: Dict[str, Any]) -> Optional[WorkflowEvent]:
+        """
+        Infer the next event to trigger based on current FSM state.
+
+        This maps from the legacy API-type inference to the event-driven system.
+
+        Args:
+            state_json: Current state JSON
+
+        Returns:
+            The event to trigger, or None if cannot infer
+        """
+        state_data = state_json.get('state', {})
+        fsm = state_data.get('FSM', {})
+        fsm_state = fsm.get('state', 'UNKNOWN').upper()
+
+        # Map FSM state to next event
+        # Based on "Planning First" protocol
+
+        if fsm_state == 'IDLE':
+            return WorkflowEvent.START_WORKFLOW
+
+        elif fsm_state == 'STAGE_RUNNING':
+            return WorkflowEvent.START_STEP
+
+        elif fsm_state == 'STEP_RUNNING':
+            # Need to check if step is complete or start next behavior
+            # For now, default to START_BEHAVIOR
+            # TODO: Add logic to check if step goals are met
+            return WorkflowEvent.START_BEHAVIOR
+
+        elif fsm_state == 'BEHAVIOR_RUNNING':
+            # Behavior is running, should complete it
+            return WorkflowEvent.COMPLETE_BEHAVIOR
+
+        elif 'BEHAVIOR_COMPLETED' in fsm_state:
+            # Need reflection to decide: NEXT_BEHAVIOR or COMPLETE_STEP
+            # This requires API call, so return None (handled by caller)
+            return None
+
+        elif 'STEP_COMPLETED' in fsm_state:
+            # Need to decide: NEXT_STEP or COMPLETE_STAGE
+            return None
+
+        elif 'STAGE_COMPLETED' in fsm_state:
+            # Need to decide: NEXT_STAGE or COMPLETE_WORKFLOW
+            return None
+
+        else:
+            self.warning(f"[FSM] Cannot infer event for state: {fsm_state}")
+            return None
+
+    def infer_api_type_from_state(self, state_json: Dict[str, Any]) -> str:
+        """
+        Infer the API type to call based on current FSM state.
+
+        This is the state machine's version of state_file_loader.infer_api_type()
+
+        Args:
+            state_json: Current state JSON
+
+        Returns:
+            API type: 'planning', 'generating', or 'reflecting'
+
+        Logic (based on Planning First protocol):
+        - IDLE → planning (START_WORKFLOW)
+        - STAGE_RUNNING → planning (START_STEP)
+        - STEP_RUNNING → planning (check if target achieved)
+        - BEHAVIOR_RUNNING → generating (get actions to execute)
+        - *_COMPLETE(D) → reflecting (reflect on completion)
+        """
+        state_data = state_json.get('state', {})
+        fsm = state_data.get('FSM', {})
+        fsm_state = fsm.get('state', 'UNKNOWN').upper()
+
+        if 'BEHAVIOR' in fsm_state and 'RUNNING' in fsm_state:
+            # BEHAVIOR_RUNNING → generating (get actions)
+            return 'generating'
+
+        elif 'COMPLETE' in fsm_state:
+            # BEHAVIOR_COMPLETED, STEP_COMPLETED, etc. → reflecting
+            return 'reflecting'
+
+        elif 'STEP' in fsm_state and 'RUNNING' in fsm_state:
+            # STEP_RUNNING → planning (check target achieved)
+            return 'planning'
+
+        elif 'STAGE' in fsm_state and 'RUNNING' in fsm_state:
+            # STAGE_RUNNING → planning (decide next step)
+            return 'planning'
+
+        elif fsm_state == 'IDLE':
+            # IDLE → planning (start workflow)
+            return 'planning'
+
+        else:
+            self.warning(f"[FSM] Cannot infer API type for state: {fsm_state}, defaulting to 'planning'")
+            return 'planning'
 
     # ==============================================
     # Getters

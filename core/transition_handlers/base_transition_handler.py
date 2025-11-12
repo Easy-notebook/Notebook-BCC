@@ -1,0 +1,184 @@
+"""
+Base Transition Handler
+Provides common functionality for all FSM transition handlers.
+"""
+
+from abc import ABC, abstractmethod
+from typing import Dict, Any
+from copy import deepcopy
+from silantui import ModernLogger
+
+
+class BaseTransitionHandler(ABC, ModernLogger):
+    """
+    Base class for all FSM transition handlers.
+
+    Each handler is responsible for:
+    1. Parsing API response
+    2. Updating state JSON based on the response
+    3. Performing the FSM state transition
+    4. Returning the updated state
+    """
+
+    def __init__(self, from_state: str, to_state: str, handler_name: str = None):
+        """
+        Initialize the transition handler.
+
+        Args:
+            from_state: Source FSM state
+            to_state: Target FSM state
+            handler_name: Name for logging (defaults to class name)
+        """
+        name = handler_name or self.__class__.__name__
+        ModernLogger.__init__(self, name)
+        self.from_state = from_state
+        self.to_state = to_state
+
+    @abstractmethod
+    def can_handle(self, api_response: Any) -> bool:
+        """
+        Check if this handler can handle the given API response.
+
+        Args:
+            api_response: Parsed API response
+
+        Returns:
+            True if this handler can process this response
+        """
+        pass
+
+    @abstractmethod
+    def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
+        """
+        Apply the transition to the state.
+
+        Args:
+            state: Current state JSON (will be deep copied)
+            api_response: Parsed API response
+
+        Returns:
+            Updated state JSON with transition applied
+        """
+        pass
+
+    def _deep_copy_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a deep copy of the state."""
+        return deepcopy(state)
+
+    def _normalize_state_name(self, state_name: str) -> str:
+        """
+        Normalize state name from server format to local FSM format.
+
+        Examples:
+            STATE_Behavior_Running → BEHAVIOR_RUNNING
+            behavior_running → BEHAVIOR_RUNNING
+        """
+        if not state_name:
+            return state_name
+
+        # Remove STATE_ prefix if present
+        if state_name.startswith('STATE_'):
+            state_name = state_name[6:]
+
+        # Convert to uppercase
+        state_name = state_name.upper().replace(' ', '_')
+
+        return state_name
+
+    def _get_observation(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Get observation structure from state."""
+        return state.get('observation', {})
+
+    def _get_location(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Get location structure from state."""
+        return self._get_observation(state).get('location', {})
+
+    def _get_progress(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Get progress structure from state."""
+        return self._get_location(state).get('progress', {})
+
+    def _get_state_data(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Get state data structure."""
+        return state.get('state', {})
+
+    def _get_fsm(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Get FSM structure from state."""
+        return self._get_state_data(state).get('FSM', {})
+
+    def _update_fsm_state(
+        self,
+        state: Dict[str, Any],
+        new_state: str,
+        transition_name: str
+    ) -> None:
+        """
+        Update FSM state and transition.
+
+        Args:
+            state: State dict (modified in place)
+            new_state: New FSM state
+            transition_name: Name of the transition
+        """
+        fsm = self._get_fsm(state)
+        old_state = fsm.get('state', 'UNKNOWN')
+        fsm['previous_state'] = old_state
+        fsm['state'] = new_state
+        fsm['last_transition'] = transition_name
+        self.info(f"FSM transition: {old_state} → {new_state}")
+
+    def _update_location_current(
+        self,
+        state: Dict[str, Any],
+        stage_id: str = None,
+        step_id: str = None,
+        behavior_id: str = None,
+        behavior_iteration: int = None
+    ) -> None:
+        """
+        Update location.current fields.
+
+        Args:
+            state: State dict (modified in place)
+            stage_id: Stage ID (None = no change)
+            step_id: Step ID (None = no change, use 'clear' to set to None)
+            behavior_id: Behavior ID (None = no change, use 'clear' to set to None)
+            behavior_iteration: Behavior iteration number
+        """
+        location = self._get_location(state)
+        current = location.setdefault('current', {})
+
+        if stage_id is not None:
+            current['stage_id'] = stage_id
+
+        if step_id is not None:
+            current['step_id'] = None if step_id == 'clear' else step_id
+
+        if behavior_id is not None:
+            current['behavior_id'] = None if behavior_id == 'clear' else behavior_id
+
+        if behavior_iteration is not None:
+            current['behavior_iteration'] = behavior_iteration
+
+    def _init_outputs_tracking(
+        self,
+        expected_artifacts: Dict[str, str]
+    ) -> Dict[str, list]:
+        """
+        Initialize outputs tracking structure.
+
+        Args:
+            expected_artifacts: Dict of {name: description}
+
+        Returns:
+            Outputs tracking dict with expected/produced/in_progress
+        """
+        expected_list = [
+            {'name': name, 'description': desc}
+            for name, desc in expected_artifacts.items()
+        ]
+
+        return {
+            'expected': expected_list,
+            'produced': [],
+            'in_progress': []
+        }

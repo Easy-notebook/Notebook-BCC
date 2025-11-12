@@ -1,115 +1,68 @@
 """
-COMPLETE_BEHAVIOR Handler
-Handles: BEHAVIOR_RUNNING → BEHAVIOR_COMPLETED transition
-
-Responsibilities:
-1. Call Reflecting API (/reflecting) with behavior feedback
-2. Parse JSON response
-3. Apply context updates
-4. Check transition directives (continue_behaviors, target_achieved)
-5. Trigger appropriate next transition
+COMPLETE_BEHAVIOR Event Handler
+Handles action completion from generating API.
+Event: COMPLETE_BEHAVIOR (internally uses COMPLETE_ACTION)
+Transition: BEHAVIOR_RUNNING → BEHAVIOR_COMPLETED
 """
 
-from typing import Any, Dict
-from silantui import ModernLogger
+from typing import Dict, Any
+from .base_transition_handler import BaseTransitionHandler
 
 
-class CompleteBehaviorHandler(ModernLogger):
-    """Handler for COMPLETE_BEHAVIOR transition."""
+class CompleteBehaviorHandler(BaseTransitionHandler):
+    """
+    Handles COMPLETE_BEHAVIOR event.
+    Transition: BEHAVIOR_RUNNING → BEHAVIOR_COMPLETED
+
+    Triggered by: Generating API returning actions list
+
+    Updates:
+    - state.FSM.state to 'BEHAVIOR_COMPLETED'
+
+    Note: Actions should already be executed and state updated from stores
+    before calling this handler. This handler only performs the FSM transition.
+    """
 
     def __init__(self):
-        super().__init__("CompleteBehaviorHandler")
+        super().__init__(
+            'BEHAVIOR_RUNNING',
+            'BEHAVIOR_COMPLETED',
+            'COMPLETE_BEHAVIOR'
+        )
 
-    def handle(self, state_machine, payload: Any = None) -> None:
+    def can_handle(self, api_response: Any) -> bool:
+        """Check if response contains actions list."""
+        if isinstance(api_response, dict):
+            # Check for actions field
+            if 'actions' in api_response:
+                return isinstance(api_response['actions'], list)
+            # Also handle count field from iteration loop
+            if 'count' in api_response and isinstance(api_response.get('count'), int):
+                return True
+        return False
+
+    def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """
-        Handle COMPLETE_BEHAVIOR transition.
+        Apply COMPLETE_BEHAVIOR transition.
 
         Args:
-            state_machine: WorkflowStateMachine instance
-            payload: Optional payload data
+            state: Current state JSON (should already contain updated notebook/effects)
+            api_response: Generating API response with actions
+
+        Returns:
+            Updated state JSON with FSM transitioned
         """
-        self.info("[Handler] COMPLETE_BEHAVIOR: BEHAVIOR_RUNNING → BEHAVIOR_COMPLETED")
+        new_state = self._deep_copy_state(state)
 
-        ctx = state_machine.execution_context.workflow_context
+        actions = api_response.get('actions', [])
+        action_count = api_response.get('count', len(actions))
 
-        if not ctx.current_stage_id or not ctx.current_step_id:
-            self.error("[Handler] Missing stage/step ID")
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': 'Missing stage/step'})
-            return
+        self.info(f"Applying actions transition: {action_count} actions received")
 
-        try:
-            # Call Reflecting API
-            from utils.api_client import workflow_api_client
-            from utils.state_builder import build_api_state, build_behavior_feedback
+        # Update FSM state to BEHAVIOR_COMPLETED
+        # This signals that all actions have been executed
+        self._update_fsm_state(new_state, 'BEHAVIOR_COMPLETED', 'COMPLETE_ACTION')
 
-            current_state = build_api_state(state_machine, require_progress_info=True)
-            behavior_feedback = build_behavior_feedback(state_machine)
+        self.info("Transition complete: COMPLETE_BEHAVIOR")
 
-            # Extract notebook_id from state
-            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
-
-            self.info(f"[Handler] Calling Reflecting API for behavior completion")
-
-            reflecting_response = workflow_api_client.send_reflecting_sync(
-                stage_id=ctx.current_stage_id,
-                step_index=ctx.current_step_id,
-                state=current_state,
-                notebook_id=notebook_id,
-                behavior_feedback=behavior_feedback
-            )
-
-            response_type = reflecting_response.get('type')
-            self.info(f"[Handler] Reflecting API response type: {response_type}")
-
-            # Update context from response
-            from utils.workflow_updater import workflow_updater
-            workflow_updater.update_from_response(state_machine, reflecting_response)
-
-            # 📝 更新 API 日志，添加最终状态
-            try:
-                from utils.state_builder import build_api_state
-                final_state = build_api_state(state_machine, require_progress_info=False)
-                workflow_api_client.update_last_log_with_final_state(final_state)
-            except Exception as e:
-                self.warning(f"[Handler] Failed to update log with final state: {e}")
-
-            # Mark current behavior as completed
-            if ctx.current_behavior_id and ctx.current_behavior_id not in ctx.completed_behaviors:
-                ctx.completed_behaviors.append(ctx.current_behavior_id)
-
-            # Check transition directives (for JSON responses)
-            if response_type == 'json':
-                content = reflecting_response.get('content', {})
-                transition = content.get('transition', {})
-                continue_behaviors = transition.get('continue_behaviors', False)
-                target_achieved = transition.get('target_achieved', content.get('targetAchieved', False))
-
-                from core.events import WorkflowEvent
-                if target_achieved:
-                    self.info("[Handler] Step target achieved per Reflecting API")
-                    state_machine.transition(WorkflowEvent.COMPLETE_STEP)
-                elif continue_behaviors:
-                    self.info("[Handler] Continuing to next behavior")
-                    ctx.current_behavior_id = None
-                    ctx.current_behavior_actions = []
-                    ctx.current_action_index = 0
-                    state_machine.transition(WorkflowEvent.NEXT_BEHAVIOR)
-                else:
-                    self.info("[Handler] No clear directive, defaulting to COMPLETE_STEP")
-                    state_machine.transition(WorkflowEvent.COMPLETE_STEP)
-            else:
-                # For XML responses, default to next behavior
-                self.info("[Handler] XML response, continuing to next behavior")
-                from core.events import WorkflowEvent
-                ctx.current_behavior_id = None
-                state_machine.transition(WorkflowEvent.NEXT_BEHAVIOR)
-
-        except Exception as e:
-            self.error(f"[Handler] Failed to complete behavior: {e}", exc_info=True)
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': str(e)})
-
-
-# Create singleton instance
-handle_complete_behavior = CompleteBehaviorHandler().handle
+        return new_state

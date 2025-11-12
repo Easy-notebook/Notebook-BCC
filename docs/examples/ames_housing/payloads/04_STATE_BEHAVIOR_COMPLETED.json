@@ -273,19 +273,67 @@
       ]
     },
     "effects": {
-      "current": [],
+      "current": [
+        "数据集成功加载！数据形状：(2930, 82)\n"
+      ],
       "history": []
     },
     "notebook": {
+      "title": "房价预测模型构建",
+      "cells": [
+        {
+          "id": "80755aa8-1e80-4c2b-b654-3c050eb2b359",
+          "type": "markdown",
+          "content": "基于提供的 Housing 数据集，我们将构建一个房价预测模型，该模型的性能目标为 RMSE 小于 25000 且 R² 大于 0.85，同时符合 PCS 标准要求。\n作为第一步，我们将加载数据并对其进行初步验证，以确认数据的完整性和正确性。",
+          "outputs": [],
+          "enable_edit": true,
+          "description": "",
+          "metadata": {
+            "is_step": false,
+            "is_chapter": false,
+            "is_section": false,
+            "finished_thinking": false
+          },
+          "language": "python",
+          "could_visible_in_writing_mode": true,
+          "isUpdate": true
+        },
+        {
+          "id": "ba6c0232-9202-486e-bef6-0ec49acf28b0",
+          "type": "code",
+          "content": "import pandas as pd\n\n# Load the dataset\nfile_path = './assets/housing.csv'\ntry:\n    housing_data = pd.read_csv(file_path)\n    print(f\"数据集成功加载！数据形状：{housing_data.shape}\")\nexcept Exception as e:\n    print(f\"数据加载失败: {e}\")",
+          "outputs": [
+            {
+              "output_type": "stream",
+              "text": "数据集成功加载！数据形状：(2930, 82)\n"
+            }
+          ],
+          "enable_edit": true,
+          "description": "",
+          "metadata": {
+            "is_step": false,
+            "is_chapter": false,
+            "is_section": false,
+            "finished_thinking": false
+          },
+          "language": "python",
+          "could_visible_in_writing_mode": true,
+          "execution_count": 1,
+          "isUpdate": true
+        }
+      ],
+      "execution_count": 1,
+      "cell_count": 2,
       "notebook_id": "f9559c1623154ca1b16b1cd83f7faea3",
-      "title": null,
-      "cell_count": 0,
-      "last_cell_type": null,
-      "last_output": null
+      "last_cell_type": "code",
+      "last_output": {
+        "output_type": "stream",
+        "text": "数据集成功加载！数据形状：(2930, 82)\n"
+      }
     },
     "FSM": {
-      "state": "BEHAVIOR_RUNNING",
-      "last_transition": "START_BEHAVIOR",
+      "state": "BEHAVIOR_COMPLETED",
+      "last_transition": "COMPLETE_ACTION",
       "timestamp": "2025-11-12T08:12:23.060562+00:00"
     }
   }

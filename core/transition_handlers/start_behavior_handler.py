@@ -1,113 +1,116 @@
 """
-START_BEHAVIOR Handler
-Handles: STEP_RUNNING → BEHAVIOR_RUNNING transition
-
-Responsibilities:
-1. Call Planning API (/planning) to check step status or get behavior definition
-2. If behavior definition returned (XML), parse and store it
-3. If JSON returned, check targetAchieved
-4. Call Generating API (/generating) to get actions
-5. Store actions in context
+START_BEHAVIOR Event Handler
+Handles behavior initialization from planning API.
+Event: START_BEHAVIOR
+Transition: STEP_RUNNING → BEHAVIOR_RUNNING
 """
 
-from typing import Any, Dict
-from silantui import ModernLogger
+from typing import Dict, Any
+from .base_transition_handler import BaseTransitionHandler
 
 
-class StartBehaviorHandler(ModernLogger):
-    """Handler for START_BEHAVIOR transition."""
+class StartBehaviorHandler(BaseTransitionHandler):
+    """
+    Handles START_BEHAVIOR event.
+    Transition: STEP_RUNNING → BEHAVIOR_RUNNING
+
+    Triggered by: Planning API returning behavior definition
+
+    Updates:
+    - observation.location.progress.behaviors with new behavior
+    - observation.location.current with behavior_id and iteration
+    - observation.location.goals with behavior task
+    - state.FSM.state to 'BEHAVIOR_RUNNING'
+    """
 
     def __init__(self):
-        super().__init__("StartBehaviorHandler")
+        super().__init__('STEP_RUNNING', 'BEHAVIOR_RUNNING', 'START_BEHAVIOR')
 
-    def handle(self, state_machine, payload: Any = None) -> None:
+    def can_handle(self, api_response: Any) -> bool:
+        """Check if response contains behavior definition."""
+        if isinstance(api_response, dict):
+            # Check for behavior fields
+            has_behavior_id = 'behavior_id' in api_response
+            has_agent = 'agent' in api_response
+            has_task = 'task' in api_response
+            return has_behavior_id and (has_agent or has_task)
+        return False
+
+    def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """
-        Handle START_BEHAVIOR transition.
+        Apply START_BEHAVIOR transition.
 
         Args:
-            state_machine: WorkflowStateMachine instance
-            payload: Optional payload data
+            state: Current state JSON
+            api_response: Planning API response with behavior
+
+        Returns:
+            Updated state JSON
         """
-        self.info("[Handler] START_BEHAVIOR: STEP_RUNNING → BEHAVIOR_RUNNING")
+        new_state = self._deep_copy_state(state)
 
-        ctx = state_machine.execution_context.workflow_context
+        # Extract behavior fields
+        behavior_id = api_response.get('behavior_id')
+        step_id = api_response.get('step_id')
+        agent = api_response.get('agent')
+        task = api_response.get('task', '').strip()
+        inputs = api_response.get('inputs', {})
+        outputs = api_response.get('outputs', {})
+        acceptance = api_response.get('acceptance', [])
+        whathappened = api_response.get('whathappened', {})
 
-        if not ctx.current_stage_id or not ctx.current_step_id:
-            self.error("[Handler] Missing stage/step ID")
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': 'Missing stage/step'})
-            return
+        self.info(f"Applying behavior: {behavior_id}")
 
-        try:
-            # First, call Planning API to check if we should proceed
-            from utils.api_client import workflow_api_client
-            from utils.state_builder import build_api_state
+        # Get structures
+        progress = self._get_progress(new_state)
+        behaviors_progress = progress.setdefault('behaviors', {})
+        location = self._get_location(new_state)
 
-            current_state = build_api_state(state_machine, require_progress_info=True)
+        # Build current behavior
+        current_behavior = {
+            'behavior_id': behavior_id,
+            'step_id': step_id,
+            'agent': agent,
+            'task': task,
+            'inputs': inputs,
+            'outputs': outputs,
+            'acceptance': acceptance
+        }
 
-            # Extract notebook_id from state
-            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+        if whathappened:
+            current_behavior['whathappened'] = whathappened
 
-            self.info(f"[Handler] Calling Planning API for behavior check")
+        # Update behaviors progress
+        behaviors_progress['current'] = current_behavior
+        behaviors_progress['completed'] = []
+        behaviors_progress['iteration'] = 1
+        behaviors_progress['focus'] = task
 
-            planning_response = workflow_api_client.send_feedback_sync(
-                stage_id=ctx.current_stage_id,
-                step_index=ctx.current_step_id,
-                state=current_state,
-                notebook_id=notebook_id
-            )
+        # Initialize outputs tracking
+        expected_outputs = [
+            {'name': name, 'description': desc}
+            for name, desc in outputs.items()
+        ]
+        behaviors_progress['current_outputs'] = {
+            'expected': expected_outputs,
+            'produced': [],
+            'in_progress': []
+        }
 
-            response_type = planning_response.get('type')
-            self.info(f"[Handler] Planning API response type: {response_type}")
+        # Update location.current
+        self._update_location_current(
+            new_state,
+            behavior_id=behavior_id,
+            behavior_iteration=1
+        )
 
-            if response_type == 'behavior':
-                # Update behavior definition
-                from utils.workflow_updater import workflow_updater
-                workflow_updater.update_from_response(state_machine, planning_response)
-                self.info(f"[Handler] Behavior definition updated: {ctx.current_behavior_id}")
+        # Update location.goals
+        if task:
+            location['goals'] = task
 
-            elif response_type == 'json':
-                content = planning_response.get('content', {})
-                target_achieved = content.get('targetAchieved', False)
+        # Update FSM state
+        self._update_fsm_state(new_state, 'BEHAVIOR_RUNNING', 'START_BEHAVIOR')
 
-                if target_achieved:
-                    self.info("[Handler] Step target already achieved")
-                    from core.events import WorkflowEvent
-                    state_machine.transition(WorkflowEvent.COMPLETE_STEP)
-                    return
+        self.info(f"Transition complete: START_BEHAVIOR (behavior: {behavior_id})")
 
-                # Apply any context updates
-                from utils.workflow_updater import workflow_updater
-                workflow_updater.update_from_response(state_machine, planning_response)
-
-            # Now call Generating API to get actions
-            self.info(f"[Handler] Calling Generating API for actions")
-
-            actions_response = workflow_api_client.fetch_behavior_actions_sync(
-                stage_id=ctx.current_stage_id,
-                step_index=ctx.current_step_id,
-                state=current_state
-            )
-
-            # Store actions in context
-            if 'actions' in actions_response:
-                ctx.current_behavior_actions = actions_response['actions']
-                ctx.current_action_index = 0
-                self.info(f"[Handler] Received {len(ctx.current_behavior_actions)} actions")
-
-                # Transition to ACTION_RUNNING (or start executing)
-                from core.events import WorkflowEvent
-                state_machine.transition(WorkflowEvent.START_ACTION)
-            else:
-                self.warning("[Handler] No actions returned from Generating API")
-                from core.events import WorkflowEvent
-                state_machine.transition(WorkflowEvent.COMPLETE_BEHAVIOR)
-
-        except Exception as e:
-            self.error(f"[Handler] Failed to start behavior: {e}", exc_info=True)
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': str(e)})
-
-
-# Create singleton instance
-handle_start_behavior = StartBehaviorHandler().handle
+        return new_state

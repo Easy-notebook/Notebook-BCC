@@ -47,15 +47,17 @@
   },
   "state": {
     "variables": {
-      "user_problem": "基于  Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
-      "user_submit_files": ["./assets/housing.csv"]
+      "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+      "user_submit_files": [
+        "./assets/housing.csv"
+      ]
     },
     "effects": {
       "current": [],
       "history": []
     },
     "notebook": {
-      "notebook_id": "f9559c1623154ca1b16b1cd83f7faea3", 
+      "notebook_id": "f9559c1623154ca1b16b1cd83f7faea3",
       "title": null,
       "cell_count": 0,
       "last_cell_type": null,
@@ -64,7 +66,7 @@
     "FSM": {
       "state": "IDLE",
       "last_transition": null,
-      "timestamp": "2025-10-30T10:00:00.000Z"
+      "timestamp": "2025-11-12T08:12:23.060562+00:00"
     }
   }
 }

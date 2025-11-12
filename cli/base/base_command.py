@@ -12,6 +12,7 @@ from executors.code_executor import CodeExecutor
 from notebook.notebook_manager import NotebookManager
 from notebook.cell_renderer import CellRenderer
 from core.state_machine import WorkflowStateMachine
+from core.async_state_machine import AsyncStateMachineAdapter
 
 
 class BaseCommand(ModernLogger):
@@ -54,6 +55,14 @@ class BaseCommand(ModernLogger):
             notebook_manager=self.notebook_manager,
             max_steps=max_steps,
             interactive=interactive
+        )
+
+        # Initialize async state machine adapter
+        # API client will be set later (in start command)
+        self.async_state_machine = AsyncStateMachineAdapter(
+            state_machine=self.state_machine,
+            api_client=None,  # Will be set in start command
+            script_store=self.script_store
         )
 
     def setup_logging(self, level=logging.INFO):

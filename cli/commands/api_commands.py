@@ -24,7 +24,13 @@ class APICommands:
     """
 
     def cmd_send_api(self, args):
-        """Send API request from state file."""
+        """
+        Send API request from state file.
+
+        Supports two modes:
+        1. Auto mode (--api-type=auto): Uses AsyncStateMachineAdapter for full state transition
+        2. Manual mode: Sends specific API request for debugging/testing
+        """
         # Load state file using unified helper
         print(f"Loading state from: {args.state_file}")
         state_json, parsed_state = self._load_state_file(args.state_file)
@@ -32,13 +38,21 @@ class APICommands:
         # Display state info
         api_display.display_state_info(parsed_state)
 
-        # Infer API type using unified helper
-        api_type = self._infer_api_type(state_json, args.api_type)
+        # Check if using auto mode (event-driven)
+        if hasattr(args, 'api_type') and args.api_type == 'auto':
+            print("\n[Auto Mode] Using event-driven state machine")
+            print("   This will automatically infer API type and handle state transition")
+            return self._cmd_send_api_auto(args, state_json, parsed_state)
+
+        # Manual mode: specific API request
+        # Infer API type using state machine
         if args.api_type:
+            api_type = args.api_type
             print(f"\nUsing specified API type: {api_type}")
         else:
+            api_type = self.state_machine.infer_api_type_from_state(state_json)
             print(f"\nAuto-inferred API type: {api_type}")
-            print(f"   (You can override with --api-type)")
+            print(f"   (You can override with --api-type or use --api-type=auto for automatic execution)")
 
         # Extract parameters
         stage_id = parsed_state['stage_id'] or 'none'
@@ -98,11 +112,44 @@ class APICommands:
 
             elif api_type == 'reflecting':
                 # Reflecting API
+                # 使用 state class 来确定 transition_name
+                from core.state_classes.state_factory import StateFactory
+
+                fsm = state.get('state', {}).get('FSM', {})
+                current_fsm_state = fsm.get('state', '')
+
+                transition_name = None
+                state_instance = StateFactory.get_state(current_fsm_state)
+
+                print(f"[DEBUG] Current FSM state: {current_fsm_state}")
+                print(f"[DEBUG] State instance: {state_instance}")
+
+                if state_instance:
+                    next_transition_event = state_instance.determine_next_transition(state)
+                    print(f"[DEBUG] Next transition event: {next_transition_event}")
+                    if next_transition_event:
+                        transition_name = next_transition_event.value
+                        print(f"[DEBUG] Transition name: {transition_name}")
+
+                # 如果没有确定 transition_name，使用默认值
+                if not transition_name:
+                    print(f"[DEBUG] No transition_name determined, using fallback")
+                    # 简单的 fallback 逻辑
+                    if 'BEHAVIOR_COMPLETED' in current_fsm_state:
+                        transition_name = 'COMPLETE_STEP'  # 默认假设
+                    elif 'STEP_COMPLETED' in current_fsm_state:
+                        transition_name = 'COMPLETE_STAGE'
+                    else:
+                        transition_name = 'REFLECTING'
+
+                print(f"[DEBUG] Final transition_name: {transition_name}")
+
                 with api_display.display_sending_progress('reflecting') or DummyContext():
                     result = await workflow_api_client.send_reflecting(
                         stage_id=stage_id,
                         step_index=step_id,
-                        state=state
+                        state=state,
+                        transition_name=transition_name
                     )
                 api_display.display_api_response('reflecting', result, success=True)
                 return result
@@ -119,7 +166,11 @@ class APICommands:
         print("\nAPI request completed successfully")
 
     def cmd_test_actions(self, args):
-        """Execute actions from JSON file using ScriptStore."""
+        """
+        Execute actions from JSON file using ScriptStore.
+
+        Now directly passes actions to script_store without legacy conversion.
+        """
         console = Console()
 
         # Load files using unified helper
@@ -130,16 +181,11 @@ class APICommands:
 
         state_json, _parsed_state = self._load_state_file(args.state_file)
 
-        # Extract and set notebook_id from state
+        # Sync state to stores (including notebook_id)
+        self._sync_state_to_stores(state_json)
+
+        # Extract notebook_id for display
         notebook_id = state_json.get('state', {}).get('notebook', {}).get('notebook_id')
-        if notebook_id:
-            console.print(f"[cyan]Using notebook_id from state: {notebook_id}[/cyan]")
-            self.code_executor.notebook_id = notebook_id
-            self.code_executor.is_kernel_ready = True
-            # CRITICAL: Also set notebook_id in notebook_store for consistency
-            self.notebook_store.notebook_id = notebook_id
-        else:
-            console.print("[yellow]Warning: No notebook_id found in state, will initialize new kernel[/yellow]")
 
         # Display info table
         table = Table(show_header=False, box=box.ROUNDED)
@@ -155,7 +201,7 @@ class APICommands:
         stats = {'actions_executed': 0, 'errors': 0}
 
         # Execute actions using ScriptStore
-        console.print(f"\n[bold cyan]Starting execution of {len(actions_data)} actions (using ScriptStore)[/bold cyan]\n")
+        console.print(f"\n[bold cyan]Starting execution of {len(actions_data)} actions[/bold cyan]\n")
 
         with Progress(
             SpinnerColumn(),
@@ -167,14 +213,15 @@ class APICommands:
             task = progress.add_task("[cyan]Executing actions...", total=len(actions_data))
 
             for idx, action_data in enumerate(actions_data):
+                # Extract action info for display
                 action = action_data.get('action', {})
-                action_type = action.get('type')
+                action_type = action.get('type', 'unknown')
 
                 progress.update(task, advance=1, description=f"[cyan]Action {idx+1}/{len(actions_data)}: {action_type}")
 
-                # Convert to ExecutionStep and execute using ScriptStore
-                step = self._convert_action_to_step(action_data)
-                self.script_store.exec_action(step)
+                # Execute action directly (NEW: no conversion needed)
+                # Actions from API are already in correct format
+                self.script_store.exec_action(action_data)
                 stats['actions_executed'] += 1
 
                 # Optional: Display action result
@@ -198,7 +245,7 @@ class APICommands:
         # Display summary
         console.print(Panel(
             f"[green]OK[/green] File saved: [cyan]{args.output}[/cyan]\n"
-            f"[green]OK[/green] FSM State: [magenta]BEHAVIOR_COMPLETE[/magenta]",
+            f"[green]OK[/green] FSM State: [magenta]BEHAVIOR_COMPLETED[/magenta]",
             title="[bold green]Output Saved[/bold green]",
             border_style="green",
             box=box.DOUBLE
@@ -209,7 +256,7 @@ class APICommands:
         summary_table.add_column("Item", style="cyan", width=30)
         summary_table.add_column("Value", style="green", justify="right")
 
-        summary_table.add_row("FSM State Transition", "BEHAVIOR_RUNNING -> BEHAVIOR_COMPLETE")
+        summary_table.add_row("FSM State Transition", "BEHAVIOR_RUNNING -> BEHAVIOR_COMPLETED")
         summary_table.add_row("Actions Executed", str(stats['actions_executed']))
         summary_table.add_row("Cells Created", str(len(self.notebook_store.cells)))
         summary_table.add_row("Code Executions", str(self.notebook_store.execution_count))
@@ -238,6 +285,58 @@ class APICommands:
             base_state,
             self.notebook_store,
             self.ai_context_store,
-            "BEHAVIOR_COMPLETE",
+            "BEHAVIOR_COMPLETED",
             transition_data
         )
+
+    def _cmd_send_api_auto(self, args, state_json, parsed_state):
+        """
+        Auto mode for send-api: Uses AsyncStateMachineAdapter for full state transition.
+
+        This is the NEW event-driven approach.
+        """
+        console = Console()
+
+        # Sync state to stores
+        self._sync_state_to_stores(state_json)
+
+        # Get current FSM state
+        fsm_state = parsed_state.get('fsm_state', 'UNKNOWN')
+
+        console.print(f"\n[bold cyan]Auto Mode - Event-Driven Execution[/bold cyan]")
+        console.print(f"Current State: [yellow]{fsm_state}[/yellow]")
+
+        # Execute one state transition using AsyncStateMachineAdapter
+        async def execute_transition():
+            try:
+                console.print("\n[bold blue]Executing state transition...[/bold blue]")
+                next_state = await self.async_state_machine.step(state_json)
+                return next_state
+            except Exception as e:
+                console.print(f"[red]Error during state transition: {e}[/red]")
+                import traceback
+                traceback.print_exc()
+                return None
+
+        # Run async transition
+        next_state = asyncio.run(execute_transition())
+
+        if next_state:
+            # Parse new state
+            parsed_next = state_file_loader.parse_state_for_api(next_state)
+            new_fsm_state = parsed_next.get('fsm_state')
+
+            console.print(f"\n[green]OK[/green] State transition complete")
+            console.print(f"New State: [bold yellow]{new_fsm_state}[/bold yellow]")
+
+            # Save to output file if specified
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    json.dump(next_state, f, indent=2, ensure_ascii=False)
+                console.print(f"\n[green]Response saved to: {args.output}[/green]")
+
+            console.print("\n[bold green]Auto execution completed successfully[/bold green]")
+            return next_state
+        else:
+            console.print("\n[bold red]Auto execution failed[/bold red]")
+            return None

@@ -1,113 +1,113 @@
 """
-START_STEP Handler
-Handles: STAGE_RUNNING → STEP_RUNNING transition
-
-Responsibilities:
-1. Call Planning API (/planning) to get steps definition for current stage
-2. Parse XML response to extract steps
-3. Update current stage with steps
-4. Set current_step_id to first step
-5. Trigger START_BEHAVIOR transition (or check if step already achieved)
+START_STEP Event Handler
+Handles step initialization with steps from planning API.
+Event: START_STEP
+Transition: STAGE_RUNNING → STEP_RUNNING
 """
 
-from typing import Any, Dict
-from silantui import ModernLogger
+from typing import Dict, Any
+from .base_transition_handler import BaseTransitionHandler
 
 
-class StartStepHandler(ModernLogger):
-    """Handler for START_STEP transition."""
+class StartStepHandler(BaseTransitionHandler):
+    """
+    Handles START_STEP event.
+    Transition: STAGE_RUNNING → STEP_RUNNING
+
+    Triggered by: Planning API returning steps list
+
+    Updates:
+    - observation.location.progress.steps with new steps
+    - observation.location.current with first step
+    - state.FSM.state to 'STEP_RUNNING'
+    """
 
     def __init__(self):
-        super().__init__("StartStepHandler")
+        super().__init__('STAGE_RUNNING', 'STEP_RUNNING', 'START_STEP')
 
-    def handle(self, state_machine, payload: Any = None) -> None:
+    def can_handle(self, api_response: Any) -> bool:
+        """Check if response contains steps list."""
+        if isinstance(api_response, dict):
+            return 'steps' in api_response and isinstance(api_response['steps'], list)
+        return False
+
+    def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """
-        Handle START_STEP transition.
+        Apply START_STEP transition.
 
         Args:
-            state_machine: WorkflowStateMachine instance
-            payload: Optional payload data
+            state: Current state JSON
+            api_response: Planning API response with steps
+
+        Returns:
+            Updated state JSON
         """
-        self.info("[Handler] START_STEP: STAGE_RUNNING → STEP_RUNNING")
+        new_state = self._deep_copy_state(state)
 
-        if not state_machine.pipeline_store:
-            self.error("[Handler] Pipeline store not available")
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': 'Pipeline store not available'})
-            return
+        steps_data = api_response.get('steps', [])
+        focus = api_response.get('focus', '')
+        goals = api_response.get('goals', '')
 
-        ctx = state_machine.execution_context.workflow_context
+        self.info(f"Applying {len(steps_data)} steps")
 
-        if not ctx.current_stage_id:
-            self.error("[Handler] No current stage ID")
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': 'No current stage'})
-            return
+        if not steps_data:
+            self.warning("No steps in planning response")
+            return new_state
 
-        try:
-            # Call Planning API to get steps definition
-            from utils.api_client import workflow_api_client
-            from utils.state_builder import build_api_state
+        # Get structures
+        progress = self._get_progress(new_state)
+        steps_progress = progress.setdefault('steps', {})
 
-            current_state = build_api_state(state_machine, require_progress_info=True)
+        # Build first step (current)
+        first_step = steps_data[0]
+        current_step = {
+            'step_id': first_step.get('step_id'),
+            'title': first_step.get('title', ''),
+            'goal': first_step.get('goal', ''),
+            'verified_artifacts': first_step.get('verified_artifacts', {}),
+            'required_variables': first_step.get('required_variables', {}),
+            'pcs_considerations': first_step.get('pcs_considerations', {})
+        }
 
-            # Extract notebook_id from state
-            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+        # Update steps progress
+        steps_progress['current'] = current_step
+        steps_progress['completed'] = []
+        steps_progress['focus'] = focus
 
-            self.info(f"[Handler] Calling Planning API for steps of stage: {ctx.current_stage_id}")
+        # Build remaining steps
+        remaining_steps = []
+        for step_data in steps_data[1:]:
+            remaining_step = {
+                'step_id': step_data.get('step_id'),
+                'title': step_data.get('title', ''),
+                'goal': step_data.get('goal', ''),
+                'verified_artifacts': step_data.get('verified_artifacts', {}),
+                'required_variables': step_data.get('required_variables', {}),
+                'pcs_considerations': step_data.get('pcs_considerations', {})
+            }
+            remaining_steps.append(remaining_step)
 
-            planning_response = workflow_api_client.send_feedback_sync(
-                stage_id=ctx.current_stage_id,
-                step_index=ctx.current_step_id or "",
-                state=current_state,
-                notebook_id=notebook_id
-            )
+        steps_progress['remaining'] = remaining_steps
 
-            # Parse response
-            response_type = planning_response.get('type')
-            self.info(f"[Handler] Planning API response type: {response_type}")
+        # Initialize outputs tracking
+        steps_progress['current_outputs'] = self._init_outputs_tracking(
+            first_step.get('verified_artifacts', {})
+        )
 
-            if response_type == 'steps':
-                # Update steps using workflow_updater
-                from utils.workflow_updater import workflow_updater
-                workflow_updater.update_from_response(state_machine, planning_response)
+        # Update location
+        location = self._get_location(new_state)
+        self._update_location_current(
+            new_state,
+            step_id=first_step.get('step_id'),
+            behavior_id='clear'
+        )
 
-                if not ctx.current_step_id:
-                    self.error("[Handler] Failed to set current_step_id")
-                    from core.events import WorkflowEvent
-                    state_machine.transition(WorkflowEvent.FAIL, {'error': 'Failed to set current step'})
-                    return
+        if goals:
+            location['goals'] = goals
 
-                self.info(f"[Handler] Steps updated, current step: {ctx.current_step_id}")
+        # Update FSM state
+        self._update_fsm_state(new_state, 'STEP_RUNNING', 'START_STEP')
 
-                # Transition to START_BEHAVIOR
-                from core.events import WorkflowEvent
-                state_machine.transition(WorkflowEvent.START_BEHAVIOR)
+        self.info(f"Transition complete: START_STEP (step: {first_step.get('step_id')})")
 
-            elif response_type == 'json':
-                # Check if target already achieved
-                content = planning_response.get('content', {})
-                target_achieved = content.get('targetAchieved', False)
-
-                if target_achieved:
-                    self.info("[Handler] Stage target already achieved per Planning API")
-                    from core.events import WorkflowEvent
-                    state_machine.transition(WorkflowEvent.COMPLETE_STAGE)
-                else:
-                    self.info("[Handler] Proceeding to START_BEHAVIOR")
-                    from core.events import WorkflowEvent
-                    state_machine.transition(WorkflowEvent.START_BEHAVIOR)
-
-            else:
-                self.error(f"[Handler] Unexpected response type: {response_type}")
-                from core.events import WorkflowEvent
-                state_machine.transition(WorkflowEvent.FAIL, {'error': f'Unexpected response type: {response_type}'})
-
-        except Exception as e:
-            self.error(f"[Handler] Failed to start step: {e}", exc_info=True)
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': str(e)})
-
-
-# Create singleton instance
-handle_start_step = StartStepHandler().handle
+        return new_state

@@ -1,94 +1,107 @@
 """
-START_WORKFLOW Handler
-Handles: IDLE → STAGE_RUNNING transition
-
-Responsibilities:
-1. Call Planning API (/planning) to get workflow stages definition
-2. Parse XML response to extract stages
-3. Create/update WorkflowTemplate with stages
-4. Set current_stage_id to first stage
-5. Trigger START_STEP transition
+START_WORKFLOW Event Handler
+Handles workflow initialization with stages from planning API.
+Event: START_WORKFLOW
+Transition: IDLE → STAGE_RUNNING
 """
 
-from typing import Any, Dict
-from silantui import ModernLogger
+from typing import Dict, Any
+from .base_transition_handler import BaseTransitionHandler
 
 
-class StartWorkflowHandler(ModernLogger):
-    """Handler for START_WORKFLOW transition."""
+class StartWorkflowHandler(BaseTransitionHandler):
+    """
+    Handles START_WORKFLOW event.
+    Transition: IDLE → STAGE_RUNNING
+
+    Triggered by: Planning API returning stages list
+
+    Updates:
+    - observation.location.progress.stages with new stages
+    - observation.location.current with first stage
+    - state.FSM.state to 'STAGE_RUNNING'
+    """
 
     def __init__(self):
-        super().__init__("StartWorkflowHandler")
+        super().__init__('IDLE', 'STAGE_RUNNING', 'START_WORKFLOW')
 
-    def handle(self, state_machine, payload: Any = None) -> None:
+    def can_handle(self, api_response: Any) -> bool:
+        """Check if response contains stages list."""
+        if isinstance(api_response, dict):
+            return 'stages' in api_response and isinstance(api_response['stages'], list)
+        return False
+
+    def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """
-        Handle START_WORKFLOW transition.
+        Apply START_WORKFLOW transition.
 
         Args:
-            state_machine: WorkflowStateMachine instance
-            payload: Optional payload data
+            state: Current state JSON
+            api_response: Planning API response with stages
+
+        Returns:
+            Updated state JSON
         """
-        self.info("[Handler] START_WORKFLOW: IDLE → STAGE_RUNNING")
+        new_state = self._deep_copy_state(state)
 
-        if not state_machine.pipeline_store:
-            self.error("[Handler] Pipeline store not available")
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': 'Pipeline store not available'})
-            return
+        stages_data = api_response.get('stages', [])
+        focus = api_response.get('focus', '')
 
-        try:
-            # Call Planning API to get stages definition
-            from utils.api_client import workflow_api_client
-            from utils.state_builder import build_api_state
+        self.info(f"Applying {len(stages_data)} stages")
 
-            current_state = build_api_state(state_machine, require_progress_info=True)
+        if not stages_data:
+            self.warning("No stages in planning response")
+            return new_state
 
-            # Extract notebook_id from state
-            notebook_id = current_state.get('state', {}).get('notebook', {}).get('notebook_id')
+        # Get structures
+        progress = self._get_progress(new_state)
+        stages_progress = progress.setdefault('stages', {})
 
-            self.info("[Handler] Calling Planning API for stages definition...")
+        # Build first stage (current)
+        first_stage = stages_data[0]
+        current_stage = {
+            'stage_id': first_stage.get('stage_id'),
+            'title': first_stage.get('title', ''),
+            'goal': first_stage.get('goal', ''),
+            'verified_artifacts': first_stage.get('verified_artifacts', {})
+        }
 
-            planning_response = workflow_api_client.send_feedback_sync(
-                stage_id="",  # Empty for initial request
-                step_index="",
-                state=current_state,
-                notebook_id=notebook_id
-            )
+        # Update stages progress
+        stages_progress['current'] = current_stage
+        stages_progress['completed'] = []
+        stages_progress['focus'] = focus
 
-            # Parse response
-            response_type = planning_response.get('type')
-            self.info(f"[Handler] Planning API response type: {response_type}")
+        # Build remaining stages
+        remaining_stages = []
+        for stage_data in stages_data[1:]:
+            remaining_stage = {
+                'stage_id': stage_data.get('stage_id'),
+                'title': stage_data.get('title', ''),
+                'goal': stage_data.get('goal', ''),
+                'verified_artifacts': stage_data.get('verified_artifacts', {})
+            }
+            if 'required_variables' in stage_data:
+                remaining_stage['required_variables'] = stage_data['required_variables']
+            remaining_stages.append(remaining_stage)
 
-            if response_type != 'stages':
-                self.error(f"[Handler] Expected 'stages' response, got '{response_type}'")
-                from core.events import WorkflowEvent
-                state_machine.transition(WorkflowEvent.FAIL, {'error': f'Unexpected response type: {response_type}'})
-                return
+        stages_progress['remaining'] = remaining_stages
 
-            # Update workflow using workflow_updater
-            from utils.workflow_updater import workflow_updater
-            workflow_updater.update_from_response(state_machine, planning_response)
+        # Initialize outputs tracking
+        stages_progress['current_outputs'] = self._init_outputs_tracking(
+            first_stage.get('verified_artifacts', {})
+        )
 
-            ctx = state_machine.execution_context.workflow_context
+        # Update location.current
+        self._update_location_current(
+            new_state,
+            stage_id=first_stage.get('stage_id'),
+            step_id='clear',
+            behavior_id='clear'
+        )
 
-            if not ctx.current_stage_id:
-                self.error("[Handler] Failed to set current_stage_id")
-                from core.events import WorkflowEvent
-                state_machine.transition(WorkflowEvent.FAIL, {'error': 'Failed to set current stage'})
-                return
+        # Update FSM state
+        self._update_fsm_state(new_state, 'STAGE_RUNNING', 'START_WORKFLOW')
 
-            self.info(f"[Handler] Workflow initialized with {len(planning_response['content']['stages'])} stages")
-            self.info(f"[Handler] Current stage: {ctx.current_stage_id}")
+        self.info(f"Transition complete: START_WORKFLOW (stage: {first_stage.get('stage_id')})")
 
-            # Transition to START_STEP
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.START_STEP)
-
-        except Exception as e:
-            self.error(f"[Handler] Failed to start workflow: {e}", exc_info=True)
-            from core.events import WorkflowEvent
-            state_machine.transition(WorkflowEvent.FAIL, {'error': str(e)})
-
-
-# Create singleton instance
-handle_start_workflow = StartWorkflowHandler().handle
+        return new_state

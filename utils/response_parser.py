@@ -6,6 +6,8 @@ Handles XML and JSON response formats from different API endpoints.
 import json
 import xml.etree.ElementTree as ET
 from typing import Dict, Any, List, Optional, Union
+from pathlib import Path
+from datetime import datetime
 from silantui import ModernLogger
 
 
@@ -21,6 +23,8 @@ class ResponseParser(ModernLogger):
     def __init__(self):
         """Initialize the response parser."""
         super().__init__("ResponseParser")
+        self.xml_errors_dir = Path("xml_errors")
+        self.xml_errors_dir.mkdir(exist_ok=True)
 
     def parse_response(self, response: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -163,6 +167,8 @@ class ResponseParser(ModernLogger):
                 }
         except ET.ParseError as e:
             self.error(f"XML parse error: {e}")
+            # Save detailed error log
+            self._save_xml_error_log(xml_string, e)
             return {
                 'type': 'unknown',
                 'content': xml_string
@@ -377,7 +383,7 @@ class ResponseParser(ModernLogger):
             - outputs_tracking: dict with produced/in_progress/remaining
         """
         reflection = {
-            'behavior_is_complete': root.get('current_behavior_is_complete', '').lower() == 'true',
+            'behavior_is_complete': root.get('current_step_is_complete', '').lower() == 'true',
             'next_state': None,
             'variables_produced': {},
             'artifacts_produced': [],
@@ -486,6 +492,176 @@ class ResponseParser(ModernLogger):
             i += 1
 
         return ''.join(result)
+
+    def _save_xml_error_log(self, xml_string: str, error: ET.ParseError) -> None:
+        """
+        Save detailed XML parsing error log with context and suggestions.
+
+        Args:
+            xml_string: The XML content that failed to parse
+            error: The ParseError exception
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+        error_file = self.xml_errors_dir / f"xml_error_{timestamp}.log"
+
+        # Parse error details
+        error_msg = str(error)
+        line_num = None
+        col_num = None
+
+        # Extract line and column from error message
+        # Format: "not well-formed (invalid token): line 45, column 47"
+        import re
+        match = re.search(r'line (\d+), column (\d+)', error_msg)
+        if match:
+            line_num = int(match.group(1))
+            col_num = int(match.group(2))
+
+        # Split XML into lines for context display
+        xml_lines = xml_string.split('\n')
+
+        # Generate error report
+        report_lines = []
+        report_lines.append("=" * 80)
+        report_lines.append("XML PARSING ERROR REPORT")
+        report_lines.append("=" * 80)
+        report_lines.append("")
+        report_lines.append(f"Timestamp: {datetime.now().isoformat()}")
+        report_lines.append(f"Error Type: {type(error).__name__}")
+        report_lines.append(f"Error Message: {error_msg}")
+        report_lines.append("")
+
+        if line_num and col_num:
+            report_lines.append(f"Error Location: Line {line_num}, Column {col_num}")
+            report_lines.append("")
+
+            # Show context (5 lines before and after)
+            context_start = max(0, line_num - 6)
+            context_end = min(len(xml_lines), line_num + 5)
+
+            report_lines.append("-" * 80)
+            report_lines.append("ERROR CONTEXT (with line numbers):")
+            report_lines.append("-" * 80)
+
+            for i in range(context_start, context_end):
+                line = xml_lines[i]
+                line_marker = ">>> " if i == line_num - 1 else "    "
+                report_lines.append(f"{line_marker}{i+1:4d} | {line}")
+
+                # Add pointer to error column
+                if i == line_num - 1 and col_num:
+                    pointer = " " * (len(line_marker) + 7 + col_num - 1) + "^"
+                    report_lines.append(pointer + " ERROR HERE")
+
+            report_lines.append("-" * 80)
+            report_lines.append("")
+
+        # Add diagnostic information
+        report_lines.append("DIAGNOSTIC ANALYSIS:")
+        report_lines.append("-" * 80)
+
+        # Check for common XML errors
+        diagnostics = self._analyze_xml_error(xml_string, error_msg, line_num, col_num, xml_lines)
+        for diagnostic in diagnostics:
+            report_lines.append(f"• {diagnostic}")
+
+        report_lines.append("")
+        report_lines.append("-" * 80)
+        report_lines.append("FULL XML CONTENT:")
+        report_lines.append("-" * 80)
+        report_lines.append(xml_string)
+        report_lines.append("")
+        report_lines.append("=" * 80)
+        report_lines.append("END OF ERROR REPORT")
+        report_lines.append("=" * 80)
+
+        # Write to file
+        with open(error_file, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(report_lines))
+
+        self.warning(f"⚠️  XML error details saved to: {error_file}")
+
+    def _analyze_xml_error(self, xml_string: str, error_msg: str,
+                          line_num: Optional[int], col_num: Optional[int],
+                          xml_lines: List[str]) -> List[str]:
+        """
+        Analyze XML error and provide diagnostic suggestions.
+
+        Returns:
+            List of diagnostic messages and suggestions
+        """
+        diagnostics = []
+
+        # Check for common patterns
+        if "not well-formed" in error_msg.lower():
+            diagnostics.append("XML is not well-formed. Common causes:")
+            diagnostics.append("  - Special characters (<, >, &) not properly escaped")
+            diagnostics.append("  - Missing closing tags")
+            diagnostics.append("  - Invalid characters in attribute values")
+
+        if "mismatched tag" in error_msg.lower():
+            diagnostics.append("Mismatched XML tags detected. Check that:")
+            diagnostics.append("  - Every opening tag has a matching closing tag")
+            diagnostics.append("  - Tag names are spelled correctly")
+            diagnostics.append("  - Tags are properly nested")
+
+            # Try to find the mismatched tag
+            if line_num and line_num <= len(xml_lines):
+                error_line = xml_lines[line_num - 1]
+                import re
+                # Look for closing tag
+                closing_match = re.search(r'</(\w+)>', error_line)
+                if closing_match:
+                    closing_tag = closing_match.group(1)
+                    diagnostics.append(f"  - Found closing tag: </{closing_tag}>")
+                    diagnostics.append(f"  - Search for matching opening tag: <{closing_tag}>")
+
+        if "invalid token" in error_msg.lower():
+            diagnostics.append("Invalid token found. This usually means:")
+            diagnostics.append("  - Unescaped special characters in text content")
+            diagnostics.append("  - Illegal characters in tag names or attributes")
+            diagnostics.append("  - Malformed XML structure")
+
+        # Check for unclosed tags
+        import re
+        opening_tags = re.findall(r'<(\w+)[\s>]', xml_string)
+        closing_tags = re.findall(r'</(\w+)>', xml_string)
+
+        from collections import Counter
+        opening_count = Counter(opening_tags)
+        closing_count = Counter(closing_tags)
+
+        unclosed = []
+        for tag, count in opening_count.items():
+            if closing_count.get(tag, 0) < count:
+                unclosed.append(f"{tag} (missing {count - closing_count.get(tag, 0)} closing tag(s))")
+
+        if unclosed:
+            diagnostics.append("")
+            diagnostics.append("Potentially unclosed tags:")
+            for tag in unclosed:
+                diagnostics.append(f"  - <{tag}>")
+
+        # Check for unescaped characters
+        if line_num and line_num <= len(xml_lines):
+            error_line = xml_lines[line_num - 1]
+            # Look for unescaped characters in what should be text content
+            if re.search(r'>[^<]*[<>&][^<]*<', error_line):
+                diagnostics.append("")
+                diagnostics.append("Possible unescaped special characters in text content:")
+                diagnostics.append("  - '<' should be '&lt;'")
+                diagnostics.append("  - '>' should be '&gt;'")
+                diagnostics.append("  - '&' should be '&amp;'")
+
+        # Suggest fixes
+        diagnostics.append("")
+        diagnostics.append("SUGGESTED FIXES:")
+        diagnostics.append("  1. Review the API/LLM prompt to ensure valid XML output")
+        diagnostics.append("  2. Add XML validation in the API response generation")
+        diagnostics.append("  3. Consider adding XML repair logic in the client")
+        diagnostics.append("  4. Use CDATA sections for text with special characters")
+
+        return diagnostics
 
 
 # Create singleton instance

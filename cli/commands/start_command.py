@@ -1,5 +1,7 @@
 """
 Start command - handles workflow initialization and iteration loop.
+
+Uses AsyncStateMachineAdapter for event-driven execution.
 """
 
 import json
@@ -14,7 +16,6 @@ from rich import box
 
 from utils.state_file_loader import state_file_loader
 from utils.api_client import workflow_api_client
-from utils.state_updater import state_updater
 
 
 class StartCommand:
@@ -22,8 +23,51 @@ class StartCommand:
     Handles 'start' command and iteration loop.
     """
 
+    def _create_session_log_dir(self, args) -> Path:
+        """
+        Create session-specific log directory.
+
+        Directory name format: YYYYMMDD_HHMMSS_command_args
+        Example: 20251112_200026_start_config
+
+        Args:
+            args: Command arguments
+
+        Returns:
+            Path to session log directory
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Build command description
+        cmd_parts = ["start"]
+
+        if args.state_file:
+            cmd_parts.append("state")
+        elif args.config:
+            cmd_parts.append("config")
+        else:
+            cmd_parts.append("traditional")
+
+        if args.iterate:
+            cmd_parts.append("iterate")
+
+        cmd_name = "_".join(cmd_parts)
+
+        # Create directory: logs/YYYYMMDD_HHMMSS_command/
+        session_dir = Path("logs") / f"{timestamp}_{cmd_name}"
+        session_dir.mkdir(parents=True, exist_ok=True)
+
+        return session_dir
+
     def cmd_start(self, args):
         """Start a new workflow."""
+        # Create session log directory
+        self._session_log_dir = self._create_session_log_dir(args)
+        print(f"📁 Session logs: {self._session_log_dir}")
+
+        # Set API logger to use session directory
+        workflow_api_client.set_log_dir(str(self._session_log_dir))
+
         # Determine input mode
         if args.state_file:
             # Mode 1: Start from state file
@@ -256,13 +300,33 @@ class StartCommand:
             print(f"  Ready for manual API calls")
 
     def _generate_output_path(self, new_fsm_state: str, iteration: int) -> str:
-        """Generate output file path based on original state file and new FSM state."""
+        """
+        Generate output file path for state snapshot.
+
+        Saves to session log directory if available, otherwise to current/original directory.
+
+        Args:
+            new_fsm_state: New FSM state name
+            iteration: Current iteration number
+
+        Returns:
+            Full path for state snapshot file
+        """
         import re
+
+        # Normalize FSM state name
+        fsm_normalized = new_fsm_state.upper().replace('_', '_')
+
+        # If we have a session log directory, save there
+        if hasattr(self, '_session_log_dir') and self._session_log_dir:
+            filename = f"state_{iteration:02d}_{fsm_normalized}.json"
+            output_path = self._session_log_dir / filename
+            return str(output_path)
 
         # Check if we have original state file path
         if not hasattr(self, '_original_state_file') or not self._original_state_file:
-            # Fallback: use current directory with iteration number
-            return f"state_iteration_{iteration:02d}.json"
+            # Fallback: use current directory with iteration number and FSM state name
+            return f"state_iteration_{iteration:02d}_{fsm_normalized}.json"
 
         original_path = Path(self._original_state_file)
         original_name = original_path.stem  # Without extension
@@ -278,11 +342,9 @@ class StartCommand:
             new_seq = old_seq + 1
 
             # Build new filename with incremented sequence and new FSM state
-            fsm_normalized = new_fsm_state.upper().replace('_', '_')
             new_filename = f"{new_seq:02d}_STATE_{fsm_normalized}.json"
         else:
             # No sequence number found - use iteration-based naming
-            fsm_normalized = new_fsm_state.upper().replace('_', '_')
             new_filename = f"state_iteration_{iteration:02d}_{fsm_normalized}.json"
 
         # Return full path in original directory
@@ -290,7 +352,12 @@ class StartCommand:
         return str(output_path)
 
     def _run_iteration_loop(self, max_iterations):
-        """Run automatic iteration loop."""
+        """
+        Run automatic iteration loop using event-driven state machine.
+
+        This is the NEW implementation using AsyncStateMachineAdapter.
+        All API calls and state transitions are handled by the state machine.
+        """
         # Suppress verbose logging during iteration
         logging.getLogger('silantui').setLevel(logging.WARNING)
 
@@ -305,11 +372,15 @@ class StartCommand:
         parsed_next = None
 
         console.print(Panel.fit(
-            "[bold cyan]ITERATION LOOP[/bold cyan]\n"
-            f"Max iterations: {max_iterations}",
+            "[bold cyan]EVENT-DRIVEN ITERATION LOOP[/bold cyan]\n"
+            f"Max iterations: {max_iterations}\n"
+            "[dim]Using AsyncStateMachineAdapter[/dim]",
             border_style="cyan",
             box=box.ROUNDED
         ))
+
+        # Set API client on async state machine
+        self.async_state_machine.api_client = workflow_api_client
 
         # Create a single persistent event loop for all iterations
         async def run_all_iterations():
@@ -346,88 +417,51 @@ class StartCommand:
                 ))
 
                 # Check if we've reached a terminal state
-                terminal_states = ['COMPLETE', 'ERROR', 'ABORTED']
+                terminal_states = ['COMPLETE', 'ERROR', 'ABORTED', 'WORKFLOW_COMPLETED']
                 if fsm_state in terminal_states:
                     console.print(f"[green]Reached terminal state: {fsm_state}[/green]")
                     break
 
-                # Infer API type from FSM state
-                api_type = state_file_loader.infer_api_type(current_state)
+                # ========================================
+                # NEW: Use AsyncStateMachineAdapter to handle everything
+                # ========================================
+                with console.status(f"[bold blue]State Machine Step...[/bold blue]", spinner="dots"):
+                    try:
+                        # One single call handles: API inference, API call, state transition
+                        next_state = await self.async_state_machine.step(current_state)
+                    except Exception as e:
+                        console.print(f"[red]Error during state machine step: {e}[/red]")
+                        self.error(f"State machine error: {e}", exc_info=True)
+                        break
 
-                # Send API request with spinner
-                with console.status(f"[bold blue]Calling {api_type} API...[/bold blue]", spinner="dots"):
-                    if api_type == 'planning':
-                        response = await workflow_api_client.send_feedback(
-                            stage_id=stage_id or 'initial',
-                            step_index=step_id or 'none',
-                            state=current_state
-                        )
-                    elif api_type == 'generating':
-                        # Collect all actions first (don't update state yet)
-                        actions = []
-                        async for action in workflow_api_client.fetch_behavior_actions(
-                            stage_id=stage_id or 'unknown',
-                            step_index=step_id or 'unknown',
-                            state=current_state,
-                            stream=False
-                        ):
-                            print(action)
-                            actions.append(action)
+                console.print(f"[green]OK[/green] State transition complete")
 
-                        # Now execute all actions at once (updates stores but not state)
-                        for action in actions:
-                            step = self._convert_action_to_step(action)
-                            self.script_store.exec_action(step)
-
-                        response = {'actions': actions, 'count': len(actions)}
-                    elif api_type == 'reflecting':
-                        response = await workflow_api_client.send_reflecting(
-                            stage_id=stage_id or 'unknown',
-                            step_index=step_id or 'unknown',
-                            state=current_state
-                        )
-                    else:
-                        raise ValueError(f"Unknown API type: {api_type}")
-
-                console.print(f"[green]OK[/green] {api_type.capitalize()} response received")
-
-                # Show actions info and execution for generating
-                if api_type == 'generating':
-                    num_actions = len(response['actions'])
-                    console.print(f"  └─ Received [cyan]{num_actions}[/cyan] actions")
-                    console.print(f"  └─ [yellow]Executing actions...[/yellow]")
-
-                # Apply transition to get next state
-                # Convert response to format for state_updater
-                if api_type == 'planning':
-                    transition_content = response
-                elif api_type == 'generating':
-                    # For generating: build state from stores first, then update FSM
-                    # Actions have already been executed (stores updated)
-                    current_state = self._build_state_from_stores(current_state)
-                    # Now just update FSM to BEHAVIOR_COMPLETE
-                    transition_content = json.dumps(response)
-                elif api_type == 'reflecting':
-                    transition_content = response
-                else:
-                    transition_content = str(response)
-
-                # Apply transition to update state
-                next_state = state_updater.apply_transition(
-                    state=current_state,
-                    transition_response=transition_content,
-                    transition_type=api_type
-                )
-
-                # Update current state for next iteration
-                current_state = next_state
-                self._current_state = next_state
-
-                # Parse and display new state
+                # Parse new state
                 parsed_next = state_file_loader.parse_state_for_api(next_state)
                 new_fsm_state = parsed_next.get('fsm_state')
                 new_stage = parsed_next.get('stage_id')
                 new_step = parsed_next.get('step_id')
+
+                # Infer what transition occurred (for display only)
+                # 使用 StateFactory 来确定正确的 transition 名称
+                from core.state_classes.state_factory import StateFactory
+
+                transition_name = None
+                state_instance = StateFactory.get_state(fsm_state)
+                if state_instance:
+                    next_transition_event = state_instance.determine_next_transition(current_state)
+                    if next_transition_event:
+                        transition_name = next_transition_event.value
+
+                # Fallback: 如果无法确定，显示状态转换
+                if not transition_name:
+                    transition_name = f'{fsm_state}→{new_fsm_state}'
+
+                console.print(f"  └─ Transition: [yellow]{transition_name}[/yellow]")
+
+                # Update current state for next iteration
+                current_state = next_state
+                self._current_state = next_state
 
                 # Show transition result
                 result_table = Table(show_header=False, box=None, padding=(0, 1))

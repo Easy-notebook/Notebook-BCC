@@ -8,6 +8,8 @@
 
 ## 🗂️ 协议文档列表
 
+### 核心规范文档
+
 | 文档 | 用途 | 适用角色 |
 |-----|------|---------|
 | [API_REQUIREMENTS.md](./API_REQUIREMENTS.md) | **API需求总结** - 后端开发必读 | 后端开发者 |
@@ -15,6 +17,14 @@
 | [API.md](./API.md) | 完整API交互协议 | 后端/前端开发者 |
 | [OBSERVATION.md](./OBSERVATION.md) | Observation结构和Context Filter | 后端开发者、AI工程师 |
 | [ACTION.md](./ACTION.md) | Action类型和格式详解 | 前端开发者、AI工程师 |
+
+### 新增：系统设计与实现指南
+
+| 文档 | 用途 | 适用角色 |
+|-----|------|---------|
+| [STATE_MACHINE_SPECIFICATION.md](./STATE_MACHINE_SPECIFICATION.md) | **状态机完整规范** - 包含所有状态定义、转换关系、示例payloads | 架构师、全栈开发者 |
+| [PROMPT_DESIGN_PATTERNS.md](./PROMPT_DESIGN_PATTERNS.md) | **提示词设计模式** - Agent设计原则、优化经验、反模式总结 | AI工程师、提示词工程师 |
+| [STATE_TRANSITION_QUICK_REFERENCE.md](./STATE_TRANSITION_QUICK_REFERENCE.md) | **快速参考指南** - 状态转换速查表、调试清单 | 所有开发者 |
 
 ---
 
@@ -41,10 +51,20 @@
 ### 我是AI工程师
 
 **推荐阅读顺序**:
-1. [OBSERVATION.md](./OBSERVATION.md) - 理解观测数据结构
-2. [ACTION.md](./ACTION.md) - 了解POMDP动作空间
-3. [API.md](./API.md) - 理解Planning和Generating的职责
-4. [STATE_MACHINE.md](./STATE_MACHINE.md) - 理解状态转移逻辑
+1. [STATE_MACHINE_SPECIFICATION.md](./STATE_MACHINE_SPECIFICATION.md) - **必读** 完整状态机规范
+2. [PROMPT_DESIGN_PATTERNS.md](./PROMPT_DESIGN_PATTERNS.md) - **必读** 提示词设计最佳实践
+3. [OBSERVATION.md](./OBSERVATION.md) - 理解观测数据结构
+4. [ACTION.md](./ACTION.md) - 了解POMDP动作空间
+5. [STATE_TRANSITION_QUICK_REFERENCE.md](./STATE_TRANSITION_QUICK_REFERENCE.md) - 快速查询状态转换
+
+### 我是架构师/系统设计者
+
+**推荐阅读顺序**:
+1. [STATE_MACHINE_SPECIFICATION.md](./STATE_MACHINE_SPECIFICATION.md) - **核心** 完整FSM规范和设计原则
+2. [STATE_TRANSITION_QUICK_REFERENCE.md](./STATE_TRANSITION_QUICK_REFERENCE.md) - 状态转换可视化图谱
+3. [PROMPT_DESIGN_PATTERNS.md](./PROMPT_DESIGN_PATTERNS.md) - Agent角色和职责分离
+4. [API_REQUIREMENTS.md](./API_REQUIREMENTS.md) - API设计要求
+5. [STATE_MACHINE.md](./STATE_MACHINE.md) - 历史状态机文档参考
 
 ---
 
@@ -190,7 +210,7 @@ Context Filter 是 Planning API 返回的筛选指令，告诉Client在调用Gen
 ### Q4: Reflection XML 的作用是什么?
 
 Reflection XML 用于描述行为完成后的状态转换:
-- 标记行为是否完成 (`current_behavior_is_complete`)
+- 标记行为是否完成 (`current_step_is_complete`)
 - 指定下一个FSM状态 (`<decision><next_state>`)
 - 提供新产生的变量 (`<variables_produced>`)
 - 更新产出追踪 (`<outputs_tracking_update>`)
@@ -325,6 +345,54 @@ actions = generating_api.get_actions(observation)  # 跳过Planning
 
 ---
 
+## 📘 新文档亮点
+
+### STATE_MACHINE_SPECIFICATION.md
+
+本文档提供了完整的状态机规范，包括：
+
+- **6个核心状态定义**: IDLE, STAGE_RUNNING, STEP_RUNNING, BEHAVIOR_RUNNING, BEHAVIOR_COMPLETED, STEP_COMPLETED
+- **6个状态转换详解**: 每个转换的触发条件、输入输出、Agent职责
+- **完整示例**: 基于Ames Housing案例的真实状态流转演示
+- **设计原则**: Artifact-First, Deterministic, PCS-Aligned等核心理念
+- **错误处理**: Behavior重试、Step失败、变量依赖缺失的处理策略
+
+**适合**: 新加入团队的开发者快速理解整个系统架构
+
+### PROMPT_DESIGN_PATTERNS.md
+
+本文档总结了6个Agent的提示词设计经验：
+
+- **Stage-Planner Agent**: 如何进行阶段级别分解
+- **Step-Planner Agent**: 如何进行步骤级别细化
+- **Behavior Arrangement Agent**: 如何选择合适的执行Agent
+- **Action-Generator Agent**: 如何生成高质量的Notebook内容
+- **Behavior Reflection Agent**: 如何评估行为完成度
+- **Stage Reflection Agent**: 如何进行阶段反思和变量管理
+
+**核心价值**:
+- ✅ **设计模式库**: 可复用的XML模板
+- ✅ **优化历史**: 基于实际迭代的改进经验
+- ✅ **反模式总结**: 7个常见错误及解决方案
+- ✅ **检查清单**: 每类Agent的质量保证清单
+
+**适合**: AI工程师、提示词工程师，以及需要优化Agent性能的开发者
+
+### STATE_TRANSITION_QUICK_REFERENCE.md
+
+本文档是一个便捷的速查手册：
+
+- **可视化状态图**: ASCII艺术风格的状态机流程图
+- **转换总结表**: 一目了然的转换关系矩阵
+- **状态特征速查**: 每个状态的JSON结构示例
+- **决策逻辑流程**: Behavior/Stage reflection的决策算法
+- **变量生命周期**: 变量在各状态间的演化过程
+- **调试清单**: 常见问题的排查步骤和快速修复
+
+**适合**: 所有开发者日常开发时的案头参考
+
+---
+
 ## 🔗 外部资源
 
 - [GitHub Repository](https://github.com/your-org/Notebook-BCC)
@@ -339,8 +407,9 @@ actions = generating_api.get_actions(observation)  # 跳过Planning
 |------|------|---------|
 | 1.0 | 2025-11-10 | 初始版本，整合所有协议文档 |
 | 2.0 | 2025-11-10 | 添加Reflection Mechanism，更新API协议 |
+| 3.0 | 2025-11-12 | **重大更新** - 新增三个核心文档：状态机完整规范、提示词设计模式、快速参考指南 |
 
 ---
 
-**Last Updated**: 2025-11-10
+**Last Updated**: 2025-11-12
 **Maintainer**: Notebook-BCC Team

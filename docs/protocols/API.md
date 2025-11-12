@@ -950,12 +950,12 @@ Reflection Mechanism 是行为完成后的状态转换机制，通过 XML 格式
 
 **文件格式**: `.xml`
 
-**根元素**: `<reflection current_behavior_is_complete="true|false">`
+**根元素**: `<reflection current_step_is_complete="true|false">`
 
 **完整结构示例**:
 
 ```xml
-<reflection current_behavior_is_complete="true">
+<reflection current_step_is_complete="true">
   <evaluation>
     <artifacts_produced>
       <artifact name="data_existence_report" status="complete">
@@ -1028,7 +1028,7 @@ Reflection Mechanism 是行为完成后的状态转换机制，通过 XML 格式
 
 ### 关键字段说明
 
-#### 1. `current_behavior_is_complete` (属性)
+#### 1. `current_step_is_complete` (属性)
 
 **用途**: 标识当前行为是否已完成
 
@@ -1118,9 +1118,9 @@ Client 加载新状态
 
 ### 状态转换规则
 
-**基于 `current_behavior_is_complete`**:
+**基于 `current_step_is_complete`**:
 
-| current_behavior_is_complete | next_state | 说明 |
+| current_step_is_complete | next_state | 说明 |
 |------------------------------|-----------|------|
 | `true` | `STATE_Step_Running` | 行为完成，进入下一步骤 |
 | `true` | `STATE_Stage_Running` | 步骤完成，进入下一阶段 |
@@ -1135,7 +1135,7 @@ Client 加载新状态
 def _parse_reflection_xml(self, root: ET.Element) -> Dict[str, Any]:
     """解析 reflection XML"""
     reflection = {
-        'behavior_is_complete': root.get('current_behavior_is_complete') == 'true',
+        'behavior_is_complete': root.get('current_step_is_complete') == 'true',
         'next_state': None,
         'variables_produced': {},
         'artifacts_produced': [],

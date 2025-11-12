@@ -1,96 +1,94 @@
 <steps>
-  <step id="data_collection_inventory" title="Data Collection and Inventory">
-    <goal>
-      Collect and validate the housing dataset to confirm accessibility, completeness, and version traceability. Artifacts: data_existence_report; Acceptance: `os.path.exists("./assets/housing.csv")==True` and `os.path.getsize("./assets/housing.csv")>0`.
-    </goal>
-    <verified_artifacts>
-      <variable name="data_existence_report">Comprehensive record confirming dataset presence, file metadata (size, timestamp), and accessibility path, type: report (JSON/Markdown), quality: must match provided file path and be accessible.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="user_submit_files">Raw dataset file paths, source: user submission.</variable>
-      <variable name="user_problem">Defines project scope and modeling objective, source: global context.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Ensures the dataset is consistently sourced and representative of the intended domain for generalizable predictions.</predictability>
-      <computability>Standardizes file loading path and encoding for deterministic reproducibility.</computability>
-      <stability>Validates dataset integrity to prevent downstream errors or broken references.</stability>
-    </pcs_considerations>
-  </step>
+   <step id="data_collection_inventory" title="Data Collection and Initial Inventory">
+      <goal>
+         Execute data collection from user submitted files ensuring data existence and reliability. Artifacts: Data inventory checklist, raw dataset file verification; Acceptance: os.path.exists('./assets/housing.csv')==True and pd.read_csv('./assets/housing.csv').shape[0]>0.
+      </goal>
+      <verified_artifacts>
+         <variable name="data_inventory_checklist">Inventory report of data files, text-based, completeness verification standards</variable>
+         <variable name="raw_dataset">Raw housing dataset loaded into memory, dataframe type, non-empty standards</variable>
+      </verified_artifacts>
+      <required_variables>
+         <variable name="user_submit_files">List of submitted files, external source</variable>
+      </required_variables>
+      <pcs_considerations>
+         <predictability>Ensures presence of necessary data for modeling and hypothesis testing.</predictability>
+         <computability>Establishes reproducible data loading steps and file verification logic.</computability>
+         <stability>Mitigates risks of missing or corrupted data through completeness checks.</stability>
+      </pcs_considerations>
+   </step>
+   <step id="data_structure_discovery" title="Exploring Data Structure and Organization">
+      <goal>
+         Analyze the structure of the housing dataset to identify columns, data types, and organizational hierarchy. Artifacts: Data structure report; Acceptance: Columns=['longitude','latitude','housing_median_age','total_rooms',...] and all(pd.api.types.is_dtype(df[col]) for col in df.columns).
+      </goal>
+      <verified_artifacts>
+         <variable name="data_structure_report">Detailed overview of dataset columns, data types, and hierarchy, text-based standards</variable>
+      </verified_artifacts>
+      <required_variables>
+         <variable name="raw_dataset">Loaded housing dataset dataframe, analysis input source</variable>
+      </required_variables>
+      <pcs_considerations>
+         <predictability>Defines a clear organizational context for data exploration and predictive modeling.</predictability>
+         <computability>Facilitates efficient and systematic data structure analysis steps.</computability>
+         <stability>Ensures robustness against inconsistent or incorrect data formatting.</stability>
+      </pcs_considerations>
+   </step>
+   <step id="variable_semantics_analysis" title="Variable Semantic Interpretation">
+      <goal>
+         Map the semantics of each dataset column to business concepts and assess measurement scales. Artifacts: Variable semantic dictionary; Acceptance: len(variable_mapping)==len(df.columns) and all([type(scale) in [str, tuple] for scale in scales]).
+      </goal>
+      <verified_artifacts>
+         <variable name="variable_mapping_report">Mapping of columns to business concepts, dictionary type, business logic alignment</variable>
+         <variable name="measurement_scales">Scales and ranges of each dataset variable, dictionary type</variable>
+      </verified_artifacts>
+      <required_variables>
+         <variable name="data_structure_report">Overview of dataset structure and columns, analysis input source</variable>
+      </required_variables>
+      <pcs_considerations>
+         <predictability>Identifies meaningfully interpretable variables for downstream predictive modeling.</predictability>
+         <computability>Ensures a standard semantic framework linking machine-readable data to domain knowledge.</computability>
+         <stability>Promotes robustness in modeling by accounting for variable scale sensitivity.</stability>
+      </pcs_considerations>
+   </step>
+   <step id="observation_unit_identification" title="Define Observation Units and Unique Identifiers">
+      <goal>
+         Identify observation unit types and ensure uniqueness within the dataset. Artifacts: Observation unit definition document; Acceptance: len(set(df.index)) == len(df.index) and 'observation_unit_type' in globals().
+      </goal>
+      <verified_artifacts>
+         <variable name="observation_unit_definition">Detailed description of observation types, text-based</variable>
+         <variable name="unique_identifiers">List of unique keys identifying observations, list type</variable>
+      </verified_artifacts>
+      <required_variables>
+         <variable name="data_structure_report">Overview of dataset structure and relationships, source</variable>
+      </required_variables>
+      <pcs_considerations>
+         <predictability>Enables clear identification of data representativeness and observation uniqueness.</predictability>
+         <computability>Provides consistent methods for indexing and accessing data observations.</computability>
+         <stability>Improves data utility by ensuring robust observation unit definitions.</stability>
+      </pcs_considerations>
+   </step>
+   <step id="variable_relevance_assessment" title="Evaluate Variable Relevance">
+      <goal>
+         Assess relationships between variables and their relevance to predicting housing prices. Artifacts: Variable analysis report; Acceptance: len(relevant_variables) > 5 and sorted(relevance_scores, reverse=True)[0] >= threshold.
+      </goal>
+      <verified_artifacts>
+         <variable name="relevance_scores">List of variable importance metrics, numerical standards</variable>
+         <variable name="relevant_variables">Filtered list of predictive variable names, list type</variable>
+      </verified_artifacts>
+      <required_variables>
+         <variable name="raw_dataset">Housing dataset loaded into memory, input source</variable>
+         <variable name="variable_mapping_report">Semantic mappings for understanding variables, source</variable>
+      </required_variables>
+      <pcs_considerations>
+         <predictability>Ensures identification of impactful predictive variables aligned with domain logic.</predictability>
+         <computability>Enables systematic computational ranking of variable importance via quantitative metrics.</computability>
+         <stability>Validates robustness by analyzing complementary and redundant variable effects.</stability>
+      </pcs_considerations>
+   </step>
 
-  <step id="data_structure_discovery" title="Data Structure Discovery">
-    <goal>
-      Identify the dataset’s schema, variable names, and types to ensure readiness for analysis. Artifacts: data_structure_document; Acceptance: `len(df_raw.columns)>5` and `df_raw.dtypes.notnull().all()==True`.
-    </goal>
-    <verified_artifacts>
-      <variable name="data_structure_document">Schema summary describing each column name, type, and nullability, type: structured document (JSON/CSV), quality: all column names non-null and typed.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="df_raw">Loaded housing dataset as DataFrame, source: previous step output.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Establishes consistent schema understanding to ensure features are consistently interpreted.</predictability>
-      <computability>Enforces reproducible schema parsing and deterministic data type inference.</computability>
-      <stability>Detects inconsistent or malformed columns that may affect downstream model performance.</stability>
-    </pcs_considerations>
-  </step>
-
-  <step id="variable_semantic_analysis" title="Variable Semantic Analysis">
-    <goal>
-      Map variables to semantic meanings and validate against domain understanding. Artifacts: variable_analysis_report; Acceptance: `len(variable_analysis_report['valid_variables'])>5` and `all('price' in variable_analysis_report['target_candidates'])==True`.
-    </goal>
-    <verified_artifacts>
-      <variable name="variable_analysis_report">Detailed mapping of each variable to its semantic meaning, units, and relevance, type: report (DataFrame or JSON), quality: includes target and key predictors.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="data_structure_document">Schema of the dataset, source: previous step output.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Ensures meaningful variables are used, improving interpretability and model generalization.</predictability>
-      <computability>Defines structured mapping to facilitate automated feature handling.</computability>
-      <stability>Prevents instability from misinterpreted or inconsistent variable definitions.</stability>
-    </pcs_considerations>
-  </step>
-
-  <step id="variable_relevance_assessment" title="Variable Relevance Assessment">
-    <goal>
-      Assess statistical relevance of variables to the target to guide feature selection. Artifacts: variable_analysis_report (updated with correlation metrics); Acceptance: `abs(variable_analysis_report['corr_with_target']).mean()>0.1`.
-    </goal>
-    <verified_artifacts>
-      <variable name="variable_analysis_report">Expanded variable analysis report including correlation with target variable, type: numeric summary, quality: all correlations computed successfully.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="df_raw">Loaded housing dataset as DataFrame, source: data_collection_inventory output.</variable>
-      <variable name="variable_analysis_report">Initial variable semantic mapping, source: previous step.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Quantifies relationships ensuring variable selection supports robust prediction.</predictability>
-      <computability>Uses standardized correlation computation for reproducible analysis.</computability>
-      <stability>Evaluates multi-collinearity and ensures variable relationships remain consistent under data perturbation.</stability>
-    </pcs_considerations>
-  </step>
-
-  <step id="pcs_hypothesis_generation" title="PCS Hypothesis Generation">
-    <goal>
-      Formulate PCS hypotheses linking data characteristics to predictability, computability, and stability tests. Artifacts: pcs_hypothesis_framework; Acceptance: `len(pcs_hypothesis_framework['hypotheses'])>=3`.
-    </goal>
-    <verified_artifacts>
-      <variable name="pcs_hypothesis_framework">Structured list of PCS hypotheses connecting data factors to predictive outcomes, type: structured text or JSON, quality: covers all three PCS dimensions.</variable>
-    </verified_artifacts>
-    <required_variables>
-      <variable name="variable_analysis_report">Finalized variable-level summary, source: previous step output.</variable>
-    </required_variables>
-    <pcs_considerations>
-      <predictability>Defines testable hypotheses on feature predictability and model generalization.</predictability>
-      <computability>Specifies reproducible experimental setups for PCS validation.</computability>
-      <stability>Frames robustness tests to verify performance under data and parameter variations.</stability>
-    </pcs_considerations>
-  </step>
-
-  <focus>
-    The execution of this stage should begin with verifying dataset existence and metadata integrity, then proceed to schema discovery and semantic understanding. Variable-level analyses should identify key predictors and correlations before constructing PCS hypotheses to formalize testable expectations for the model’s behavior and stability. Document all intermediate artifacts and ensure each step passes acceptance criteria before progressing.
-  </focus>
-
-  <goals>
-    Refine the stage goal as: To systematically verify the existence, structure, and semantics of the housing dataset, ensuring traceable, interpretable, and PCS-aligned foundations for predictive modeling.
-  </goals>
+   <focus>
+   Each step is focused on ensuring that data required for predictive modeling of housing prices is comprehensively inventoried, structurally analyzed, semantically mapped, uniquely identified, and effectively connected with PSC considerations, enabling later stages with ideal inputs.
+   </focus>
+   <goals>
+Establish the confidence of foundational dataset correctness by ensuring all initial checks, validations, mappings, and interpretations are complete and quality compliant.
+   </goals>
 </steps>

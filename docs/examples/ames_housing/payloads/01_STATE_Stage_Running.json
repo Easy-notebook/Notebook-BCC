@@ -13,139 +13,108 @@
           "current": {
             "stage_id": "data_existence_establishment",
             "title": "Data Existence Establishment",
-            "goal": "Establish and verify the existence, structure, and relevance of the housing dataset to ensure readiness for predictive modeling. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: `os.path.exists(\"./assets/housing.csv\")==True` and `df_raw.shape[0]>0` and `len(df_raw.columns)>5`.",
+            "goal": "Establish the foundation of data existence through systematic data discovery and analysis. Artifacts: data_existence_report, data_structure_document, variable_analysis_report, pcs_hypothesis_framework; Acceptance: All required data successfully obtained, and data structure and relationships clearly mapped, with variable semantics confirmed by domain experts. PCS hypotheses specific and testable.",
             "verified_artifacts": {
-              "data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics.",
-              "data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable.",
-              "variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price).",
-              "pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."
+              "data_existence_report": "Complete data inventory and quality assessment",
+              "data_structure_document": "Schema, relationships, type analysis",
+              "variable_analysis_report": "Semantic mapping, importance ranking",
+              "pcs_hypothesis_framework": "Testable hypotheses for validation"
             }
           },
           "remaining": [
             {
               "stage_id": "data_integrity_assurance",
               "title": "Data Integrity Assurance",
-              "goal": "Clean and validate the housing dataset to ensure completeness, accuracy, and reproducibility. Artifacts: df_cleaned, data_quality_report, processing_pipeline_doc, integrity_verification_report; Acceptance: `df_cleaned.isnull().sum().sum()==0` and `len(df_cleaned.columns)==len(df_raw.columns)` and `df_cleaned.duplicated().sum()==0`.",
+              "goal": "Ensure data integrity and consistency, producing an analysis-ready dataset. Artifacts: df_cleaned, data_quality_report, processing_pipeline_doc, integrity_verification_report; Acceptance: df_cleaned.isnull().sum().sum() == 0, all dtypes/indexes validated and correct, processing pipeline fully documented and reproducible with quality metrics meeting standards.",
               "verified_artifacts": {
-                "df_cleaned": "Pandas DataFrame with no missing values or duplicates, correct dtypes, and valid ranges.",
-                "data_quality_report": "Quality metrics summary with before/after cleaning comparisons.",
-                "processing_pipeline_doc": "Document outlining reproducible data cleaning operations and parameters.",
-                "integrity_verification_report": "Formal validation log ensuring full data integrity under PCS checks."
+                "df_cleaned": "DataFrame with no missing values and correct dtypes",
+                "data_quality_report": "Comprehensive quality metrics and processing log",
+                "processing_pipeline_doc": "Reproducibility documentation including seeds and versions",
+                "integrity_verification_report": "Quality assurance certification"
               },
               "required_variables": {
-                "df_raw": "Initial dataset loaded from housing.csv."
+                "data_existence_report": "Complete data inventory and quality assessment"
               }
             },
             {
               "stage_id": "exploratory_data_analysis",
               "title": "Exploratory Data Analysis",
-              "goal": "Explore variable distributions and relationships to uncover predictive patterns and modeling insights. Artifacts: eda_summary, correlation_matrix, distribution_analysis, modeling_recommendations, ./outputs/eda/; Acceptance: `os.path.exists(\"./outputs/eda/\")==True` and `len(correlation_matrix.columns)>3` and `len(modeling_recommendations)>0`.",
+              "goal": "Understand data patterns and relationships to inform modeling strategy. Artifacts: eda_summary, correlation_matrix, distribution_analysis, modeling_recommendations, ./outputs/eda/; Acceptance: Distribution and key variable relationship analysis completed with six charts generated and modeling recommendations documented.",
               "verified_artifacts": {
-                "eda_summary": "Comprehensive statistical overview for each variable, including min, max, mean, std.",
-                "correlation_matrix": "Matrix of variable correlations, highlighting top correlated features with price.",
-                "distribution_analysis": "Dictionary summarizing target and feature distribution shapes.",
-                "modeling_recommendations": "Suggested feature engineering methods and model families.",
-                "./outputs/eda/": "Visualization folder containing at least 6 distribution/correlation plots."
+                "eda_summary": "Comprehensive statistics for each variable",
+                "correlation_matrix": "Full variable correlation analysis",
+                "distribution_analysis": "Target distribution analysis and transform recommendations",
+                "modeling_recommendations": "Feature engineering and method suggestions",
+                "./outputs/eda/": "Visualization charts and dashboards"
               },
               "required_variables": {
-                "df_cleaned": "Cleaned dataset ready for analysis."
+                "df_cleaned": "Cleaned data for exploratory analysis"
               }
             },
             {
               "stage_id": "methodology_strategy_formulation",
               "title": "Methodology Strategy Formulation",
-              "goal": "Design a modeling methodology covering feature engineering, model selection, and evaluation standards. Artifacts: feature_engineering_strategy, model_method_candidates, evaluation_framework, methodology_document; Acceptance: `len(model_method_candidates)>2` and `(\"RMSE\" in evaluation_framework)` and `(\"R²\" in evaluation_framework)`.",
+              "goal": "Formulate modeling strategy with feature engineering and model selection. Artifacts: feature_engineering_strategy, model_method_candidates, evaluation_framework, methodology_document; Acceptance: Strategy matches data characteristics and fully integrates PCS framework with a feasible implementation plan.",
               "verified_artifacts": {
-                "feature_engineering_strategy": "Detailed plan describing feature transformation and encoding methods.",
-                "model_method_candidates": "List of algorithms considered (e.g., Linear Regression, RandomForest, XGBoost).",
-                "evaluation_framework": "Evaluation metrics and validation scheme ensuring PCS compliance.",
-                "methodology_document": "Consolidated modeling strategy ready for implementation."
+                "feature_engineering_strategy": "Detailed feature engineering plan",
+                "model_method_candidates": "List of candidate algorithms with rationale",
+                "evaluation_framework": "Evaluation metrics and validation strategy",
+                "methodology_document": "Complete modeling methodology and plan"
               },
               "required_variables": {
-                "eda_summary": "Exploratory analysis results.",
-                "modeling_recommendations": "Modeling insights and transformation guidelines."
+                "modeling_recommendations": "Suggestions from EDA"
               }
             },
             {
               "stage_id": "model_implementation_execution",
               "title": "Model Implementation Execution",
-              "goal": "Implement and train models following the defined strategy to produce a robust housing price predictor. Artifacts: feature_pipeline, trained_models, final_model, training_history, best_params, ./models/model.pkl; Acceptance: `os.path.exists(\"./models/model.pkl\")==True` and `final_rmse<25000` and `final_r2>0.85`.",
+              "goal": "Execute modeling strategy to build and optimize models. Artifacts: feature_pipeline, trained_models, final_model, training_history, best_params, ./models/model.pkl; Acceptance: All steps implemented, optimization achieved, performance meets expectations, and no data leakage with model.pkl loading successfully.",
               "verified_artifacts": {
-                "feature_pipeline": "Reusable feature transformation pipeline consistent with strategy.",
-                "trained_models": "Collection of trained models with varying algorithms and parameters.",
-                "final_model": "Optimized model object chosen by PCS metrics.",
-                "training_history": "Training and validation performance logs across iterations.",
-                "best_params": "Hyperparameter configuration yielding best results.",
-                "./models/model.pkl": "Serialized model file for deployment."
+                "feature_pipeline": "Reusable feature engineering pipeline",
+                "trained_models": "Collection of trained models with different algorithms",
+                "final_model": "Optimized production-ready model",
+                "training_history": "Complete training process logs",
+                "best_params": "Optimal hyperparameter configuration",
+                "./models/model.pkl": "Saved model file"
               },
               "required_variables": {
-                "feature_engineering_strategy": "Defined feature transformation plan.",
-                "evaluation_framework": "Evaluation metrics and validation scheme."
+                "feature_engineering_strategy": "Feature engineering plan"
               }
             },
             {
               "stage_id": "predictability_validation",
               "title": "Predictability Validation",
-              "goal": "Validate model generalization using cross-validation and independent test sets to ensure performance consistency. Artifacts: cv_scores, test_performance, temporal_validation_report, domain_generalization_report, business_impact_report; Acceptance: `test_performance[\"RMSE\"]<25000` and `test_performance[\"R²\"]>0.85` and `len(cv_scores)>=5`.",
+              "goal": "Validate model's predictive performance on unseen data. Artifacts: cv_scores, test_performance, temporal_validation_report, domain_generalization_report, business_impact_report; Acceptance: Appropriately applied cross-validation, independent test set, comprehensive generalization testing, and business value alignment.",
               "verified_artifacts": {
-                "cv_scores": "Cross-validation scores array covering multiple folds.",
-                "test_performance": "Performance metrics dict including RMSE, R², and MAE on unseen data.",
-                "temporal_validation_report": "Time-based performance analysis ensuring stability.",
-                "domain_generalization_report": "Cross-domain performance and robustness testing results.",
-                "business_impact_report": "Summary of predictive model’s business impact (ROI, decisions)."
+                "cv_scores": "Array of cross-validation fold scores",
+                "test_performance": "Test set metrics: RMSE, R², MAE",
+                "temporal_validation_report": "Time-based generalization analysis",
+                "domain_generalization_report": "Cross-domain performance evaluation",
+                "business_impact_report": "ROI and business value report"
               },
               "required_variables": {
-                "final_model": "Trained model for evaluation.",
-                "df_cleaned": "Cleaned dataset with target variable."
-              }
-            },
-            {
-              "stage_id": "stability_assessment",
-              "title": "Stability Assessment",
-              "goal": "Conduct perturbation and sensitivity analysis to assess model stability under varying data and hyperparameter conditions. Artifacts: perturbation_test_results, sensitivity_analysis_report, stability_metrics, stability_certification, improvement_recommendations; Acceptance: `stability_metrics[\"variation_coefficient\"]<0.05` and `len(improvement_recommendations)>0`.",
-              "verified_artifacts": {
-                "perturbation_test_results": "Results from noise-injected and resampled data tests.",
-                "sensitivity_analysis_report": "Ranking of influential features and hyperparameters.",
-                "stability_metrics": "Dictionary of robustness metrics including variation coefficient.",
-                "stability_certification": "Formal statement ensuring stability bounds and validity range.",
-                "improvement_recommendations": "Recommended stability enhancement strategies."
-              },
-              "required_variables": {
-                "final_model": "Trained model to assess stability.",
-                "test_performance": "Evaluation results as baseline reference."
-              }
-            },
-            {
-              "stage_id": "results_communication",
-              "title": "Results Communication",
-              "goal": "Communicate final outcomes to technical and business audiences effectively through reports, documentation, and dashboards. Artifacts: technical_documentation, executive_summary, visualization_package, implementation_guide, model_card; Acceptance: `os.path.exists(\"./reports/\")==True` and `len(executive_summary)>300` and `(\"RMSE\" in model_card)`.",
-              "verified_artifacts": {
-                "technical_documentation": "Complete methodology and reproducibility documentation.",
-                "executive_summary": "Concise business-level explanation of model results and insights.",
-                "visualization_package": "Interactive dashboards summarizing performance and stability.",
-                "implementation_guide": "Deployment and usage instructions.",
-                "model_card": "Model transparency document with metrics, use cases, and caveats."
-              },
-              "required_variables": {
-                "test_performance": "Validated model results.",
-                "stability_metrics": "Stability findings for inclusion in model card."
+                "final_model": "Optimized production-ready model"
               }
             }
           ],
-          "focus": "RMSE < 25000; R² > 0.85; CV folds ≥ 5; PCS compliance verified at all stages; stability variation_coefficient < 0.05; reproducibility logs complete; all artifacts saved deterministically under ./outputs and ./models/.",
+          "focus": "RMSE < 25000\n        R² > 0.85\n        PCS standards adherence\n        Reproducibility\n        No data leakage",
           "current_outputs": {
             "expected": [
               {
-                "data_existence_report": "Detailed report confirming data acquisition, structure recognition, and variable availability with summary statistics."
+                "name": "data_existence_report",
+                "description": "Complete data inventory and quality assessment"
               },
               {
-                "data_structure_document": "Schema of the dataset, describing each column, type, and potential target variable."
+                "name": "data_structure_document",
+                "description": "Schema, relationships, type analysis"
               },
               {
-                "variable_analysis_report": "Variable-level semantic mapping and correlation summary with the target (price)."
+                "name": "variable_analysis_report",
+                "description": "Semantic mapping, importance ranking"
               },
               {
-                "pcs_hypothesis_framework": "Hypothesis document linking data characteristics to PCS testability requirements."
+                "name": "pcs_hypothesis_framework",
+                "description": "Testable hypotheses for validation"
               }
             ],
             "produced": [],
@@ -175,12 +144,12 @@
           }
         }
       },
-      "goals": "The user proposed the problem 'Build a house price prediction model based on the Housing dataset, RMSE < 25000, R² > 0.85, compliant with PCS standards,' and uploaded the file './assets/housing.csv'. The workflow now follows an 8-stage PCS-compliant data science lifecycle: (1) Data Existence Establishment, (2) Data Integrity Assurance, (3) Exploratory Data Analysis, (4) Methodology Strategy Formulation, (5) Model Implementation Execution, (6) Predictability Validation, (7) Stability Assessment, (8) Results Communication. The current stage is 'data_existence_establishment,' with the goal of verifying data availability, understanding structure, analyzing variable relevance, and generating PCS testable hypotheses."
+      "goals": "用户提出了问题%user_problem%，上传了文件%user_submit_files%,需要对于用户的问题进行大目标拆分，以目标产物为导向，进行阶段拆分，每个阶段需要有明确的目标，并且需要有明确的目标产物"
     }
   },
   "state": {
     "variables": {
-      "user_problem": "基于  Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
+      "user_problem": "基于 Housing 数据集构建房价预测模型，RMSE < 25000，R² > 0.85，符合 PCS 标准",
       "user_submit_files": [
         "./assets/housing.csv"
       ]
@@ -190,7 +159,7 @@
       "history": []
     },
     "notebook": {
-      "notebook_id": "f9559c1623154ca1b16b1cd83f7faea3", 
+      "notebook_id": "f9559c1623154ca1b16b1cd83f7faea3",
       "title": null,
       "cell_count": 0,
       "last_cell_type": null,
@@ -199,7 +168,7 @@
     "FSM": {
       "state": "STAGE_RUNNING",
       "last_transition": "START_WORKFLOW",
-      "timestamp": "2025-11-04T02:54:07.042Z"
+      "timestamp": "2025-11-12T08:12:23.060562+00:00"
     }
   }
 }

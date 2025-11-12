@@ -33,6 +33,16 @@ class WorkflowAPIClient(ModernLogger):
         self.api_logger = get_api_logger()  # API 调用日志记录器
         self.last_api_log_file: Optional[str] = None  # 最后一次 API 调用的日志文件路径
 
+    def set_log_dir(self, log_dir: str):
+        """
+        Set the log directory for API call logging.
+
+        Args:
+            log_dir: Directory path for session logs
+        """
+        from .api_logger import APICallLogger
+        self.api_logger = APICallLogger(log_dir)
+
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
@@ -89,6 +99,7 @@ class WorkflowAPIClient(ModernLogger):
         step_index: str,
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
+        transition_name: Optional[str] = None,
         behavior_feedback: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
@@ -179,6 +190,7 @@ class WorkflowAPIClient(ModernLogger):
 
                         # Log error with details
                         log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                             api_url=Config.REFLECTING_API_URL,
                             method='POST',
                             payload=payload,
@@ -218,6 +230,7 @@ class WorkflowAPIClient(ModernLogger):
 
                     # 📝 记录 API 调用详情（包含响应）
                     log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                         api_url=Config.REFLECTING_API_URL,
                         method='POST',
                         payload=payload,
@@ -241,6 +254,7 @@ class WorkflowAPIClient(ModernLogger):
                 response_error = str(e)
                 # 记录失败的调用
                 log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                     api_url=Config.REFLECTING_API_URL,
                     method='POST',
                     payload=payload,
@@ -270,6 +284,7 @@ class WorkflowAPIClient(ModernLogger):
         step_index: str,
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
+        transition_name: Optional[str] = None,
         behavior_feedback: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
@@ -370,6 +385,7 @@ class WorkflowAPIClient(ModernLogger):
 
                         # Log error with details
                         log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                             api_url=Config.FEEDBACK_API_URL,
                             method='POST',
                             payload=payload,
@@ -409,6 +425,7 @@ class WorkflowAPIClient(ModernLogger):
 
                     # 📝 记录 API 调用详情（包含响应）
                     log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                         api_url=Config.FEEDBACK_API_URL,
                         method='POST',
                         payload=payload,
@@ -432,6 +449,7 @@ class WorkflowAPIClient(ModernLogger):
                 response_error = str(e)
                 # 记录失败的调用
                 log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                     api_url=Config.FEEDBACK_API_URL,
                     method='POST',
                     payload=payload,
@@ -461,6 +479,7 @@ class WorkflowAPIClient(ModernLogger):
         step_index: str,
         state: Dict[str, Any],
         stream: bool = True,
+        transition_name: Optional[str] = None,
         behavior_feedback: Optional[Dict[str, Any]] = None  # Added: behavior feedback
     ) -> AsyncIterator[Dict[str, Any]]:
         """
@@ -530,6 +549,7 @@ class WorkflowAPIClient(ModernLogger):
 
             # 📝 记录 API 调用详情到独立日志文件
             log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                 api_url=Config.BEHAVIOR_API_URL,
                 method='POST',
                 payload=payload,
@@ -565,6 +585,7 @@ class WorkflowAPIClient(ModernLogger):
 
                     # Log error with details
                     log_file = self.api_logger.log_api_call(
+                            transition_name=transition_name,
                         api_url=Config.BEHAVIOR_API_URL,
                         method='POST',
                         payload=payload,

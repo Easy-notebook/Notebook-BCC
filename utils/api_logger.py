@@ -20,7 +20,7 @@ class APICallLogger:
     _call_counter = 0
     _lock = threading.Lock()
 
-    def __init__(self, log_dir: str = "api_logs"):
+    def __init__(self, log_dir: str = "logs"):
         """
         初始化 API 日志记录器
 
@@ -47,7 +47,8 @@ class APICallLogger:
         response: Optional[Any] = None,
         response_status: Optional[int] = None,
         response_error: Optional[str] = None,
-        final_state: Optional[Dict[str, Any]] = None
+        final_state: Optional[Dict[str, Any]] = None,
+        transition_name: Optional[str] = None
     ) -> str:
         """
         记录 API 调用信息到独立的日志文件
@@ -71,14 +72,16 @@ class APICallLogger:
 
         # 生成时间戳
         timestamp = datetime.now()
-        time_str = timestamp.strftime("%Y%m%d_%H%M%S_%f")[:-3]  # 精确到毫秒
 
-        # 清理 API URL 用于文件名（移除特殊字符）
-        api_name = api_url.replace('http://', '').replace('https://', '')
-        api_name = api_name.replace(':', '_').replace('/', '_')
+        # 生成文件名：编号_TRANSITION名.log
+        # 例如：0001_START_WORKFLOW.log, 0002_START_STEP.log
+        if transition_name:
+            filename = f"{call_number:04d}_{transition_name}.log"
+        else:
+            # Fallback: 使用 API 类型
+            api_type = api_url.split('/')[-1]  # 从 URL 提取最后部分 (planning/generating/reflecting)
+            filename = f"{call_number:04d}_{api_type}.log"
 
-        # 生成文件名：编号_时间_API地址.log
-        filename = f"{call_number:04d}_{time_str}_{api_name}.log"
         log_file = self.log_dir / filename
 
         # 准备日志内容
@@ -522,7 +525,7 @@ class APICallLogger:
 _api_logger = None
 
 
-def get_api_logger(log_dir: str = "api_logs") -> APICallLogger:
+def get_api_logger(log_dir: str = "logs") -> APICallLogger:
     """获取全局 API 日志记录器单例"""
     global _api_logger
     if _api_logger is None:
