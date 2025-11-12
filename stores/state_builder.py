@@ -43,6 +43,14 @@ class StateBuilder(ModernLogger):
         # Get current notebook state
         notebook_data = notebook_store.to_dict()
 
+        # CRITICAL: Preserve notebook_id from base_state if not in notebook_data
+        # This ensures notebook_id is never lost during state updates
+        if 'notebook_id' not in notebook_data and 'state' in base_state:
+            base_notebook_id = base_state.get('state', {}).get('notebook', {}).get('notebook_id')
+            if base_notebook_id:
+                notebook_data['notebook_id'] = base_notebook_id
+                self.warning(f"[StateBuilder] ⚠️ Recovered notebook_id from base_state: {base_notebook_id}")
+
         # Get current effects from AI context
         context = ai_context_store.get_context()
 

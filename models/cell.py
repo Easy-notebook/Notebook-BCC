@@ -100,7 +100,7 @@ class Cell:
             'id': self.id,
             'type': self.type.value,
             'content': self.content,
-            'outputs': [out.to_dict() for out in self.outputs],
+            'outputs': [out.to_dict() if hasattr(out, 'to_dict') else out for out in self.outputs],
             'enable_edit': self.enable_edit,
             'description': self.description,
             'metadata': self.metadata,

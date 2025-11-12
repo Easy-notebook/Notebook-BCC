@@ -211,6 +211,11 @@ class WorkflowCLI(ModernLogger):
         # Sync notebook
         if 'notebook' in state_data:
             notebook_data = state_data['notebook']
+
+            # Debug: Check if notebook_id exists in input data
+            input_notebook_id = notebook_data.get('notebook_id')
+            self.script_store.info(f"[Commands] _sync_state_to_stores: input notebook_id={input_notebook_id}")
+
             # Clear existing cells
             self.notebook_store.cells.clear()
 
@@ -243,6 +248,11 @@ class WorkflowCLI(ModernLogger):
                     self.script_store.code_executor.notebook_id = existing_notebook_id
                     self.script_store.code_executor.is_kernel_ready = True  # Mark as ready since notebook exists
                     self.script_store.info(f"[Commands] ✅ Synced notebook_id: {existing_notebook_id}")
+                    self.script_store.info(f"[Commands] CodeExecutor state: id={self.script_store.code_executor.notebook_id}, ready={self.script_store.code_executor.is_kernel_ready}")
+                else:
+                    self.script_store.warning(f"[Commands] ⚠️ code_executor is None! Cannot sync notebook_id")
+            else:
+                self.script_store.warning(f"[Commands] ⚠️ No notebook_id in notebook_data! Will create new notebook on first exec")
 
         # Sync effects to AI context
         if 'effects' in state_data:
@@ -253,6 +263,8 @@ class WorkflowCLI(ModernLogger):
 
     def create_parser(self) -> argparse.ArgumentParser:
         """Create argument parser."""
+        from config import Config
+
         parser = argparse.ArgumentParser(
             description='Notebook-BCC: Python Workflow System',
             formatter_class=argparse.RawDescriptionHelpFormatter
@@ -261,7 +273,8 @@ class WorkflowCLI(ModernLogger):
         # Global configuration options
         parser.add_argument('--backend-url', type=str, help='Backend Jupyter kernel URL (default: http://localhost:18600)')
         parser.add_argument('--dslc-url', type=str, help='DSLC workflow API URL (default: http://localhost:28600)')
-        parser.add_argument('--notebook-id', type=str, help='Initial notebook ID')
+        parser.add_argument('--notebook-id', type=str, default=Config.NOTEBOOK_ID,
+                          help='Notebook ID (default: from .env NOTEBOOK_ID or None)')
 
         # Execution control options
         parser.add_argument('--max-steps', type=int, default=0, help='Maximum steps to execute (0 = unlimited)')
@@ -519,8 +532,14 @@ class WorkflowCLI(ModernLogger):
                 idle_state['state']['variables']['user_problem'] = user_problem
                 idle_state['state']['variables']['user_submit_files'] = user_submit_files
 
-                # Generate new notebook_id
-                idle_state['state']['notebook']['notebook_id'] = uuid.uuid4().hex
+                # Use existing notebook_id from code_executor if available, otherwise generate new one
+                if self.code_executor.notebook_id:
+                    idle_state['state']['notebook']['notebook_id'] = self.code_executor.notebook_id
+                    print(f"  Using existing notebook_id: {self.code_executor.notebook_id[:16]}...")
+                else:
+                    new_notebook_id = uuid.uuid4().hex
+                    idle_state['state']['notebook']['notebook_id'] = new_notebook_id
+                    print(f"  Generated new notebook_id: {new_notebook_id[:16]}...")
 
                 # Update timestamp
                 idle_state['state']['FSM']['timestamp'] = datetime.now(timezone.utc).isoformat()
@@ -575,7 +594,16 @@ class WorkflowCLI(ModernLogger):
             self.notebook_store.from_dict(notebook_data)
             cell_count = len(notebook_data.get('cells', []))
             notebook_id = notebook_data.get('notebook_id')
-            print(f"  Notebook: {cell_count} cells" + (f", ID: {notebook_id[:8]}..." if notebook_id else ""))
+
+            # Set notebook_id on code_executor to reuse existing notebook
+            if notebook_id:
+                # Sync to both notebook_store and code_executor
+                self.notebook_store.notebook_id = notebook_id
+                self.code_executor.notebook_id = notebook_id
+                self.code_executor.is_kernel_ready = True
+                print(f"  Notebook: {cell_count} cells, ID: {notebook_id[:8]}... (reusing existing notebook)")
+            else:
+                print(f"  Notebook: {cell_count} cells (no notebook_id, will create new)")
 
         # Store current state for iteration
         self._current_state = state_json

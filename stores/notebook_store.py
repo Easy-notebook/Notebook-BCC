@@ -19,7 +19,7 @@ class NotebookStore(ModernLogger):
         self.cells: List[Cell] = []
         self.title: str = "Untitled Notebook"
         self.execution_count: int = 0
-        self.notebook_id: Optional[str] = None  # Add explicit notebook_id field
+        self.notebook_id: Optional[str] = None  # Explicitly initialize notebook_id
 
         # Track cell updates for context
         self._cell_snapshots: Dict[str, Dict[str, Any]] = {}  # cell_id -> snapshot
@@ -42,11 +42,16 @@ class NotebookStore(ModernLogger):
         cell_id = cell_data.get('id')
         cell_type = CellType(cell_data.get('type', 'markdown'))
 
+        # Convert dictionary outputs to CellOutput objects
+        raw_outputs = cell_data.get('outputs', [])
+        outputs = [CellOutput(**out) if isinstance(out, dict) else out
+                   for out in raw_outputs]
+
         cell = Cell(
             id=cell_id,
             type=cell_type,
             content=cell_data.get('content', ''),
-            outputs=cell_data.get('outputs', []),
+            outputs=outputs,
             enable_edit=cell_data.get('enableEdit', cell_type != CellType.THINKING),
             phase_id=cell_data.get('phaseId'),
             description=cell_data.get('description', ''),
@@ -252,6 +257,9 @@ class NotebookStore(ModernLogger):
         # Add optional/dynamic fields if they exist
         if hasattr(self, 'notebook_id') and self.notebook_id:
             result['notebook_id'] = self.notebook_id
+            self.debug(f"[NotebookStore] to_dict: Including notebook_id={self.notebook_id}")
+        else:
+            self.warning(f"[NotebookStore] to_dict: ⚠️ No notebook_id! (hasattr={hasattr(self, 'notebook_id')}, value={getattr(self, 'notebook_id', 'N/A')})")
 
         # Add last cell info if cells exist
         if self.cells:

@@ -109,8 +109,12 @@ class CodeExecutor(ModernLogger):
         Returns:
             Dict containing execution results
         """
+        # Debug: Log current notebook_id state
+        self.debug(f"[CodeExecutor] Execute called - notebook_id={self.notebook_id}, is_kernel_ready={self.is_kernel_ready}")
+
         # Ensure kernel is initialized
         if not self.is_kernel_ready:
+            self.warning(f"[CodeExecutor] Kernel not ready! Calling initialize_kernel (current notebook_id={self.notebook_id})")
             if not self.initialize_kernel():
                 return {
                     'success': False,
