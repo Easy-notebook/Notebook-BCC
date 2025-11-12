@@ -228,9 +228,18 @@ class WorkflowAPIClient(ModernLogger):
                         response_data = result
                         self.info(f"[API] Reflection response: targetAchieved={result.get('targetAchieved')}")
 
+                    # 从响应中提取 next_state 来确定实际的 transition_name
+                    actual_transition_name = transition_name
+                    if not actual_transition_name:
+                        # 解析响应确定 transition name
+                        actual_transition_name = self._determine_transition_from_response(
+                            response_data,
+                            current_fsm_state=state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
+                        )
+
                     # 📝 记录 API 调用详情（包含响应）
                     log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
+                        transition_name=actual_transition_name,
                         api_url=Config.REFLECTING_API_URL,
                         method='POST',
                         payload=payload,
@@ -711,6 +720,65 @@ class WorkflowAPIClient(ModernLogger):
             return loop.run_until_complete(future)
         else:
             return loop.run_until_complete(collect_actions())
+
+    def _determine_transition_from_response(
+        self,
+        response_data: Any,
+        current_fsm_state: str
+    ) -> str:
+        """
+        根据 API 响应内容和当前 FSM 状态确定 transition name。
+
+        Args:
+            response_data: API 响应数据（XML 字符串或 dict）
+            current_fsm_state: 当前 FSM 状态
+
+        Returns:
+            Transition name (例如: COMPLETE_STEP, NEXT_BEHAVIOR, COMPLETE_STAGE)
+        """
+        # 如果是 XML 字符串，先解析
+        if isinstance(response_data, str):
+            from utils.response_parser import response_parser
+            parsed = response_parser.parse_response(response_data)
+            response_dict = parsed.get('content', {})
+        else:
+            response_dict = response_data
+
+        # 提取 next_state
+        next_state = response_dict.get('next_state', '').upper()
+
+        # 根据当前状态和目标状态映射到 transition name
+        transition_map = {
+            ('BEHAVIOR_COMPLETED', 'STEP_COMPLETED'): 'COMPLETE_STEP',
+            ('BEHAVIOR_COMPLETED', 'STEP_RUNNING'): 'NEXT_BEHAVIOR',
+            ('STEP_COMPLETED', 'STAGE_COMPLETED'): 'COMPLETE_STAGE',
+            ('STEP_COMPLETED', 'STAGE_RUNNING'): 'NEXT_STEP',
+            ('STAGE_COMPLETED', 'WORKFLOW_COMPLETED'): 'COMPLETE_WORKFLOW',
+            ('STAGE_COMPLETED', 'STAGE_RUNNING'): 'NEXT_STAGE',
+        }
+
+        key = (current_fsm_state.upper(), next_state)
+        transition_name = transition_map.get(key)
+
+        if transition_name:
+            self.info(f"[API] Determined transition: {current_fsm_state} → {next_state} = {transition_name}")
+            return transition_name
+
+        # Fallback: 尝试从 next_state 推断
+        if 'STEP_COMPLETED' in next_state:
+            return 'COMPLETE_STEP'
+        elif 'STAGE_COMPLETED' in next_state:
+            return 'COMPLETE_STAGE'
+        elif 'STEP_RUNNING' in next_state:
+            return 'NEXT_BEHAVIOR'
+        elif 'STAGE_RUNNING' in next_state:
+            return 'NEXT_STEP'
+        elif 'WORKFLOW_COMPLETED' in next_state:
+            return 'COMPLETE_WORKFLOW'
+
+        # 最终 fallback
+        self.warning(f"[API] Could not determine transition from {current_fsm_state} → {next_state}, using 'UNKNOWN'")
+        return 'UNKNOWN'
 
 
 # Create singleton instance

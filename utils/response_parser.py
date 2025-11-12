@@ -381,6 +381,7 @@ class ResponseParser(ModernLogger):
             - variables_produced: dict of new variables
             - artifacts_produced: list of completed artifacts
             - outputs_tracking: dict with produced/in_progress/remaining
+            - context_for_next: dict with whathappened and recommendations
         """
         reflection = {
             'behavior_is_complete': root.get('current_step_is_complete', '').lower() == 'true',
@@ -391,6 +392,10 @@ class ResponseParser(ModernLogger):
                 'produced': [],
                 'in_progress': [],
                 'remaining': []
+            },
+            'context_for_next': {
+                'whathappened': {},
+                'recommendations_for_next': {}
             }
         }
 
@@ -410,6 +415,28 @@ class ResponseParser(ModernLogger):
                         value = var.get('value', var.text or '')
                         if name:
                             reflection['variables_produced'][name] = value
+
+                # Extract whathappened
+                whathappened_elem = child.find('whathappened')
+                if whathappened_elem is not None:
+                    overview_elem = whathappened_elem.find('overview')
+                    if overview_elem is not None and overview_elem.text:
+                        reflection['context_for_next']['whathappened']['overview'] = overview_elem.text.strip()
+
+                    key_findings_elem = whathappened_elem.find('key_findings')
+                    if key_findings_elem is not None and key_findings_elem.text:
+                        reflection['context_for_next']['whathappened']['key_findings'] = key_findings_elem.text.strip()
+
+                # Extract recommendations_for_next
+                recommendations_elem = child.find('recommendations_for_next')
+                if recommendations_elem is not None:
+                    if_continuing_elem = recommendations_elem.find('if_continuing_behavior')
+                    if if_continuing_elem is not None and if_continuing_elem.text:
+                        reflection['context_for_next']['recommendations_for_next']['if_continuing_behavior'] = if_continuing_elem.text.strip()
+
+                    if_moving_forward_elem = recommendations_elem.find('if_moving_forward')
+                    if if_moving_forward_elem is not None and if_moving_forward_elem.text:
+                        reflection['context_for_next']['recommendations_for_next']['if_moving_forward'] = if_moving_forward_elem.text.strip()
 
             elif child.tag == 'evaluation':
                 # Extract artifacts_produced

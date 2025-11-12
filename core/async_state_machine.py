@@ -325,31 +325,15 @@ class AsyncStateMachineAdapter(ModernLogger):
         stage_id = current.get('stage_id', 'unknown')
         step_id = current.get('step_id', 'unknown')
 
-        # 使用 state class 来确定下一个 transition
-        from core.state_classes.state_factory import StateFactory
-        state_instance = StateFactory.get_state(current_fsm_state)
-
         self.info(f"[AsyncFSM] Current FSM state: {current_fsm_state}")
-        self.info(f"[AsyncFSM] State instance: {state_instance}")
-
-        if state_instance:
-            next_transition_event = state_instance.determine_next_transition(state_json)
-            self.info(f"[AsyncFSM] Next transition event: {next_transition_event}")
-            # 提取事件名称作为 transition_name
-            transition_name = next_transition_event.value if next_transition_event else 'COMPLETE_STEP'
-        else:
-            # Fallback to default
-            self.warning(f"[AsyncFSM] No state instance found for {current_fsm_state}, using default")
-            transition_name = 'COMPLETE_STEP'
-
-        self.info(f"[AsyncFSM] Current state: {current_fsm_state}, Determined transition: {transition_name}")
 
         # 调用 reflecting API
+        # transition_name 将在 API 响应后根据 next_state 自动确定
         response = await self.api_client.send_reflecting(
             stage_id=stage_id,
             step_index=step_id,
             state=state_json,
-            transition_name=transition_name
+            transition_name=None  # 让 API client 根据响应确定实际的 transition
         )
 
         # 应用 transition
@@ -382,11 +366,12 @@ class AsyncStateMachineAdapter(ModernLogger):
         step_id = current.get('step_id', 'unknown')
 
         # 调用 reflecting API
+        # transition_name 将根据响应自动确定
         response = await self.api_client.send_reflecting(
             stage_id=stage_id,
             step_index=step_id,
             state=state_json,
-            transition_name='COMPLETE_STAGE'
+            transition_name=None
         )
 
         # 应用 transition
@@ -418,11 +403,12 @@ class AsyncStateMachineAdapter(ModernLogger):
         stage_id = current.get('stage_id', 'unknown')
 
         # 调用 reflecting API
+        # transition_name 将根据响应自动确定
         response = await self.api_client.send_reflecting(
             stage_id=stage_id,
             step_index='completed',
             state=state_json,
-            transition_name='REFLECTING_STAGE_COMPLETED'
+            transition_name=None
         )
 
         # 应用 transition

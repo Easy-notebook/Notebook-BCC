@@ -69,6 +69,7 @@ class CompleteStepHandler(BaseTransitionHandler):
         variables_produced = api_response.get('variables_produced', {})
         artifacts_produced = api_response.get('artifacts_produced', [])
         outputs_tracking = api_response.get('outputs_tracking', {})
+        context_for_next = api_response.get('context_for_next', {})
 
         self.info(
             f"Applying reflection: behavior_complete={behavior_is_complete}, "
@@ -85,6 +86,25 @@ class CompleteStepHandler(BaseTransitionHandler):
             current_vars = state_data.setdefault('variables', {})
             current_vars.update(variables_produced)
             self.info(f"Added {len(variables_produced)} new variables")
+
+        # Update context information in current behavior before completing it
+        if context_for_next:
+            behaviors_progress = progress.get('behaviors', {})
+            current_behavior = behaviors_progress.get('current')
+            if current_behavior:
+                # Update whathappened information
+                whathappened = context_for_next.get('whathappened', {})
+                if whathappened:
+                    if 'whathappened' not in current_behavior:
+                        current_behavior['whathappened'] = {}
+                    current_behavior['whathappened'].update(whathappened)
+                    self.info("Updated whathappened context in current behavior")
+
+                # Store recommendations for next step
+                recommendations = context_for_next.get('recommendations_for_next', {})
+                if recommendations:
+                    current_behavior['recommendations_for_next'] = recommendations
+                    self.info("Stored recommendations for next step")
 
         # Complete current behavior
         self._complete_behavior(new_state, artifacts_produced, outputs_tracking)
