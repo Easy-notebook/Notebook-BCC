@@ -99,56 +99,39 @@ class StateBuilder(ModernLogger):
         Returns:
             Effect dictionary or None
         """
-        # Handle both CellOutput objects and dict formats
-        output_type = output.output_type if hasattr(output, 'output_type') else output.get('output_type')
+        # Helper to get attribute from both object and dict
+        def get_attr(name: str, default=None):
+            return getattr(output, name, None) if hasattr(output, name) else output.get(name, default)
 
+        output_type = get_attr('output_type')
         effect = None
 
         if output_type == 'stream':
-            text = output.text or output.content if hasattr(output, 'text') else output.get('text', '')
-            effect = {
-                "type": "text",
-                "text": text
-            }
+            text = get_attr('text') or get_attr('content', '')
+            effect = {"type": "text", "text": text}
 
         elif output_type == 'execute_result':
-            text = output.text or output.content if hasattr(output, 'text') else output.get('text', '')
-            effect = {
-                "type": "text",
-                "text": str(text)
-            }
+            text = get_attr('text') or get_attr('content', '')
+            effect = {"type": "text", "text": str(text)}
 
         elif output_type == 'display_data':
-            # Check if it's an image
-            content = output.content if hasattr(output, 'content') else output.get('content', {})
+            content = get_attr('content', {})
             if isinstance(content, dict):
                 if 'image/png' in content or 'image/jpeg' in content:
                     image_id = f"{cell_ref}-img" if cell_ref else "img"
-                    effect = {
-                        "type": "image_url",
-                        "image_url": f"<image #{image_id} request-to-see>"
-                    }
+                    effect = {"type": "image_url", "image_url": f"<image #{image_id} request-to-see>"}
                 else:
-                    effect = {
-                        "type": "text",
-                        "text": str(content)
-                    }
+                    effect = {"type": "text", "text": str(content)}
             else:
-                effect = {
-                    "type": "text",
-                    "text": str(content)
-                }
+                effect = {"type": "text", "text": str(content)}
 
         elif output_type == 'error':
-            ename = output.ename if hasattr(output, 'ename') else output.get('ename', 'Error')
-            evalue = output.evalue if hasattr(output, 'evalue') else output.get('evalue', '')
-            traceback = output.traceback if hasattr(output, 'traceback') else output.get('traceback', [])
             effect = {
                 "type": "error",
                 "error": {
-                    "name": ename,
-                    "message": evalue,
-                    "traceback": traceback
+                    "name": get_attr('ename', 'Error'),
+                    "message": get_attr('evalue', ''),
+                    "traceback": get_attr('traceback', [])
                 }
             }
 

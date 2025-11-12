@@ -61,10 +61,6 @@ class AIPlanningContextStore(ModernLogger):
         self._context.variables[key] = value
         self.info(f"[AI Context] Set variable: {key} = {value}")
 
-    def update_variable(self, key: str, value: Any):
-        """Update a variable (alias for add_variable)."""
-        self.add_variable(key, value)
-
     def get_variable(self, key: str, default: Any = None) -> Any:
         """Get a variable value."""
         return self._context.variables.get(key, default)

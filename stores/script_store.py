@@ -11,6 +11,15 @@ from typing import Dict, List, Optional, Any, Callable
 from models.action import ScriptAction, ActionMetadata, ExecutionStep
 from models.cell import CellType
 
+# Import constants
+from .constants import (
+    CELL_TYPE_MAPPING,
+    ACTION_TYPES,
+    EXECUTION_STEP_FIELD_MAPPING,
+    METADATA_STANDARD_FIELDS,
+    DEFAULT_CONTENT,
+)
+
 # Import modularized registry and handlers
 from .action_registry import ActionRegistry, ActionHandler
 from .handlers import (
@@ -30,39 +39,6 @@ from .handlers.thinking_handlers import finish_thinking
 from .handlers.text_handlers import update_last_text
 from .handlers.workflow_handlers import update_title
 
-
-# =====================================================================
-# Constants and Configuration
-# =====================================================================
-
-# Cell type mapping
-CELL_TYPE_MAPPING = {
-    'text': 'markdown',
-    'code': 'code',
-    'Hybrid': 'Hybrid',
-    'outcome': 'outcome',
-    'error': 'error',
-    'thinking': 'thinking',
-}
-
-# Action types (Generating Actions only - 8 types)
-ACTION_TYPES = {
-    'ADD_ACTION': 'add',
-    'EXEC_CODE': 'exec',
-    'IS_THINKING': 'is_thinking',
-    'FINISH_THINKING': 'finish_thinking',
-    'NEW_CHAPTER': 'new_chapter',
-    'NEW_SECTION': 'new_section',
-    'NEW_STEP': 'new_step',
-    'UPDATE_TITLE': 'update_title',
-}
-
-# Removed actions (now handled by Planning API context_update):
-# - 'UPDATE_WORKFLOW': 'update_workflow' → context_update.workflow_update
-# - 'UPDATE_STEP_LIST': 'update_stage_steps' → context_update.stage_steps_update
-# - 'COMPLETE_STEP': 'end_phase' → Planning API targetAchieved
-# - 'NEXT_EVENT': 'next_event' → Removed (unclear purpose)
-
 # =====================================================================
 # Main ScriptStore Class
 # =====================================================================
@@ -79,7 +55,7 @@ class ScriptStore(ModernLogger):
     """
 
     # Class-level registry for shared handlers
-    _registry = ActionRegistry()
+    _class_registry = ActionRegistry()
 
     def __init__(self, notebook_store=None, ai_context_store=None, code_executor=None):
         super().__init__("ScriptStore")
@@ -91,16 +67,10 @@ class ScriptStore(ModernLogger):
         self.notebook_store = notebook_store
         self.ai_context_store = ai_context_store
         self.code_executor = code_executor
-        # Instance-level action registry to avoid cross-instance interference
-        # Seed from class-level registry for backward compatibility
-        self._registry = ActionRegistry()
-        try:
-            self._registry._handlers.update(self.__class__._registry._handlers)
-            self._registry._pre_hooks.extend(self.__class__._registry._pre_hooks)
-            self._registry._post_hooks.extend(self.__class__._registry._post_hooks)
-        except Exception:
-            pass
 
+        # Instance-level action registry
+        self._registry = ActionRegistry()
+        self._copy_class_registry()
 
         # Workflow update tracking
         self.pending_workflow_update: Optional[Dict[str, Any]] = None
@@ -111,6 +81,15 @@ class ScriptStore(ModernLogger):
 
         # Register default handlers
         self._register_default_handlers()
+
+    def _copy_class_registry(self):
+        """Copy handlers from class-level registry to instance registry."""
+        try:
+            self._registry._handlers.update(self.__class__._class_registry._handlers)
+            self._registry._pre_hooks.extend(self.__class__._class_registry._pre_hooks)
+            self._registry._post_hooks.extend(self.__class__._class_registry._post_hooks)
+        except Exception as e:
+            self.warning(f"Failed to copy class registry: {e}")
 
     # =================================================================
     # Handler Registration Methods
@@ -132,14 +111,6 @@ class ScriptStore(ModernLogger):
         registry.register_handler('set_effect_as_thinking', lambda step: handle_set_effect_thinking(self, step))
         registry.register_handler('update_last_text', lambda step: handle_update_last_text(self, step))
         registry.register_handler(ACTION_TYPES['UPDATE_TITLE'], lambda step: handle_update_title(self, step))
-        # NOTE: The following actions were removed and are now handled by Planning API:
-        # - COMPLETE_STEP → Planning API targetAchieved
-        # - UPDATE_WORKFLOW → context_update.workflow_update
-        # - UPDATE_STEP_LIST → context_update.stage_steps_update
-        # Commented out to avoid KeyError:
-        # registry.register_handler(ACTION_TYPES['COMPLETE_STEP'], lambda step: handle_complete_step(self, step))
-        # registry.register_handler(ACTION_TYPES['UPDATE_WORKFLOW'], lambda step: handle_update_workflow(self, step))
-        # registry.register_handler(ACTION_TYPES['UPDATE_STEP_LIST'], lambda step: handle_update_step_list(self, step))
 
     @classmethod
     def register_custom_action(cls, action_type: str, handler: ActionHandler) -> None:
@@ -162,7 +133,7 @@ class ScriptStore(ModernLogger):
 
             ScriptStore.register_custom_action('my_custom_action', custom_handler)
         """
-        cls._registry.register_handler(action_type, handler)
+        cls._class_registry.register_handler(action_type, handler)
 
     @classmethod
     def add_execution_hook(cls, hook_type: str, hook: Callable) -> None:
@@ -189,9 +160,9 @@ class ScriptStore(ModernLogger):
             raise ValueError("Hook must be callable")
 
         if hook_type == 'pre':
-            cls._registry.add_pre_hook(hook)
+            cls._class_registry.add_pre_hook(hook)
         elif hook_type == 'post':
-            cls._registry.add_post_hook(hook)
+            cls._class_registry.add_post_hook(hook)
 
     # =================================================================
     # Helper Functions (delegated to handler modules)
@@ -199,14 +170,7 @@ class ScriptStore(ModernLogger):
 
     def get_default_content(self, content_type: str = 'text') -> str:
         """Get default content for a content type."""
-        defaults = {
-            'text': '',
-            'code': '# Write your code here',
-            'outcome': 'Results will be displayed here',
-            'error': 'Error occurred',
-            'thinking': 'AI is thinking...'
-        }
-        return defaults.get(content_type, '')
+        return DEFAULT_CONTENT.get(content_type, '')
 
     def get_current_step_id(self) -> Optional[str]:
         """Get current step ID from state machine."""
@@ -397,15 +361,10 @@ class ScriptStore(ModernLogger):
 
         # Build extra dict for any additional metadata fields not in the standard set
         extra = {}
-        standard_fields = {
-            'is_step', 'is_chapter', 'is_section',
-            'chapter_id', 'section_id', 'chapter_number', 'section_number',
-            'finished_thinking', 'thinking_text'
-        }
         for key, value in metadata_dict.items():
             # Convert camelCase to snake_case for standard fields
             snake_key = ''.join(['_' + c.lower() if c.isupper() else c for c in key]).lstrip('_')
-            if snake_key not in standard_fields:
+            if snake_key not in METADATA_STANDARD_FIELDS:
                 extra[key] = value
 
         metadata = ActionMetadata(
@@ -431,32 +390,7 @@ class ScriptStore(ModernLogger):
         }
 
         # Add optional fields only if present in data
-        field_mappings = {
-            'shotType': 'shot_type',
-            'content': 'content',
-            'storeId': 'store_id',
-            'contentType': 'content_type',
-            'codecellId': 'codecell_id',
-            'needOutput': 'need_output',
-            'autoDebug': 'auto_debug',
-            'textArray': 'text_array',
-            'agentName': 'agent_name',
-            'customText': 'custom_text',
-            'text': 'text',
-            'title': 'title',
-            'thinkingText': 'thinking_text',
-            'updatedWorkflow': 'updated_workflow',
-            'newSteps': 'updated_steps',  # Map newSteps to updated_steps
-            'updatedSteps': 'updated_steps',  # Also support updatedSteps
-            'stageId': 'stage_id',
-            'state': 'state',
-            'actionIdRef': 'action_id_ref',
-            'stepId': 'step_id',
-            'phaseId': 'phase_id',
-            'keepDebugButtonVisible': 'keep_debug_button_visible',
-        }
-
-        for json_key, python_key in field_mappings.items():
+        for json_key, python_key in EXECUTION_STEP_FIELD_MAPPING.items():
             if json_key in data:
                 step_kwargs[python_key] = data[json_key]
             else:
