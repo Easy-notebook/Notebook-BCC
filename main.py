@@ -3,7 +3,7 @@
 Main entry point for Notebook-BCC.
 """
 
-from cli.commands import main
+from cli.workflow_cli import main
 
 if __name__ == '__main__':
     main()

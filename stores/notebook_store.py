@@ -255,11 +255,8 @@ class NotebookStore(ModernLogger):
         }
 
         # Add optional/dynamic fields if they exist
-        if hasattr(self, 'notebook_id') and self.notebook_id:
+        if self.notebook_id:
             result['notebook_id'] = self.notebook_id
-            self.debug(f"[NotebookStore] to_dict: Including notebook_id={self.notebook_id}")
-        else:
-            self.warning(f"[NotebookStore] to_dict: ⚠️ No notebook_id! (hasattr={hasattr(self, 'notebook_id')}, value={getattr(self, 'notebook_id', 'N/A')})")
 
         # Add last cell info if cells exist
         if self.cells:

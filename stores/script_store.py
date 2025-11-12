@@ -91,6 +91,16 @@ class ScriptStore(ModernLogger):
         self.notebook_store = notebook_store
         self.ai_context_store = ai_context_store
         self.code_executor = code_executor
+        # Instance-level action registry to avoid cross-instance interference
+        # Seed from class-level registry for backward compatibility
+        self._registry = ActionRegistry()
+        try:
+            self._registry._handlers.update(self.__class__._registry._handlers)
+            self._registry._pre_hooks.extend(self.__class__._registry._pre_hooks)
+            self._registry._post_hooks.extend(self.__class__._registry._post_hooks)
+        except Exception:
+            pass
+
 
         # Workflow update tracking
         self.pending_workflow_update: Optional[Dict[str, Any]] = None
@@ -108,7 +118,7 @@ class ScriptStore(ModernLogger):
 
     def _register_default_handlers(self):
         """Register all default action handlers using modularized handlers."""
-        registry = self.__class__._registry
+        registry = self._registry
 
         # Register handlers from modularized handler modules
         # Each handler is a lambda that passes self (script_store) to the handler function
@@ -485,7 +495,7 @@ class ScriptStore(ModernLogger):
 
         try:
             # Execute pre-hooks
-            self.__class__._registry.execute_pre_hooks(step)
+            self._registry.execute_pre_hooks(step)
 
             # Sync state if present
             if step.state and self.ai_context_store:
@@ -495,7 +505,7 @@ class ScriptStore(ModernLogger):
                 self.ai_context_store.set_context(merged_state)
 
             # Execute action using registry
-            handler = self.__class__._registry.get_handler(action_type)
+            handler = self._registry.get_handler(action_type)
             if handler:
                 result = handler(step)
             else:
@@ -507,7 +517,7 @@ class ScriptStore(ModernLogger):
                 self._handle_section(step)
 
             # Execute post-hooks
-            self.__class__._registry.execute_post_hooks(step, result)
+            self._registry.execute_post_hooks(step, result)
 
             return result
 

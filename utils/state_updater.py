@@ -350,26 +350,23 @@ class StateUpdater(ModernLogger):
 
         Updates:
         - FSM state to BEHAVIOR_COMPLETE
-        - Store actions in state for potential execution
 
-        Note: The state passed in may already have updated notebook and effects
-        from action execution. We should preserve them and only update FSM.
+        Note: State should already contain updated notebook and effects from stores.
         """
-        # Don't use deepcopy here! The state may already contain updated notebook/effects
-        # from _execute_actions_internal. We only need to update the FSM state.
+        # Now we can safely use deepcopy since state is already updated from stores
+        new_state = deepcopy(state)
+
         actions = content.get('actions', [])
         self.info(f"[StateUpdater] Applying actions transition: {len(actions)} actions received")
 
-        # Update FSM state to BEHAVIOR_COMPLETE (in-place)
-        fsm = state.get('state', {}).get('FSM', {})
+        # Update FSM state to BEHAVIOR_COMPLETE
+        fsm = new_state.get('state', {}).get('FSM', {})
         fsm['state'] = 'BEHAVIOR_COMPLETE'
         fsm['last_transition'] = 'COMPLETE_ACTION'
 
-        # Preserve the existing notebook and effects from action execution
-        # The state is already updated by _execute_actions_internal
         self.info(f"[StateUpdater] FSM state updated: BEHAVIOR_RUNNING → BEHAVIOR_COMPLETE")
 
-        return state  # Return the same state object (with FSM updated)
+        return new_state
 
     def _apply_reflection_transition(
         self,

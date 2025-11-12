@@ -8,7 +8,7 @@ Manages workflow execution context including:
 Note: Focus-based goal tracking is managed by WorkflowStateMachine via progress.*.focus
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import copy
 from silantui import ModernLogger
 
@@ -172,3 +172,24 @@ class AIPlanningContextStore(ModernLogger):
         """Reset the entire context."""
         self._context = AIContext()
         self.info("[AI Context] Context reset")
+
+    def update_current_section(self, section_id: str, section_number: Optional[int] = None):
+        """
+        Update the current section in variables.progress.
+        """
+        progress = self._context.variables.get('progress', {})
+        progress['current_section'] = {'id': section_id, 'number': section_number}
+        self._context.variables['progress'] = progress
+        self.info(f"[AI Context] Updated current section: {section_id}#{section_number}")
+
+    def complete_section(self, section_id: str):
+        """
+        Mark a section as completed in variables.progress.
+        """
+        progress = self._context.variables.get('progress', {})
+        completed = progress.get('completed_sections', [])
+        if section_id not in completed:
+            completed.append(section_id)
+        progress['completed_sections'] = completed
+        self._context.variables['progress'] = progress
+        self.info(f"[AI Context] Completed section: {section_id}")

@@ -43,13 +43,8 @@ class StateBuilder(ModernLogger):
         # Get current notebook state
         notebook_data = notebook_store.to_dict()
 
-        # CRITICAL: Preserve notebook_id from base_state if not in notebook_data
-        # This ensures notebook_id is never lost during state updates
-        if 'notebook_id' not in notebook_data and 'state' in base_state:
-            base_notebook_id = base_state.get('state', {}).get('notebook', {}).get('notebook_id')
-            if base_notebook_id:
-                notebook_data['notebook_id'] = base_notebook_id
-                self.warning(f"[StateBuilder] ⚠️ Recovered notebook_id from base_state: {base_notebook_id}")
+        # notebook_id should always be present in notebook_store (synced from State)
+        # No recovery needed - if missing, it means state needs initialization
 
         # Get current effects from AI context
         context = ai_context_store.get_context()
@@ -187,11 +182,7 @@ class StateBuilder(ModernLogger):
         # Get updated state from stores
         notebook_data = notebook_store.to_dict()
 
-        # Ensure notebook_id is preserved
-        if 'notebook_id' not in notebook_data and 'state' in base_state:
-            notebook_id = base_state.get('state', {}).get('notebook', {}).get('notebook_id')
-            if notebook_id:
-                notebook_data['notebook_id'] = notebook_id
+        # notebook_id should be present in notebook_store (synced from State)
 
         # Build effects from notebook
         effects_list = self.build_effects_from_notebook(notebook_store)
