@@ -2,7 +2,7 @@
 COMPLETE_STEP Event Handler
 Handles reflection result indicating step completion.
 Event: COMPLETE_STEP
-Transition: BEHAVIOR_COMPLETED → STEP_COMPLETED (or STEP_RUNNING if advancing to next step)
+Transition: BEHAVIOR_COMPLETED → STEP_COMPLETED
 """
 
 from typing import Dict, Any
@@ -23,8 +23,10 @@ class CompleteStepHandler(BaseTransitionHandler):
     - observation.location.progress.behaviors.completed list
     - observation.location.progress.steps.completed list
     - Outputs tracking for both behavior and step
-    - Advances to next step if available
-    - state.FSM.state to 'STEP_RUNNING' (for next step) or 'STEP_COMPLETED'
+    - state.FSM.state to 'STEP_COMPLETED'
+
+    Note: After reaching STEP_COMPLETED, the TransitionCoordinator will automatically
+    trigger NEXT_STEP if there are remaining steps, or COMPLETE_STAGE if this was the last step.
     """
 
     def __init__(self):
@@ -37,6 +39,10 @@ class CompleteStepHandler(BaseTransitionHandler):
     def can_handle(self, api_response: Any) -> bool:
         """Check if response indicates step completion."""
         if isinstance(api_response, dict):
+            # Don't handle auto-triggered transitions
+            if api_response.get('_auto_trigger'):
+                return False
+
             next_state = api_response.get('next_state', '')
             behavior_complete = api_response.get('behavior_is_complete', False)
 
@@ -45,8 +51,9 @@ class CompleteStepHandler(BaseTransitionHandler):
             if 'STEP_COMPLETED' in next_state_upper:
                 return True
 
-            # Or if behavior is complete but not explicitly STEP_RUNNING
-            if behavior_complete and 'STEP_RUNNING' not in next_state_upper:
+            # Or if behavior is complete but not transitioning to STEP_RUNNING or BEHAVIOR_RUNNING
+            # (BEHAVIOR_RUNNING means another iteration needed, not step completion)
+            if behavior_complete and 'STEP_RUNNING' not in next_state_upper and 'BEHAVIOR_RUNNING' not in next_state_upper:
                 return True
 
         return False
@@ -65,21 +72,18 @@ class CompleteStepHandler(BaseTransitionHandler):
         new_state = self._deep_copy_state(state)
 
         behavior_is_complete = api_response.get('behavior_is_complete', False)
-        next_state = api_response.get('next_state', 'STATE_Step_Running')
         variables_produced = api_response.get('variables_produced', {})
         artifacts_produced = api_response.get('artifacts_produced', [])
         outputs_tracking = api_response.get('outputs_tracking', {})
         context_for_next = api_response.get('context_for_next', {})
 
         self.info(
-            f"Applying reflection: behavior_complete={behavior_is_complete}, "
-            f"next_state={next_state}"
+            f"Applying COMPLETE_STEP: behavior_complete={behavior_is_complete}"
         )
 
         # Get structures
         state_data = self._get_state_data(new_state)
         progress = self._get_progress(new_state)
-        location = self._get_location(new_state)
 
         # Add new variables
         if variables_produced:
@@ -109,20 +113,17 @@ class CompleteStepHandler(BaseTransitionHandler):
         # Complete current behavior
         self._complete_behavior(new_state, artifacts_produced, outputs_tracking)
 
-        # If next_state is STEP_RUNNING, advance to next step
-        if 'STEP_RUNNING' in next_state.upper():
-            self._transition_to_next_step(new_state, outputs_tracking, artifacts_produced)
-            final_state = next_state
-            transition_name = 'TRANSITION_TO_Step_Running'
-        else:
-            # Otherwise just mark as complete
-            final_state = next_state
-            transition_name = 'COMPLETE_STEP'
+        # Complete current step and update tracking
+        self._complete_current_step(new_state, outputs_tracking, artifacts_produced)
 
-        # Update FSM state
-        self._update_fsm_state(new_state, final_state, transition_name)
+        # Update FSM state to STEP_COMPLETED
+        self._update_fsm_state(
+            new_state,
+            'STEP_COMPLETED',
+            'COMPLETE_STEP'
+        )
 
-        self.info(f"Transition complete: COMPLETE_STEP → {final_state}")
+        self.info("Transition complete: COMPLETE_STEP → STEP_COMPLETED")
 
         return new_state
 
@@ -159,51 +160,39 @@ class CompleteStepHandler(BaseTransitionHandler):
         behavior_outputs['in_progress'] = outputs_tracking.get('in_progress', [])
         behavior_outputs['remaining'] = outputs_tracking.get('remaining', [])
 
-    def _transition_to_next_step(
+    def _complete_current_step(
         self,
         state: Dict[str, Any],
         outputs_tracking: Dict[str, Any],
         artifacts_produced: list
     ) -> None:
-        """Transition to the next step."""
+        """
+        Mark current step as completed and update tracking.
+
+        Note: Does NOT move current step to completed list or clear current.
+        That will be done by NEXT_STEP_handler when transitioning to next step.
+        """
         progress = self._get_progress(state)
-        location = self._get_location(state)
         steps_progress = progress.get('steps', {})
         current_step = steps_progress.get('current')
 
-        if current_step:
-            # Mark current step as complete
-            if 'completed' not in steps_progress:
-                steps_progress['completed'] = []
+        if not current_step:
+            self.warning("No current step to complete")
+            return
 
-            completed_step = deepcopy(current_step)
-            completed_step['artifacts_produced'] = outputs_tracking.get('produced', [])
-            completed_step['completion_status'] = 'all_acceptance_criteria_passed'
+        # Just mark completion status in current step
+        # Don't move to completed list yet - NEXT_STEP_handler will do that
+        current_step['completion_status'] = 'all_acceptance_criteria_passed'
+        current_step['artifacts_produced'] = outputs_tracking.get('produced', [])
 
-            steps_progress['completed'].append(completed_step)
-            self.info(f"Step completed: {current_step.get('step_id')}")
+        self.info(f"Step marked as complete: {current_step.get('step_id')}")
 
-            # Move to next step if available
-            remaining_steps = steps_progress.get('remaining', [])
-            if remaining_steps:
-                next_step = remaining_steps[0]
-                steps_progress['current'] = next_step
-                steps_progress['remaining'] = remaining_steps[1:]
-
-                # Update location
-                self._update_location_current(
-                    state,
-                    step_id=next_step.get('step_id'),
-                    behavior_id='clear'
-                )
-                location['goals'] = next_step.get('goal', '')
-
-                # Update step outputs
-                steps_progress['current_outputs'] = self._init_outputs_tracking(
-                    next_step.get('verified_artifacts', {})
-                )
-
-                self.info(f"Advanced to next step: {next_step.get('step_id')}")
+        # Update step outputs tracking
+        step_outputs = steps_progress.get('current_outputs', {})
+        if outputs_tracking.get('produced'):
+            step_outputs['produced'] = outputs_tracking['produced']
+        step_outputs['in_progress'] = outputs_tracking.get('in_progress', [])
+        step_outputs['remaining'] = outputs_tracking.get('remaining', [])
 
         # Update stage outputs tracking
         stages_progress = progress.get('stages', {})

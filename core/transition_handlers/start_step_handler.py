@@ -108,6 +108,11 @@ class StartStepHandler(BaseTransitionHandler):
         # Update FSM state
         self._update_fsm_state(new_state, 'STEP_RUNNING', 'START_STEP')
 
+        # Execute new_step action with step title
+        step_title = first_step.get('title', '')
+        if step_title:
+            self._execute_action('new_step', content=step_title)
+
         self.info(f"Transition complete: START_STEP (step: {first_step.get('step_id')})")
 
         return new_state

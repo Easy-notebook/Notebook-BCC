@@ -163,6 +163,8 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         # 应用 transition
         from utils.state_updater import state_updater
+        if self.script_store:
+            state_updater.set_script_store(self.script_store)
         new_state = state_updater.apply_transition(
             state=state_json,
             transition_response=response,
@@ -200,6 +202,8 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         # 应用 transition
         from utils.state_updater import state_updater
+        if self.script_store:
+            state_updater.set_script_store(self.script_store)
         new_state = state_updater.apply_transition(
             state=state_json,
             transition_response=response,
@@ -237,6 +241,8 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         # 应用 transition
         from utils.state_updater import state_updater
+        if self.script_store:
+            state_updater.set_script_store(self.script_store)
         new_state = state_updater.apply_transition(
             state=state_json,
             transition_response=response,
@@ -292,6 +298,8 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         # 应用 transition（更新 FSM 到 BEHAVIOR_COMPLETED）
         from utils.state_updater import state_updater
+        if self.script_store:
+            state_updater.set_script_store(self.script_store)
         import json
         response = {'actions': actions, 'count': len(actions)}
         new_state = state_updater.apply_transition(
@@ -338,51 +346,33 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         # 应用 transition
         from utils.state_updater import state_updater
+        if self.script_store:
+            state_updater.set_script_store(self.script_store)
         new_state = state_updater.apply_transition(
             state=state_json,
             transition_response=response,
             transition_type='reflecting'
         )
+
+        # Debug: log the FSM state after transition
+        new_fsm_state = new_state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
+        self.info(f"[AsyncFSM] After _effect_behavior_completed, FSM state: {new_fsm_state}")
 
         return new_state
 
     async def _effect_step_completed(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """
         STEP_COMPLETED 状态的 effect
-        调用 reflecting API，决定下一步
+
+        STEP_COMPLETED is an intermediate state that auto-triggers NEXT_STEP or COMPLETE_STAGE.
+        No API call needed here - the TransitionCoordinator's auto-trigger mechanism
+        will handle the transition automatically.
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
+        self.info("[AsyncFSM] STEP_COMPLETED → auto-trigger will handle next transition")
 
-        self.info("[AsyncFSM] STEP_COMPLETED → calling reflecting API")
-
-        # 提取 stage_id 和 step_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        current = location.get('current', {})
-
-        stage_id = current.get('stage_id', 'unknown')
-        step_id = current.get('step_id', 'unknown')
-
-        # 调用 reflecting API
-        # transition_name 将根据响应自动确定
-        response = await self.api_client.send_reflecting(
-            stage_id=stage_id,
-            step_index=step_id,
-            state=state_json,
-            transition_name=None
-        )
-
-        # 应用 transition
-        from utils.state_updater import state_updater
-        new_state = state_updater.apply_transition(
-            state=state_json,
-            transition_response=response,
-            transition_type='reflecting'
-        )
-
-        return new_state
+        # Simply return the state - auto-trigger mechanism in TransitionCoordinator
+        # will automatically call NEXT_STEP or COMPLETE_STAGE based on remaining steps
+        return state_json
 
     async def _effect_stage_completed(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """

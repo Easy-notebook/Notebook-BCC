@@ -751,6 +751,7 @@ class WorkflowAPIClient(ModernLogger):
         transition_map = {
             ('BEHAVIOR_COMPLETED', 'STEP_COMPLETED'): 'COMPLETE_STEP',
             ('BEHAVIOR_COMPLETED', 'STEP_RUNNING'): 'NEXT_BEHAVIOR',
+            ('BEHAVIOR_COMPLETED', 'BEHAVIOR_RUNNING'): 'NEXT_BEHAVIOR',  # Reflection indicates need for another behavior iteration
             ('STEP_COMPLETED', 'STAGE_COMPLETED'): 'COMPLETE_STAGE',
             ('STEP_COMPLETED', 'STAGE_RUNNING'): 'NEXT_STEP',
             ('STAGE_COMPLETED', 'WORKFLOW_COMPLETED'): 'COMPLETE_WORKFLOW',
@@ -769,6 +770,9 @@ class WorkflowAPIClient(ModernLogger):
             return 'COMPLETE_STEP'
         elif 'STAGE_COMPLETED' in next_state:
             return 'COMPLETE_STAGE'
+        elif 'BEHAVIOR_RUNNING' in next_state:
+            # When coming from BEHAVIOR_COMPLETED and going to BEHAVIOR_RUNNING, it's NEXT_BEHAVIOR
+            return 'NEXT_BEHAVIOR'
         elif 'STEP_RUNNING' in next_state:
             return 'NEXT_BEHAVIOR'
         elif 'STAGE_RUNNING' in next_state:

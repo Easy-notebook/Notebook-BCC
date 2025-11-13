@@ -22,11 +22,26 @@ class StateUpdater(ModernLogger):
     FSM-based transition handler architecture.
     """
 
-    def __init__(self):
-        """Initialize the state updater."""
+    def __init__(self, script_store=None):
+        """Initialize the state updater.
+
+        Args:
+            script_store: Optional ScriptStore instance for executing actions during transitions
+        """
         super().__init__("StateUpdater")
         self.parser = ResponseParser()
         self.coordinator = get_transition_coordinator()
+        if script_store:
+            self.coordinator.set_script_store(script_store)
+
+    def set_script_store(self, script_store) -> None:
+        """
+        Set the script_store for the coordinator.
+
+        Args:
+            script_store: ScriptStore instance for executing actions during transitions
+        """
+        self.coordinator.set_script_store(script_store)
 
     def apply_transition(
         self,
@@ -60,6 +75,11 @@ class StateUpdater(ModernLogger):
                 api_response=parsed['content'],
                 api_type=transition_type
             )
+
+            # Debug: log the final FSM state
+            final_fsm_state = updated_state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
+            self.info(f"[StateUpdater] Final FSM state after transition: {final_fsm_state}")
+
             return updated_state
 
         except ValueError as e:

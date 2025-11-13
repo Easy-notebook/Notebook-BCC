@@ -102,6 +102,15 @@ class StartWorkflowHandler(BaseTransitionHandler):
         # Update FSM state
         self._update_fsm_state(new_state, 'STAGE_RUNNING', 'START_WORKFLOW')
 
+        # Execute update_title action with workflow focus
+        if focus:
+            self._execute_action('update_title', content=focus)
+
+        # Execute new_section action with first stage title
+        first_stage_title = first_stage.get('title', '')
+        if first_stage_title:
+            self._execute_action('new_section', content=first_stage_title)
+
         self.info(f"Transition complete: START_WORKFLOW (stage: {first_stage.get('stage_id')})")
 
         return new_state

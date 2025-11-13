@@ -38,6 +38,10 @@ class NextBehaviorHandler(BaseTransitionHandler):
             next_state = api_response.get('next_state', '')
             behavior_complete = api_response.get('behavior_is_complete', False)
 
+            # Check if explicitly transitioning to BEHAVIOR_RUNNING (need another iteration)
+            if 'BEHAVIOR_RUNNING' in next_state.upper():
+                return True
+
             # Check if explicitly transitioning to STEP_RUNNING
             if 'STEP_RUNNING' in next_state.upper():
                 return True

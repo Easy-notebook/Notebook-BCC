@@ -14,53 +14,53 @@ class WorkflowState(str, Enum):
     """
 
     # Start state
-    IDLE = 'idle'
+    IDLE = 'IDLE'
     """The machine is idle, waiting for the workflow to begin."""
 
     # Stage states
-    STAGE_RUNNING = 'stage_running'
+    STAGE_RUNNING = 'STAGE_RUNNING'
     """A stage is active, ready to execute its steps."""
 
-    STAGE_COMPLETED = 'stage_completed'
+    STAGE_COMPLETED = 'STAGE_COMPLETED'
     """A stage has successfully completed all its steps."""
 
     # Step states
-    STEP_RUNNING = 'step_running'
+    STEP_RUNNING = 'STEP_RUNNING'
     """A step is active, ready to execute its behaviors."""
 
-    STEP_COMPLETED = 'step_completed'
+    STEP_COMPLETED = 'STEP_COMPLETED'
     """A step has successfully completed all its behaviors."""
 
     # Behavior states
-    BEHAVIOR_RUNNING = 'behavior_running'
+    BEHAVIOR_RUNNING = 'BEHAVIOR_RUNNING'
     """A behavior is active, managing the execution of its actions."""
 
-    BEHAVIOR_COMPLETED = 'behavior_completed'
+    BEHAVIOR_COMPLETED = 'BEHAVIOR_COMPLETED'
     """A behavior has successfully completed after passing feedback."""
 
     # Action states
-    ACTION_RUNNING = 'action_running'
+    ACTION_RUNNING = 'ACTION_RUNNING'
     """A single, atomic action is being executed."""
 
-    ACTION_COMPLETED = 'action_completed'
+    ACTION_COMPLETED = 'ACTION_COMPLETED'
     """An action has just completed, waiting for next command."""
 
     # Workflow states
-    WORKFLOW_COMPLETED = 'workflow_completed'
+    WORKFLOW_COMPLETED = 'WORKFLOW_COMPLETED'
     """The entire workflow has finished successfully."""
 
     # Update pending states
-    WORKFLOW_UPDATE_PENDING = 'workflow_update_pending'
+    WORKFLOW_UPDATE_PENDING = 'WORKFLOW_UPDATE_PENDING'
     """Waiting for user confirmation on a major workflow update."""
 
-    STEP_UPDATE_PENDING = 'step_update_pending'
+    STEP_UPDATE_PENDING = 'STEP_UPDATE_PENDING'
     """Waiting for user confirmation on a minor step update."""
 
     # Terminal states
-    ERROR = 'error'
+    ERROR = 'ERROR'
     """A terminal error state."""
 
-    CANCELLED = 'cancelled'
+    CANCELLED = 'CANCELLED'
     """A terminal cancelled state."""
 
 

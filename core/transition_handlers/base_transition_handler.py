@@ -33,6 +33,7 @@ class BaseTransitionHandler(ABC, ModernLogger):
         ModernLogger.__init__(self, name)
         self.from_state = from_state
         self.to_state = to_state
+        self.script_store = None  # Will be injected by coordinator
 
     @abstractmethod
     def can_handle(self, api_response: Any) -> bool:
@@ -182,3 +183,37 @@ class BaseTransitionHandler(ABC, ModernLogger):
             'produced': [],
             'in_progress': []
         }
+
+    def _execute_action(self, action_type: str, content: str = '', **kwargs) -> None:
+        """
+        Execute a notebook action if script_store is available.
+
+        Args:
+            action_type: Type of action to execute (e.g., 'update_title', 'new_section', 'new_step')
+            content: Content for the action
+            **kwargs: Additional action parameters
+        """
+        if not self.script_store:
+            self.debug(f"[Action] Skipping {action_type}: no script_store available")
+            return
+
+        try:
+            # Import here to avoid circular dependency
+            from models.action import ExecutionStep, ActionMetadata
+            import uuid
+
+            # Create execution step
+            step = ExecutionStep(
+                action=action_type,
+                content=content,
+                store_id=kwargs.get('store_id') or str(uuid.uuid4()),
+                metadata=kwargs.get('metadata') or ActionMetadata(),
+                **{k: v for k, v in kwargs.items() if k not in ['store_id', 'metadata']}
+            )
+
+            # Execute action
+            self.script_store.exec_action(step)
+            self.info(f"[Action] Executed {action_type}: {content[:50] if content else '(no content)'}")
+
+        except Exception as e:
+            self.error(f"[Action] Failed to execute {action_type}: {e}", exc_info=True)
