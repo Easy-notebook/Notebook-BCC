@@ -39,6 +39,9 @@ class StateFactory:
     # Singleton instances cache
     _instances: Dict[str, BaseState] = {}
 
+    # Global API client (injected once, shared by all states)
+    _api_client = None
+
     @classmethod
     def get_state(cls, state_name: str) -> Optional[BaseState]:
         """
@@ -63,6 +66,11 @@ class StateFactory:
             return None
 
         instance = state_class()
+
+        # Inject API client if available
+        if cls._api_client:
+            instance.set_api_client(cls._api_client)
+
         cls._instances[state_name] = instance
         return instance
 
@@ -133,3 +141,20 @@ class StateFactory:
         """
         state_name = cls._normalize_state_name(state_name)
         return state_name in cls._STATE_CLASSES
+
+    @classmethod
+    def set_api_client(cls, api_client):
+        """
+        Set the global API client for all states.
+
+        This should be called once during initialization to inject
+        the API client into all state instances.
+
+        Args:
+            api_client: WorkflowAPIClient instance
+        """
+        cls._api_client = api_client
+
+        # Inject into existing instances
+        for instance in cls._instances.values():
+            instance.set_api_client(api_client)

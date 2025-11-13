@@ -25,6 +25,8 @@ class APIResponseType(str, Enum):
     COMPLETE = 'reflecting'
     """Reflecting API - Returns reflection on completion"""
 
+    FINISH = 'finish'
+    """Finish - No more API calls needed"""
 
 class PlanningResponseType(str, Enum):
     """

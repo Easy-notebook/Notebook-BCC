@@ -45,6 +45,12 @@ class AsyncStateMachineAdapter(ModernLogger):
         # 异步 state effects
         self._async_state_effects: Dict[WorkflowState, Callable[..., Awaitable]] = {}
 
+        # Inject API client into StateFactory for all states
+        if api_client:
+            from .state_classes.state_factory import StateFactory
+            StateFactory.set_api_client(api_client)
+            self.info("API client injected into StateFactory")
+
         # 注册默认的 state effects
         self._register_default_effects()
 
@@ -137,227 +143,64 @@ class AsyncStateMachineAdapter(ModernLogger):
         IDLE 状态的 effect
         调用 planning API (START_WORKFLOW)
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
-
-        self.info("[AsyncFSM] IDLE → calling planning API (START_WORKFLOW)")
-
-        # 获取 stage_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        progress = location.get('progress', {})
-        stages = progress.get('stages', {})
-        current_stage = stages.get('current', {})
-
-        stage_id = current_stage.get('stage_id', 'initial') if isinstance(current_stage, dict) else current_stage
-
-        # 调用 planning API
-        response = await self.api_client.send_feedback(
-            stage_id=stage_id or 'initial',
-            step_index='none',
-            state=state_json,
-            transition_name='START_WORKFLOW'
-        )
-
-        # 应用 transition
-        from utils.state_updater import state_updater
-        if self.script_store:
-            state_updater.set_script_store(self.script_store)
-        new_state = state_updater.apply_transition(
-            state=state_json,
-            transition_response=response,
+        return await self._call_state_api_and_apply_transition(
+            state_json=state_json,
+            state_name='IDLE',
+            transition_name='START_WORKFLOW',
             transition_type='planning'
         )
-
-        return new_state
 
     async def _effect_stage_running(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """
         STAGE_RUNNING 状态的 effect
         调用 planning API (START_STEP)
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
-
-        self.info("[AsyncFSM] STAGE_RUNNING → calling planning API (START_STEP)")
-
-        # 提取 stage_id 和 step_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        current = location.get('current', {})
-
-        stage_id = current.get('stage_id', 'unknown')
-        step_id = current.get('step_id', 'none')
-
-        # 调用 planning API
-        response = await self.api_client.send_feedback(
-            stage_id=stage_id,
-            step_index=step_id,
-            state=state_json,
-            transition_name='START_STEP'
-        )
-
-        # 应用 transition
-        from utils.state_updater import state_updater
-        if self.script_store:
-            state_updater.set_script_store(self.script_store)
-        new_state = state_updater.apply_transition(
-            state=state_json,
-            transition_response=response,
+        return await self._call_state_api_and_apply_transition(
+            state_json=state_json,
+            state_name='STAGE_RUNNING',
+            transition_name='START_STEP',
             transition_type='planning'
         )
-
-        return new_state
 
     async def _effect_step_running(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """
         STEP_RUNNING 状态的 effect
         调用 planning API (START_BEHAVIOR)
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
-
-        self.info("[AsyncFSM] STEP_RUNNING → calling planning API (START_BEHAVIOR)")
-
-        # 提取 stage_id 和 step_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        current = location.get('current', {})
-
-        stage_id = current.get('stage_id', 'unknown')
-        step_id = current.get('step_id', 'unknown')
-
-        # 调用 planning API
-        response = await self.api_client.send_feedback(
-            stage_id=stage_id,
-            step_index=step_id,
-            state=state_json,
-            transition_name='START_BEHAVIOR'
-        )
-
-        # 应用 transition
-        from utils.state_updater import state_updater
-        if self.script_store:
-            state_updater.set_script_store(self.script_store)
-        new_state = state_updater.apply_transition(
-            state=state_json,
-            transition_response=response,
+        return await self._call_state_api_and_apply_transition(
+            state_json=state_json,
+            state_name='STEP_RUNNING',
+            transition_name='START_BEHAVIOR',
             transition_type='planning'
         )
-
-        return new_state
 
     async def _effect_behavior_running(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """
         BEHAVIOR_RUNNING 状态的 effect
         调用 generating API，执行 actions
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
-
         if not self.script_store:
             self.error("[AsyncFSM] No script_store configured")
             return state_json
 
-        self.info("[AsyncFSM] BEHAVIOR_RUNNING → calling generating API")
-
-        # 提取 stage_id 和 step_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        current = location.get('current', {})
-
-        stage_id = current.get('stage_id', 'unknown')
-        step_id = current.get('step_id', 'unknown')
-
-        # 调用 generating API，收集所有 actions
-        actions = []
-        async for action in self.api_client.fetch_behavior_actions(
-            stage_id=stage_id,
-            step_index=step_id,
-            state=state_json,
-            stream=False,
-            transition_name='COMPLETE_BEHAVIOR'
-        ):
-            actions.append(action)
-
-        self.info(f"[AsyncFSM] Received {len(actions)} actions, executing...")
-
-        # 执行所有 actions（更新 stores）
-        for action in actions:
-            # 转换 action 格式
-            step = self._convert_action_to_step(action)
-            self.script_store.exec_action(step)
-
-        # 从 stores 构建新状态
-        new_state_json = self._build_state_from_stores(state_json)
-
-        # 应用 transition（更新 FSM 到 BEHAVIOR_COMPLETED）
-        from utils.state_updater import state_updater
-        if self.script_store:
-            state_updater.set_script_store(self.script_store)
-        import json
-        response = {'actions': actions, 'count': len(actions)}
-        new_state = state_updater.apply_transition(
-            state=new_state_json,
-            transition_response=json.dumps(response),
+        return await self._call_state_api_and_apply_transition(
+            state_json=state_json,
+            state_name='BEHAVIOR_RUNNING',
+            transition_name='COMPLETE_BEHAVIOR',
             transition_type='generating'
         )
-
-        return new_state
 
     async def _effect_behavior_completed(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """
         BEHAVIOR_COMPLETED 状态的 effect
         调用 reflecting API，决定下一步
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
-
-        self.info("[AsyncFSM] BEHAVIOR_COMPLETED → calling reflecting API")
-
-        # 提取当前 FSM 状态
-        fsm = state_json.get('state', {}).get('FSM', {})
-        current_fsm_state = fsm.get('state', 'BEHAVIOR_COMPLETED')
-
-        # 提取 stage_id 和 step_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        current = location.get('current', {})
-
-        stage_id = current.get('stage_id', 'unknown')
-        step_id = current.get('step_id', 'unknown')
-
-        self.info(f"[AsyncFSM] Current FSM state: {current_fsm_state}")
-
-        # 调用 reflecting API
-        # transition_name 将在 API 响应后根据 next_state 自动确定
-        response = await self.api_client.send_reflecting(
-            stage_id=stage_id,
-            step_index=step_id,
-            state=state_json,
-            transition_name=None  # 让 API client 根据响应确定实际的 transition
-        )
-
-        # 应用 transition
-        from utils.state_updater import state_updater
-        if self.script_store:
-            state_updater.set_script_store(self.script_store)
-        new_state = state_updater.apply_transition(
-            state=state_json,
-            transition_response=response,
+        return await self._call_state_api_and_apply_transition(
+            state_json=state_json,
+            state_name='BEHAVIOR_COMPLETED',
+            transition_name=None,  # Let API determine the transition
             transition_type='reflecting'
         )
-
-        # Debug: log the FSM state after transition
-        new_fsm_state = new_state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
-        self.info(f"[AsyncFSM] After _effect_behavior_completed, FSM state: {new_fsm_state}")
-
-        return new_state
 
     async def _effect_step_completed(self, state_json: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -378,41 +221,104 @@ class AsyncStateMachineAdapter(ModernLogger):
         STAGE_COMPLETED 状态的 effect
         调用 reflecting API，决定下一步
         """
-        if not self.api_client:
-            self.error("[AsyncFSM] No API client configured")
-            return state_json
-
-        self.info("[AsyncFSM] STAGE_COMPLETED → calling reflecting API")
-
-        # 提取 stage_id
-        observation = state_json.get('observation', {})
-        location = observation.get('location', {})
-        current = location.get('current', {})
-
-        stage_id = current.get('stage_id', 'unknown')
-
-        # 调用 reflecting API
-        # transition_name 将根据响应自动确定
-        response = await self.api_client.send_reflecting(
-            stage_id=stage_id,
-            step_index='completed',
-            state=state_json,
-            transition_name=None
-        )
-
-        # 应用 transition
-        from utils.state_updater import state_updater
-        new_state = state_updater.apply_transition(
-            state=state_json,
-            transition_response=response,
+        return await self._call_state_api_and_apply_transition(
+            state_json=state_json,
+            state_name='STAGE_COMPLETED',
+            transition_name=None,  # Let API determine the transition
             transition_type='reflecting'
         )
-
-        return new_state
 
     # ==============================================
     # Helper Methods
     # ==============================================
+
+    async def _call_state_api_and_apply_transition(
+        self,
+        state_json: Dict[str, Any],
+        state_name: str,
+        transition_name: Optional[str],
+        transition_type: str
+    ) -> Dict[str, Any]:
+        """
+        通用方法：调用 state 的 API 并应用 transition
+
+        Args:
+            state_json: 当前状态 JSON
+            state_name: 状态名称
+            transition_name: transition 名称
+            transition_type: transition 类型 ('planning', 'generating', 'reflecting')
+
+        Returns:
+            更新后的状态 JSON
+        """
+        if not self.api_client:
+            self.error("[AsyncFSM] No API client configured")
+            return state_json
+
+        self.info(f"[AsyncFSM] {state_name} → calling {transition_type} API (transition={transition_name})")
+
+        # Get state instance
+        from .state_classes.state_factory import StateFactory
+        state_instance = StateFactory.get_state(state_name)
+
+        if not state_instance:
+            self.error(f"[AsyncFSM] Failed to get state instance for {state_name}")
+            return state_json
+
+        # Ensure API client is injected (in case state was created before set_api_client was called)
+        if not state_instance._api_client:
+            state_instance.set_api_client(self.api_client)
+            self.debug(f"[AsyncFSM] API client injected into {state_name} state instance")
+
+        try:
+            # Call state's API method
+            response = await state_instance.call_api(state_json, transition_name)
+
+            # For generating API, collect actions from async iterator
+            if transition_type == 'generating':
+                actions = []
+                async for action in response:
+                    actions.append(action)
+
+                self.info(f"[AsyncFSM] Received {len(actions)} actions, executing...")
+
+                # Execute all actions (update stores)
+                for action in actions:
+                    step = self._convert_action_to_step(action)
+                    self.script_store.exec_action(step)
+
+                # Build new state from stores
+                new_state_json = self._build_state_from_stores(state_json)
+
+                # Apply transition (update FSM to BEHAVIOR_COMPLETED)
+                from utils.state_updater import state_updater
+                if self.script_store:
+                    state_updater.set_script_store(self.script_store)
+                import json
+                response = {'actions': actions, 'count': len(actions)}
+                new_state = state_updater.apply_transition(
+                    state=new_state_json,
+                    transition_response=json.dumps(response),
+                    transition_type='generating'
+                )
+
+                return new_state
+            else:
+                # For planning and reflecting APIs, apply transition directly
+                from utils.state_updater import state_updater
+                if self.script_store:
+                    state_updater.set_script_store(self.script_store)
+                new_state = state_updater.apply_transition(
+                    state=state_json,
+                    transition_response=response,
+                    transition_type=transition_type
+                )
+
+                return new_state
+
+        except Exception as e:
+            self.error(f"[AsyncFSM] Error calling API for {state_name}: {e}", exc_info=True)
+            return state_json
 
     def _convert_action_to_step(self, action: Dict[str, Any]) -> Dict[str, Any]:
         """

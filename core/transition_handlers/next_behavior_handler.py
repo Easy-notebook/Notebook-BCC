@@ -2,7 +2,7 @@
 NEXT_BEHAVIOR Event Handler
 Handles reflection result indicating more behaviors needed.
 Event: NEXT_BEHAVIOR
-Transition: BEHAVIOR_COMPLETED → STEP_RUNNING
+Transition: BEHAVIOR_COMPLETED → BEHAVIOR_RUNNING
 """
 
 from typing import Dict, Any
@@ -13,40 +13,42 @@ from .base_transition_handler import BaseTransitionHandler
 class NextBehaviorHandler(BaseTransitionHandler):
     """
     Handles NEXT_BEHAVIOR event.
-    Transition: BEHAVIOR_COMPLETED → STEP_RUNNING
+    Transition: BEHAVIOR_COMPLETED → BEHAVIOR_RUNNING
 
     Triggered by: Reflecting API indicating behavior incomplete,
     need another behavior iteration (behavior_is_complete=False)
 
     Updates:
     - state.variables with new variables_produced
-    - observation.location.progress.behaviors.completed list
+    - observation.location.progress.behaviors.completed list (if behavior complete)
     - Outputs tracking
-    - state.FSM.state to 'STEP_RUNNING'
+    - state.FSM.state to 'BEHAVIOR_RUNNING'
     """
 
     def __init__(self):
         super().__init__(
             'BEHAVIOR_COMPLETED',
-            'STEP_RUNNING',
+            'BEHAVIOR_RUNNING',
             'NEXT_BEHAVIOR'
         )
 
     def can_handle(self, api_response: Any) -> bool:
-        """Check if response indicates step not complete."""
+        """Check if response indicates need for another behavior iteration."""
         if isinstance(api_response, dict):
             next_state = api_response.get('next_state', '')
             behavior_complete = api_response.get('behavior_is_complete', False)
+            transition = api_response.get('transition', '')
+
+            # Check for explicit NEXT_BEHAVIOR transition
+            if 'NEXT_BEHAVIOR' in transition.upper():
+                return True
 
             # Check if explicitly transitioning to BEHAVIOR_RUNNING (need another iteration)
             if 'BEHAVIOR_RUNNING' in next_state.upper():
                 return True
 
-            # Check if explicitly transitioning to STEP_RUNNING
-            if 'STEP_RUNNING' in next_state.upper():
-                return True
-
-            # Or if behavior not complete and no next_state specified
+            # Or if behavior not complete and no explicit next_state specified
+            # (but avoid conflicting with STEP_RUNNING which is handled by CompleteStepHandler)
             if not behavior_complete and not next_state:
                 return True
 
@@ -66,15 +68,13 @@ class NextBehaviorHandler(BaseTransitionHandler):
         new_state = self._deep_copy_state(state)
 
         behavior_is_complete = api_response.get('behavior_is_complete', False)
-        next_state = api_response.get('next_state', 'STATE_Step_Running')
         variables_produced = api_response.get('variables_produced', {})
         artifacts_produced = api_response.get('artifacts_produced', [])
         outputs_tracking = api_response.get('outputs_tracking', {})
         context_for_next = api_response.get('context_for_next', {})
 
         self.info(
-            f"Applying reflection: behavior_complete={behavior_is_complete}, "
-            f"next_state={next_state}"
+            f"Applying NEXT_BEHAVIOR: behavior_complete={behavior_is_complete}"
         )
 
         # Get structures
@@ -106,14 +106,18 @@ class NextBehaviorHandler(BaseTransitionHandler):
                     current_behavior['recommendations_for_next'] = recommendations
                     self.info("Stored recommendations for next iteration")
 
-        # Update behaviors if complete
+        # Update behaviors if complete (rarely happens in NEXT_BEHAVIOR, but possible)
         if behavior_is_complete:
             self._complete_behavior(new_state, artifacts_produced, outputs_tracking)
 
-        # Update FSM state
-        self._update_fsm_state(new_state, next_state, 'TRANSITION_TO_Step_Running')
+        # Update FSM state to BEHAVIOR_RUNNING (ready for next behavior iteration)
+        self._update_fsm_state(
+            new_state,
+            'BEHAVIOR_RUNNING',
+            'NEXT_BEHAVIOR'
+        )
 
-        self.info("Transition complete: NEXT_BEHAVIOR")
+        self.info("Transition complete: NEXT_BEHAVIOR → BEHAVIOR_RUNNING")
 
         return new_state
 

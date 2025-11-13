@@ -4,9 +4,9 @@ Defines the interface for all state classes in the workflow state machine.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from typing import Dict, Any, List, Optional, TYPE_CHECKING, AsyncIterator
 from silantui import ModernLogger
-from core.api_types import APIResponseType
+from core.api_types import APIResponseType, PlanningResponseType
 
 if TYPE_CHECKING:
     from ..events import WorkflowEvent
@@ -32,6 +32,7 @@ class BaseState(ABC, ModernLogger):
         """
         ModernLogger.__init__(self, f"State.{state_name}")
         self.state_name = state_name
+        self._api_client = None  # Will be injected by state machine
 
     @abstractmethod
     def get_valid_transitions(self) -> Dict[str, 'WorkflowEvent']:
@@ -196,6 +197,157 @@ class BaseState(ABC, ModernLogger):
         # Initialize new state if needed
         # (This would be called on the NEW state instance, not this one)
         return updated_state
+
+    def set_api_client(self, api_client):
+        """
+        Set the API client for this state.
+
+        Args:
+            api_client: WorkflowAPIClient instance
+        """
+        self._api_client = api_client
+        self.info(f"API client injected for {self.state_name}")
+
+    async def call_api(
+        self,
+        state_data: Dict[str, Any],
+        transition_name: Optional[str] = None
+    ) -> Any:
+        """
+        Call the appropriate API based on state requirements.
+
+        This is the main entry point for API calls. Each state subclass
+        should implement this method to call the appropriate API endpoint
+        with the correct parameters.
+
+        Args:
+            state_data: Current state JSON
+            transition_name: Optional transition name to pass to API
+
+        Returns:
+            API response (parsed JSON or async iterator for streaming)
+
+        Raises:
+            ValueError: If API client is not configured
+            NotImplementedError: If state doesn't implement API calling
+        """
+        if not self._api_client:
+            raise ValueError(f"API client not configured for {self.state_name}")
+
+        api_type = self.get_required_api_type()
+        if not api_type:
+            self.info(f"State {self.state_name} does not require API call")
+            return None
+
+        # Extract stage_id and step_id from state
+        observation = state_data.get('observation', {})
+        location = observation.get('location', {})
+        current = location.get('current', {})
+
+        stage_id = current.get('stage_id', 'unknown')
+        step_id = current.get('step_id', 'none')
+
+        self.info(f"[{self.state_name}] Calling {api_type.value} API (stage={stage_id}, step={step_id})")
+
+        # Route to appropriate API based on type
+        if api_type == APIResponseType.PLANNING:
+            return await self._call_planning_api(state_data, stage_id, step_id, transition_name)
+        elif api_type == APIResponseType.GENERATING:
+            return await self._call_generating_api(state_data, stage_id, step_id, transition_name)
+        elif api_type == APIResponseType.COMPLETE:
+            return await self._call_reflecting_api(state_data, stage_id, step_id, transition_name)
+        else:
+            raise ValueError(f"Unknown API type: {api_type}")
+
+    async def _call_planning_api(
+        self,
+        state_data: Dict[str, Any],
+        stage_id: str,
+        step_id: str,
+        transition_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Call the Planning API.
+
+        Args:
+            state_data: Current state JSON
+            stage_id: Current stage ID
+            step_id: Current step ID
+            transition_name: Transition name (e.g., 'START_WORKFLOW', 'START_STEP', 'START_BEHAVIOR')
+
+        Returns:
+            Planning API response
+        """
+        self.info(f"[{self.state_name}] Calling planning API with transition={transition_name}")
+
+        response = await self._api_client.send_feedback(
+            stage_id=stage_id,
+            step_index=step_id,
+            state=state_data,
+            transition_name=transition_name
+        )
+
+        return response
+
+    async def _call_generating_api(
+        self,
+        state_data: Dict[str, Any],
+        stage_id: str,
+        step_id: str,
+        transition_name: Optional[str] = None
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """
+        Call the Generating API.
+
+        Args:
+            state_data: Current state JSON
+            stage_id: Current stage ID
+            step_id: Current step ID
+            transition_name: Transition name (typically 'COMPLETE_BEHAVIOR')
+
+        Returns:
+            Async iterator of actions
+        """
+        self.info(f"[{self.state_name}] Calling generating API with transition={transition_name}")
+
+        # Return async iterator for streaming actions
+        return self._api_client.fetch_behavior_actions(
+            stage_id=stage_id,
+            step_index=step_id,
+            state=state_data,
+            stream=False,
+            transition_name=transition_name or 'COMPLETE_BEHAVIOR'
+        )
+
+    async def _call_reflecting_api(
+        self,
+        state_data: Dict[str, Any],
+        stage_id: str,
+        step_id: str,
+        transition_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Call the Reflecting API.
+
+        Args:
+            state_data: Current state JSON
+            stage_id: Current stage ID
+            step_id: Current step ID
+            transition_name: Optional transition name (will be determined by API if None)
+
+        Returns:
+            Reflecting API response
+        """
+        self.info(f"[{self.state_name}] Calling reflecting API with transition={transition_name}")
+
+        response = await self._api_client.send_reflecting(
+            stage_id=stage_id,
+            step_index=step_id,
+            state=state_data,
+            transition_name=transition_name
+        )
+
+        return response
 
     def __str__(self) -> str:
         return f"State({self.state_name})"
