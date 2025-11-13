@@ -3,7 +3,6 @@
 提供事件驱动的异步执行能力
 """
 
-import asyncio
 from typing import Dict, Any, Optional, Callable, Awaitable
 from silantui import ModernLogger
 from .state_machine import WorkflowStateMachine

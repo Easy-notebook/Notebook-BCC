@@ -8,6 +8,7 @@ This module is separate from core.states (which defines WorkflowState enum).
 from .base_state import BaseState
 from .idle_state import IdleState
 from .stage_running_state import StageRunningState
+from .stage_completed_state import StageCompletedState
 from .step_running_state import StepRunningState
 from .behavior_running_state import BehaviorRunningState
 from .behavior_completed_state import BehaviorCompletedState
@@ -18,6 +19,7 @@ __all__ = [
     'BaseState',
     'IdleState',
     'StageRunningState',
+    'StageCompletedState',
     'StepRunningState',
     'BehaviorRunningState',
     'BehaviorCompletedState',

@@ -7,6 +7,7 @@ from typing import Dict, Optional
 from .base_state import BaseState
 from .idle_state import IdleState
 from .stage_running_state import StageRunningState
+from .stage_completed_state import StageCompletedState
 from .step_running_state import StepRunningState
 from .behavior_running_state import BehaviorRunningState
 from .behavior_completed_state import BehaviorCompletedState
@@ -24,12 +25,12 @@ class StateFactory:
     _STATE_CLASSES = {
         'IDLE': IdleState,
         'STAGE_RUNNING': StageRunningState,
+        'STAGE_COMPLETED': StageCompletedState,
         'STEP_RUNNING': StepRunningState,
+        'STEP_COMPLETED': StepCompletedState,
         'BEHAVIOR_RUNNING': BehaviorRunningState,
         'BEHAVIOR_COMPLETED': BehaviorCompletedState,
-        'STEP_COMPLETED': StepCompletedState,
         # Add more states as needed
-        # 'STAGE_COMPLETED': StageCompletedState,
         # 'ACTION_RUNNING': ActionRunningState,
         # 'ACTION_COMPLETED': ActionCompletedState,
         # etc.

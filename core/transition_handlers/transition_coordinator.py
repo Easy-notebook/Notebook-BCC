@@ -17,6 +17,7 @@ from .COMPLETE_BEHAVIOR_handler import CompleteBehaviorHandler
 from .NEXT_BEHAVIOR_handler import NextBehaviorHandler
 from .COMPLETE_STEP_handler import CompleteStepHandler
 from .NEXT_STEP_handler import NextStepHandler
+from .COMPLETE_STAGE_handler import CompleteStageHandler
 from .NEXT_STAGE_handler import NextStageHandler
 
 
@@ -52,6 +53,7 @@ class TransitionCoordinator(ModernLogger):
             NextBehaviorHandler(),
             CompleteStepHandler(),
             NextStepHandler(),
+            CompleteStageHandler(),
             NextStageHandler(),
         ]
 
