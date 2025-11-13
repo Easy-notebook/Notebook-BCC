@@ -27,6 +27,7 @@ from .handlers import (
     handle_new_chapter,
     handle_new_section,
     handle_new_step,
+    handle_comment_result,
     handle_exec_code,
     handle_set_effect_thinking,
     handle_is_thinking,
@@ -102,9 +103,11 @@ class ScriptStore(ModernLogger):
         # Register handlers from modularized handler modules
         # Each handler is a lambda that passes self (script_store) to the handler function
         registry.register_handler(ACTION_TYPES['ADD_ACTION'], lambda step: handle_add_action(self, step))
+        registry.register_handler('add-text', lambda step: handle_add_action(self, step))  # Alias for 'add'
         registry.register_handler(ACTION_TYPES['NEW_CHAPTER'], lambda step: handle_new_chapter(self, step))
         registry.register_handler(ACTION_TYPES['NEW_SECTION'], lambda step: handle_new_section(self, step))
         registry.register_handler(ACTION_TYPES['NEW_STEP'], lambda step: handle_new_step(self, step))
+        registry.register_handler(ACTION_TYPES['COMMENT_RESULT'], lambda step: handle_comment_result(self, step))
         registry.register_handler(ACTION_TYPES['IS_THINKING'], lambda step: handle_is_thinking(self, step))
         registry.register_handler(ACTION_TYPES['FINISH_THINKING'], lambda step: handle_finish_thinking(self, step))
         registry.register_handler(ACTION_TYPES['EXEC_CODE'], lambda step: handle_exec_code(self, step))

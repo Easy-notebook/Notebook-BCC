@@ -29,6 +29,7 @@ ACTION_TYPES = {
     'NEW_SECTION': 'new_section',
     'NEW_STEP': 'new_step',
     'UPDATE_TITLE': 'update_title',
+    'COMMENT_RESULT': 'comment_result',
 }
 
 # =====================================================================

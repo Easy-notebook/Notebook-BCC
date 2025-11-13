@@ -67,7 +67,7 @@ def handle_add_action(script_store, step: ExecutionStep) -> Optional[str]:
     """
     Handle ADD_ACTION type.
 
-    For text cells with shot_type='markdown':
+    For text cells with shot_type='markdown' or None (default to markdown):
     - If the last cell is a markdown cell and is NOT a heading (doesn't start with #),
       append content to the last cell instead of creating a new one
     - Otherwise, create a new cell as usual
@@ -89,8 +89,9 @@ def handle_add_action(script_store, step: ExecutionStep) -> Optional[str]:
         cell_type = 'code' if step.shot_type == 'action' else 'text'
         cleaned_content = clean_content(step.content or '', cell_type)
 
-        # Special logic for text cells with markdown shot_type
-        if cell_type == 'text' and step.shot_type == 'markdown':
+        # Special logic for text cells with markdown shot_type or None (default to markdown)
+        # When shot_type is None or 'markdown', treat as markdown content
+        if cell_type == 'text' and (step.shot_type == 'markdown' or step.shot_type is None):
             # Check if we should append to the last cell
             if script_store.notebook_store:
                 last_cell = script_store.notebook_store.get_last_cell()
@@ -222,4 +223,49 @@ def handle_new_step(script_store, step: ExecutionStep) -> Optional[str]:
     except Exception as e:
         if hasattr(script_store, 'error'):
             script_store.error(f"[ContentHandler] Error handling NEW_STEP: {e}", exc_info=True)
+        return None
+
+
+def handle_comment_result(script_store, step: ExecutionStep) -> Optional[str]:
+    """
+    Handle COMMENT_RESULT type.
+
+    This action type works exactly like add_markdown (adding markdown content),
+    but after execution it moves effect.current to effect.history.
+
+    Args:
+        script_store: Reference to ScriptStore instance
+        step: Execution step containing comment content
+
+    Returns:
+        Action ID if successful, None otherwise
+    """
+    try:
+        if not step:
+            raise ValueError("Execution step cannot be None")
+
+        # First, add the markdown content (same as add action with dialogue shot_type)
+        cell_type = 'text'
+        cleaned_content = clean_content(step.content or '', cell_type)
+
+        # Create new markdown cell
+        action_id = step.store_id or str(uuid.uuid4())
+        script_store.add_action(ScriptAction(
+            id=action_id,
+            type=cell_type,
+            content=cleaned_content,
+            metadata=step.metadata or ActionMetadata()
+        ))
+
+        # After adding the content, move current effects to history
+        if script_store.ai_context_store:
+            script_store.ai_context_store.move_current_effects_to_history()
+            if hasattr(script_store, 'info'):
+                script_store.info("[ContentHandler] Moved effect.current to history after comment_result")
+
+        return action_id
+
+    except Exception as e:
+        if hasattr(script_store, 'error'):
+            script_store.error(f"[ContentHandler] Error handling COMMENT_RESULT: {e}", exc_info=True)
         return None

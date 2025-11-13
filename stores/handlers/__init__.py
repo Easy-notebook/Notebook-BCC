@@ -8,6 +8,7 @@ from .content_handlers import (
     handle_new_chapter,
     handle_new_section,
     handle_new_step,
+    handle_comment_result,
 )
 from .code_handlers import (
     handle_exec_code,
@@ -30,6 +31,7 @@ __all__ = [
     'handle_new_chapter',
     'handle_new_section',
     'handle_new_step',
+    'handle_comment_result',
     # Code handlers
     'handle_exec_code',
     'handle_set_effect_thinking',

@@ -41,8 +41,9 @@ class BehaviorCompletedState(BaseState):
         Determine next transition from BEHAVIOR_COMPLETED.
 
         Logic:
-        1. Check if step outputs are satisfied -> COMPLETE_STEP
-        2. Otherwise -> NEXT_BEHAVIOR (generate more behaviors)
+        1. Check if effect.current is not empty -> NEXT_BEHAVIOR (must clear effects first)
+        2. Check if step outputs are satisfied -> COMPLETE_STEP
+        3. Otherwise -> NEXT_BEHAVIOR (generate more behaviors)
 
         Args:
             state_data: Current state JSON
@@ -52,6 +53,16 @@ class BehaviorCompletedState(BaseState):
             WorkflowEvent to trigger
         """
         from ..events import WorkflowEvent
+
+        # First, check if effect.current is not empty
+        # If not empty, we must transition to NEXT_BEHAVIOR to clear effects
+        context = state_data.get('observation', {}).get('context', {})
+        effects = context.get('effects', {})
+        current_effects = effects.get('current', [])
+
+        if current_effects:
+            self.info(f"effect.current is not empty ({len(current_effects)} effects), must transition to NEXT_BEHAVIOR")
+            return WorkflowEvent.NEXT_BEHAVIOR
 
         # Check if step is completed
         progress = self._get_progress(state_data)
