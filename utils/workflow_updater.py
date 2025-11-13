@@ -192,11 +192,11 @@ class WorkflowUpdater(ModernLogger):
             state_machine: State machine instance
             content: Parsed reflection content
         """
-        behavior_is_complete = content.get('behavior_is_complete', False)
+        current_step_is_complete = content.get('current_step_is_complete', False)
         next_state = content.get('next_state')
         variables_produced = content.get('variables_produced', {})
 
-        self.info(f"[Updater] Processing reflection: behavior_complete={behavior_is_complete}, next_state={next_state}")
+        self.info(f"[Updater] Processing reflection: behavior_complete={current_step_is_complete}, next_state={next_state}")
 
         if not state_machine.execution_context:
             self.error("[Updater] No execution context available")

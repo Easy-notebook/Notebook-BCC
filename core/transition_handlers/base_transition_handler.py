@@ -33,6 +33,7 @@ class BaseTransitionHandler(ABC, ModernLogger):
         ModernLogger.__init__(self, name)
         self.from_state = from_state
         self.to_state = to_state
+        self.transition_name = handler_name  # Store transition name for external access
         self.script_store = None  # Will be injected by coordinator
 
     @abstractmethod

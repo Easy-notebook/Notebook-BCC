@@ -20,7 +20,7 @@
   {
     "action": {
       "type": "add",
-      "shot_type": "dialogue",
+      "shot_type": "markdown",
       "content": "We begin by establishing data existence through systematic collection and inventory.  \nThis foundational step ensures the **Ames Housing dataset** is accessible, complete, and ready for further exploration.  \nWe will validate the dataset file located at `./assets/housing.csv`, gather its metadata, and perform an initial inventory to confirm readiness for downstream analysis.  \nThe verification includes confirming file accessibility, recording its size and timestamp, loading the data for inspection, and compiling a comprehensive existence report aligned with PCS principles of **Predictability**, **Computability**, and **Stability**."
     }
   },

@@ -58,8 +58,8 @@ class NextStepHandler(BaseTransitionHandler):
             if 'STEP_RUNNING' in next_state.upper():
                 # Only handle if not coming from BEHAVIOR_COMPLETED
                 # (that's handled by CompleteStepHandler)
-                behavior_complete = api_response.get('behavior_is_complete')
-                if behavior_complete is None:
+                step_complete = api_response.get('current_step_is_complete')
+                if step_complete is None:
                     return True
 
         return False
@@ -150,9 +150,12 @@ class NextStepHandler(BaseTransitionHandler):
             'NEXT_STEP'
         )
 
-        # Execute new_step action with next step title
+        # Execute add-text action with step title markdown, then new_step action
         next_step_title = next_step.get('title', '')
         if next_step_title:
+            # Add markdown title for step
+            self._execute_action('add-text', content=f'### {next_step_title}', shot_type='markdown')
+            # Execute new_step action
             self._execute_action('new_step', content=next_step_title)
 
         self.info("Transition complete: NEXT_STEP → STEP_RUNNING")

@@ -11,7 +11,6 @@ import asyncio
 from typing import Dict, Any, List, AsyncIterator, Optional
 from .context_compressor import ContextCompressor
 from .api_logger import get_api_logger
-from .response_parser import response_parser
 from config import Config
 
 
@@ -100,13 +99,16 @@ class WorkflowAPIClient(ModernLogger):
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
         transition_name: Optional[str] = None,
-        behavior_feedback: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        behavior_feedback: Optional[Dict[str, Any]] = None,
+        stream: bool = True
+    ) -> AsyncIterator[Dict[str, Any]]:
         """
         Send reflection to Reflecting API (/reflecting).
 
         This is the Reflecting API call for *_COMPLETED states.
         Used to reflect on completed stages/steps/behaviors and provide guidance for next actions.
+
+        Now returns action stream (same format as generating API).
 
         Args:
             stage_id: Current stage ID
@@ -114,12 +116,14 @@ class WorkflowAPIClient(ModernLogger):
             state: Current workflow state/context (contains progress_info per OBSERVATION_PROTOCOL.md)
             notebook_id: Optional notebook ID
             behavior_feedback: Optional behavior execution feedback
+            stream: Whether to use streaming (default: True)
 
-        Returns:
-            Reflecting API response containing:
-            - targetAchieved: bool - Whether goal is achieved
-            - transition: dict - Server control signals (continue_behaviors, target_achieved)
-            - context_update: dict - Updates to apply (variables, progress_update, etc.)
+        Yields:
+            Action dictionaries in the same format as generating API:
+            - add-text: Add markdown content (streamed from <add-comment>)
+            - mark_step_complete: Mark step as complete
+            - mark_stage_complete: Mark stage as complete
+            - complete_reflection: End of reflection
         """
         try:
             # State should already be in the correct format (observation + state)
@@ -130,7 +134,7 @@ class WorkflowAPIClient(ModernLogger):
                     'observation': state['observation'],
                     'state': state['state'],
                     'options': {
-                        'stream': False
+                        'stream': stream
                     }
                 }
             else:
@@ -152,7 +156,7 @@ class WorkflowAPIClient(ModernLogger):
                         'FSM': state.get('FSM', {})
                     },
                     'options': {
-                        'stream': False
+                        'stream': stream
                     }
                 }
 
@@ -163,7 +167,7 @@ class WorkflowAPIClient(ModernLogger):
             if notebook_id:
                 payload['notebook_id'] = notebook_id
 
-            self.info(f"[API] Sending reflection for stage={stage_id}, step={step_index}")
+            self.info(f"[API] Sending reflection for stage={stage_id}, step={step_index}, stream={stream}")
             self.debug(f"[API] Payload size: {len(json.dumps(payload))} chars")
 
             # Send request and capture response
@@ -213,51 +217,38 @@ class WorkflowAPIClient(ModernLogger):
 
                     response.raise_for_status()
 
-                    # Check content type
-                    content_type = response.headers.get('Content-Type', '')
+                    if stream:
+                        # Handle streaming response (NDJSON format like generating API)
+                        buffer = ""
+                        async for chunk in response.content.iter_any():
+                            if chunk:
+                                buffer += chunk.decode('utf-8')
+                                lines = buffer.split('\n')
+                                buffer = lines.pop()  # Keep incomplete line in buffer
 
-                    if 'xml' in content_type or 'text' in content_type:
-                        # XML response - return raw XML string
-                        xml_text = await response.text()
-                        response_data = xml_text
-                        result = xml_text  # Return raw XML directly
-                        self.info(f"[API] Reflection response: XML ({len(xml_text)} chars)")
+                                for line in lines:
+                                    line = line.strip()
+                                    if line:
+                                        try:
+                                            message = json.loads(line)
+                                            # Response format: {"action": {"type": "...", ...}}
+                                            if 'action' in message:
+                                                action = message['action']
+                                                action_type = action.get('type', 'unknown')
+                                                self.debug(f"[API] Received reflection action: {action_type}")
+                                                yield action
+                                            else:
+                                                # Fallback: if message is the action itself
+                                                self.debug(f"[API] Received direct reflection action: {message.get('type', 'unknown')}")
+                                                yield message
+                                        except json.JSONDecodeError as e:
+                                            self.warning(f"[API] Failed to parse reflection line: {line[:100]}")
                     else:
-                        # JSON response - standard format
+                        # Handle non-streaming response
                         result = await response.json()
-                        response_data = result
-                        self.info(f"[API] Reflection response: targetAchieved={result.get('targetAchieved')}")
-
-                    # 从响应中提取 next_state 来确定实际的 transition_name
-                    actual_transition_name = transition_name
-                    if not actual_transition_name:
-                        # 解析响应确定 transition name
-                        actual_transition_name = self._determine_transition_from_response(
-                            response_data,
-                            current_fsm_state=state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
-                        )
-
-                    # 📝 记录 API 调用详情（包含响应）
-                    log_file = self.api_logger.log_api_call(
-                        transition_name=actual_transition_name,
-                        api_url=Config.REFLECTING_API_URL,
-                        method='POST',
-                        payload=payload,
-                        context_state=state,
-                        extra_info={
-                            'api_type': 'reflecting',
-                            'stage_id': stage_id,
-                            'step_index': step_index,
-                            'notebook_id': notebook_id
-                        },
-                        response=response_data,
-                        response_status=response_status
-                    )
-                    if log_file:
-                        self.last_api_log_file = log_file
-                        self.info(f"[API] 调用日志已保存: {log_file}")
-
-                    return result
+                        if 'actions' in result:
+                            for action in result['actions']:
+                                yield action
 
             except aiohttp.ClientError as e:
                 response_error = str(e)
@@ -729,18 +720,24 @@ class WorkflowAPIClient(ModernLogger):
         """
         根据 API 响应内容和当前 FSM 状态确定 transition name。
 
+        Note: With action stream protocol, transitions are determined by action types
+              (mark_step_complete, mark_stage_complete) rather than response structure.
+              This method is kept for backward compatibility with planning API.
+
         Args:
-            response_data: API 响应数据（XML 字符串或 dict）
+            response_data: API 响应数据（dict or JSON string）
             current_fsm_state: 当前 FSM 状态
 
         Returns:
             Transition name (例如: COMPLETE_STEP, NEXT_BEHAVIOR, COMPLETE_STAGE)
         """
-        # 如果是 XML 字符串，先解析
+        # Parse response if it's a string
         if isinstance(response_data, str):
-            from utils.response_parser import response_parser
-            parsed = response_parser.parse_response(response_data)
-            response_dict = parsed.get('content', {})
+            try:
+                response_dict = json.loads(response_data)
+            except json.JSONDecodeError:
+                self.warning(f"[API] Failed to parse response as JSON")
+                response_dict = {}
         else:
             response_dict = response_data
 

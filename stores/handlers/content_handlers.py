@@ -67,6 +67,11 @@ def handle_add_action(script_store, step: ExecutionStep) -> Optional[str]:
     """
     Handle ADD_ACTION type.
 
+    For text cells with shot_type='markdown':
+    - If the last cell is a markdown cell and is NOT a heading (doesn't start with #),
+      append content to the last cell instead of creating a new one
+    - Otherwise, create a new cell as usual
+
     Args:
         script_store: Reference to ScriptStore instance
         step: Execution step containing action details
@@ -81,10 +86,33 @@ def handle_add_action(script_store, step: ExecutionStep) -> Optional[str]:
         if not step:
             raise ValueError("Execution step cannot be None")
 
-        action_id = step.store_id or str(uuid.uuid4())
         cell_type = 'code' if step.shot_type == 'action' else 'text'
         cleaned_content = clean_content(step.content or '', cell_type)
 
+        # Special logic for text cells with markdown shot_type
+        if cell_type == 'text' and step.shot_type == 'markdown':
+            # Check if we should append to the last cell
+            if script_store.notebook_store:
+                last_cell = script_store.notebook_store.get_last_cell()
+
+                # Append to last cell if:
+                # 1. Last cell exists
+                # 2. Last cell is markdown type
+                # 3. Last cell content doesn't start with # (not a heading)
+                if last_cell and hasattr(last_cell, 'type'):
+                    from models.cell import CellType
+                    if (last_cell.type == CellType.MARKDOWN and
+                        last_cell.content and
+                        not last_cell.content.strip().startswith('#')):
+                        # Append to existing cell
+                        new_content = last_cell.content + '\n\n' + cleaned_content
+                        script_store.notebook_store.update_cell(last_cell.id, new_content)
+                        if hasattr(script_store, 'info'):
+                            script_store.info(f"[ContentHandler] Appended to last markdown cell: {last_cell.id}")
+                        return last_cell.id
+
+        # Default behavior: create new cell
+        action_id = step.store_id or str(uuid.uuid4())
         script_store.add_action(ScriptAction(
             id=action_id,
             type=cell_type,

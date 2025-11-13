@@ -253,9 +253,11 @@ class BaseState(ABC, ModernLogger):
         if api_type == APIResponseType.PLANNING:
             return await self._call_planning_api(state_data, stage_id, step_id, transition_name)
         elif api_type == APIResponseType.GENERATING:
-            return await self._call_generating_api(state_data, stage_id, step_id, transition_name)
+            # Return async iterator directly (don't await)
+            return self._call_generating_api(state_data, stage_id, step_id, transition_name)
         elif api_type == APIResponseType.COMPLETE:
-            return await self._call_reflecting_api(state_data, stage_id, step_id, transition_name)
+            # Return async iterator directly (don't await)
+            return self._call_reflecting_api(state_data, stage_id, step_id, transition_name)
         else:
             raise ValueError(f"Unknown API type: {api_type}")
 
@@ -289,7 +291,7 @@ class BaseState(ABC, ModernLogger):
 
         return response
 
-    async def _call_generating_api(
+    def _call_generating_api(
         self,
         state_data: Dict[str, Any],
         stage_id: str,
@@ -325,9 +327,11 @@ class BaseState(ABC, ModernLogger):
         stage_id: str,
         step_id: str,
         transition_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> AsyncIterator[Dict[str, Any]]:
         """
         Call the Reflecting API.
+
+        Now returns an async iterator of actions (same format as generating API).
 
         Args:
             state_data: Current state JSON
@@ -335,19 +339,24 @@ class BaseState(ABC, ModernLogger):
             step_id: Current step ID
             transition_name: Optional transition name (will be determined by API if None)
 
-        Returns:
-            Reflecting API response
+        Yields:
+            Action dictionaries from reflection:
+            - add-text: markdown content
+            - mark_step_complete: step completion signal
+            - mark_stage_complete: stage completion signal
+            - complete_reflection: end of reflection
         """
-        self.info(f"[{self.state_name}] Calling reflecting API with transition={transition_name}")
+        self.info(f"[{self.state_name}] Calling reflecting API with transition={transition_name}, stream=True")
 
-        response = await self._api_client.send_reflecting(
+        # send_reflecting now returns an async iterator
+        async for action in self._api_client.send_reflecting(
             stage_id=stage_id,
             step_index=step_id,
             state=state_data,
-            transition_name=transition_name
-        )
-
-        return response
+            transition_name=transition_name,
+            stream=True
+        ):
+            yield action
 
     def __str__(self) -> str:
         return f"State({self.state_name})"

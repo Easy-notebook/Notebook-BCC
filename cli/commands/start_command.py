@@ -428,7 +428,8 @@ class StartCommand:
                 with console.status(f"[bold blue]State Machine Step...[/bold blue]", spinner="dots"):
                     try:
                         # One single call handles: API inference, API call, state transition
-                        next_state = await self.async_state_machine.step(current_state)
+                        # Returns (new_state, transition_name)
+                        next_state, transition_name = await self.async_state_machine.step(current_state)
                     except Exception as e:
                         console.print(f"[red]Error during state machine step: {e}[/red]")
                         self.error(f"State machine error: {e}", exc_info=True)
@@ -442,22 +443,12 @@ class StartCommand:
                 new_stage = parsed_next.get('stage_id')
                 new_step = parsed_next.get('step_id')
 
-                # Infer what transition occurred (for display only)
-                # 使用 StateFactory 来确定正确的 transition 名称
-                from core.state_classes.state_factory import StateFactory
-
-                transition_name = None
-                state_instance = StateFactory.get_state(fsm_state)
-                if state_instance:
-                    next_transition_event = state_instance.determine_next_transition(current_state)
-                    if next_transition_event:
-                        transition_name = next_transition_event.value
-
-                # Fallback: 如果无法确定，显示状态转换
-                if not transition_name:
-                    transition_name = f'{fsm_state}→{new_fsm_state}'
-
-                console.print(f"  └─ Transition: [yellow]{transition_name}[/yellow]")
+                # Display transition name (returned from state machine)
+                if transition_name:
+                    console.print(f"  └─ Transition: [yellow]{transition_name}[/yellow]")
+                else:
+                    # Fallback: 如果无法确定，显示状态转换
+                    console.print(f"  └─ Transition: [yellow]{fsm_state}→{new_fsm_state}[/yellow]")
 
                 # Update current state for next iteration
                 current_state = next_state

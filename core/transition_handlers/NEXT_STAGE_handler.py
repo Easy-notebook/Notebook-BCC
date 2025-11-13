@@ -158,9 +158,12 @@ class NextStageHandler(BaseTransitionHandler):
             'NEXT_STAGE'
         )
 
-        # Execute new_section action with next stage title
+        # Execute add-text action with stage title markdown, then new_section action
         next_stage_title = next_stage.get('title', '')
         if next_stage_title:
+            # Add markdown title for stage
+            self._execute_action('add-text', content=f'## {next_stage_title}', shot_type='markdown')
+            # Execute new_section action
             self._execute_action('new_section', content=next_stage_title)
 
         self.info("Transition complete: NEXT_STAGE → STAGE_RUNNING")

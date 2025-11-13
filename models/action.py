@@ -134,7 +134,7 @@ class ExecutionStep:
     updated_steps: Optional[List[Dict[str, Any]]] = None
     stage_id: Optional[str] = None
 
-    # Backend-provided shotType: 'action'=code, 'dialogue'=text
+    # Backend-provided shotType: 'action'=code, 'markdown'=text
     shot_type: Optional[str] = None
 
     # State synchronization

@@ -71,7 +71,7 @@ class TransitionCoordinator(ModernLogger):
         api_response: Any,
         api_type: str = None,
         auto_trigger: bool = True
-    ) -> Dict[str, Any]:
+    ) -> tuple[Dict[str, Any], str]:
         """
         Apply state transition based on API response.
 
@@ -82,7 +82,7 @@ class TransitionCoordinator(ModernLogger):
             auto_trigger: If True, automatically trigger next transition if determined by state
 
         Returns:
-            Updated state JSON with transition applied
+            Tuple of (updated state JSON, transition name)
 
         Raises:
             ValueError: If no handler can process the response
@@ -101,18 +101,20 @@ class TransitionCoordinator(ModernLogger):
                 f"Keys: {list(api_response.keys()) if isinstance(api_response, dict) else 'N/A'}"
             )
 
-        self.info(f"[Coordinator] Selected handler: {handler.__class__.__name__}")
+        # Get transition name from handler
+        transition_name = handler.transition_name
+        self.info(f"[Coordinator] Selected handler: {handler.__class__.__name__} (transition={transition_name})")
 
         # Apply transition
         updated_state = handler.apply(state, api_response)
 
-        self.info("[Coordinator] Transition applied successfully")
+        self.info(f"[Coordinator] Transition applied successfully: {transition_name}")
 
         # Auto-trigger next transition if enabled
         if auto_trigger:
             updated_state = self._auto_trigger_next_transition(updated_state)
 
-        return updated_state
+        return updated_state, transition_name
 
     def _find_handler(self, api_response: Any) -> BaseTransitionHandler | None:
         """
@@ -234,7 +236,7 @@ class TransitionCoordinator(ModernLogger):
 
         # Apply the auto-triggered transition (without recursion)
         try:
-            state = self.apply_transition(state, auto_response, auto_trigger=False)
+            state, _ = self.apply_transition(state, auto_response, auto_trigger=False)
             self.info(f"[Auto-Trigger] Successfully triggered {next_event.value}")
         except ValueError as e:
             self.warning(f"[Auto-Trigger] Failed to trigger {next_event.value}: {e}")

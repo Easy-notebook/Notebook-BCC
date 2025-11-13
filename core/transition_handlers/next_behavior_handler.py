@@ -16,7 +16,7 @@ class NextBehaviorHandler(BaseTransitionHandler):
     Transition: BEHAVIOR_COMPLETED → BEHAVIOR_RUNNING
 
     Triggered by: Reflecting API indicating behavior incomplete,
-    need another behavior iteration (behavior_is_complete=False)
+    need another behavior iteration (current_step_is_complete=False)
 
     Updates:
     - state.variables with new variables_produced
@@ -36,7 +36,7 @@ class NextBehaviorHandler(BaseTransitionHandler):
         """Check if response indicates need for another behavior iteration."""
         if isinstance(api_response, dict):
             next_state = api_response.get('next_state', '')
-            behavior_complete = api_response.get('behavior_is_complete', False)
+            step_complete = api_response.get('current_step_is_complete', False)
             transition = api_response.get('transition', '')
 
             # Check for explicit NEXT_BEHAVIOR transition
@@ -47,9 +47,9 @@ class NextBehaviorHandler(BaseTransitionHandler):
             if 'BEHAVIOR_RUNNING' in next_state.upper():
                 return True
 
-            # Or if behavior not complete and no explicit next_state specified
+            # Or if step not complete and no explicit next_state specified
             # (but avoid conflicting with STEP_RUNNING which is handled by CompleteStepHandler)
-            if not behavior_complete and not next_state:
+            if not step_complete and not next_state:
                 return True
 
         return False
@@ -67,14 +67,14 @@ class NextBehaviorHandler(BaseTransitionHandler):
         """
         new_state = self._deep_copy_state(state)
 
-        behavior_is_complete = api_response.get('behavior_is_complete', False)
+        current_step_is_complete = api_response.get('current_step_is_complete', False)
         variables_produced = api_response.get('variables_produced', {})
         artifacts_produced = api_response.get('artifacts_produced', [])
         outputs_tracking = api_response.get('outputs_tracking', {})
         context_for_next = api_response.get('context_for_next', {})
 
         self.info(
-            f"Applying NEXT_BEHAVIOR: behavior_complete={behavior_is_complete}"
+            f"Applying NEXT_BEHAVIOR: step_complete={current_step_is_complete}"
         )
 
         # Get structures
@@ -107,7 +107,7 @@ class NextBehaviorHandler(BaseTransitionHandler):
                     self.info("Stored recommendations for next iteration")
 
         # Update behaviors if complete (rarely happens in NEXT_BEHAVIOR, but possible)
-        if behavior_is_complete:
+        if current_step_is_complete:
             self._complete_behavior(new_state, artifacts_produced, outputs_tracking)
 
         # Update FSM state to BEHAVIOR_RUNNING (ready for next behavior iteration)

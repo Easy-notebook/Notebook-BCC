@@ -16,7 +16,7 @@ class CompleteStepHandler(BaseTransitionHandler):
     Transition: BEHAVIOR_COMPLETED → STEP_COMPLETED
 
     Triggered by: Reflecting API indicating behavior and step complete
-    (behavior_is_complete=True, next_state=STEP_COMPLETED)
+    (current_step_is_complete=True, next_state=STEP_COMPLETED)
 
     Updates:
     - state.variables with new variables_produced
@@ -44,16 +44,16 @@ class CompleteStepHandler(BaseTransitionHandler):
                 return False
 
             next_state = api_response.get('next_state', '')
-            behavior_complete = api_response.get('behavior_is_complete', False)
+            step_complete = api_response.get('current_step_is_complete', False)
 
             # Check for explicit STEP_COMPLETED(D) state
             next_state_upper = next_state.upper()
             if 'STEP_COMPLETED' in next_state_upper:
                 return True
 
-            # Or if behavior is complete but not transitioning to STEP_RUNNING or BEHAVIOR_RUNNING
+            # Or if step is complete but not transitioning to STEP_RUNNING or BEHAVIOR_RUNNING
             # (BEHAVIOR_RUNNING means another iteration needed, not step completion)
-            if behavior_complete and 'STEP_RUNNING' not in next_state_upper and 'BEHAVIOR_RUNNING' not in next_state_upper:
+            if step_complete and 'STEP_RUNNING' not in next_state_upper and 'BEHAVIOR_RUNNING' not in next_state_upper:
                 return True
 
         return False
@@ -71,14 +71,14 @@ class CompleteStepHandler(BaseTransitionHandler):
         """
         new_state = self._deep_copy_state(state)
 
-        behavior_is_complete = api_response.get('behavior_is_complete', False)
+        current_step_is_complete = api_response.get('current_step_is_complete', False)
         variables_produced = api_response.get('variables_produced', {})
         artifacts_produced = api_response.get('artifacts_produced', [])
         outputs_tracking = api_response.get('outputs_tracking', {})
         context_for_next = api_response.get('context_for_next', {})
 
         self.info(
-            f"Applying COMPLETE_STEP: behavior_complete={behavior_is_complete}"
+            f"Applying COMPLETE_STEP: step_complete={current_step_is_complete}"
         )
 
         # Get structures

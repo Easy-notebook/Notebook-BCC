@@ -29,6 +29,7 @@ class APICallLogger:
         """
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
+        self.last_log_file: Optional[Path] = None  # 记录最后创建的日志文件
 
     @classmethod
     def _get_next_call_number(cls) -> int:
@@ -104,10 +105,48 @@ class APICallLogger:
             with open(log_file, 'w', encoding='utf-8') as f:
                 f.write(log_content)
 
+            # 存储最后的日志文件路径
+            self.last_log_file = log_file
+
             return str(log_file)
         except Exception as e:
             print(f"⚠️  写入 API 日志失败: {e}")
             return ""
+
+    def update_last_log_transition_name(self, actual_transition_name: str) -> bool:
+        """
+        更新最后一个日志文件的 transition 名称
+
+        Args:
+            actual_transition_name: 实际使用的 transition 名称
+
+        Returns:
+            是否成功更新
+        """
+        if not self.last_log_file or not self.last_log_file.exists():
+            return False
+
+        try:
+            # 从当前文件名提取调用编号
+            # 格式: 0001_OLD_TRANSITION.log → 0001
+            call_number_str = self.last_log_file.stem.split('_')[0]
+
+            # 生成新文件名
+            new_filename = f"{call_number_str}_{actual_transition_name}.log"
+            new_log_file = self.last_log_file.parent / new_filename
+
+            # 如果新旧文件名相同，不需要重命名
+            if new_log_file == self.last_log_file:
+                return True
+
+            # 重命名文件
+            self.last_log_file.rename(new_log_file)
+            self.last_log_file = new_log_file
+
+            return True
+        except Exception as e:
+            print(f"⚠️  更新日志文件名失败: {e}")
+            return False
 
     def _format_log_content(
         self,

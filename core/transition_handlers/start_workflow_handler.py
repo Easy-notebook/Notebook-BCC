@@ -46,6 +46,8 @@ class StartWorkflowHandler(BaseTransitionHandler):
 
         stages_data = api_response.get('stages', [])
         focus = api_response.get('focus', '')
+        title = api_response.get('title', '')
+        description = api_response.get('description', '')
 
         self.info(f"Applying {len(stages_data)} stages")
 
@@ -102,13 +104,25 @@ class StartWorkflowHandler(BaseTransitionHandler):
         # Update FSM state
         self._update_fsm_state(new_state, 'STAGE_RUNNING', 'START_WORKFLOW')
 
-        # Execute update_title action with workflow focus
-        if focus:
+        # Execute notebook title with markdown (# title)
+        if title:
+            self._execute_action('add-text', content=f'# {title}', shot_type='markdown')
+            # Also update notebook metadata title
+            self._execute_action('update_title', content=title)
+        elif focus:
+            # Fallback to focus if no title provided
             self._execute_action('update_title', content=focus)
 
-        # Execute new_section action with first stage title
+        # Execute description as plain markdown text
+        if description:
+            self._execute_action('add-text', content=description, shot_type='markdown')
+
+        # Execute add-text action with stage title markdown, then new_section action
         first_stage_title = first_stage.get('title', '')
         if first_stage_title:
+            # Add markdown title for stage
+            self._execute_action('add-text', content=f'## {first_stage_title}', shot_type='markdown')
+            # Execute new_section action
             self._execute_action('new_section', content=first_stage_title)
 
         self.info(f"Transition complete: START_WORKFLOW (stage: {first_stage.get('stage_id')})")
