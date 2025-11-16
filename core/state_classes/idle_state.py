@@ -29,6 +29,7 @@ class IdleState(BaseState):
         from ..events import WorkflowEvent
         return {
             'start_workflow': WorkflowEvent.START_WORKFLOW,
+            'fail': WorkflowEvent.FAIL,
         }
 
     def determine_next_transition(
@@ -86,8 +87,8 @@ class IdleState(BaseState):
         if event not in valid_events.values():
             return False
 
-        # IDLE can always start workflow (no additional conditions)
-        if event == WorkflowEvent.START_WORKFLOW:
+        # IDLE can always start workflow or fail (no additional conditions)
+        if event in (WorkflowEvent.START_WORKFLOW, WorkflowEvent.FAIL):
             return True
 
         return False

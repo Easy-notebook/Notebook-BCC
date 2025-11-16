@@ -37,23 +37,22 @@ class CompleteStepHandler(BaseTransitionHandler):
         )
 
     def can_handle(self, api_response: Any) -> bool:
-        """Check if response indicates step completion."""
-        if isinstance(api_response, dict):
-            # Don't handle auto-triggered transitions
-            if api_response.get('_auto_trigger'):
-                return False
+        """
+        Check if response indicates step completion.
 
-            next_state = api_response.get('next_state', '')
-            step_complete = api_response.get('current_step_is_complete', False)
+        Looks for 'mark_step_complete' action in the actions list.
+        """
+        if not isinstance(api_response, dict):
+            return False
 
-            # Check for explicit STEP_COMPLETED(D) state
-            next_state_upper = next_state.upper()
-            if 'STEP_COMPLETED' in next_state_upper:
-                return True
+        # Don't handle auto-triggered transitions
+        if api_response.get('_auto_trigger'):
+            return False
 
-            # Or if step is complete but not transitioning to STEP_RUNNING or BEHAVIOR_RUNNING
-            # (BEHAVIOR_RUNNING means another iteration needed, not step completion)
-            if step_complete and 'STEP_RUNNING' not in next_state_upper and 'BEHAVIOR_RUNNING' not in next_state_upper:
+        # Check for mark_step_complete action signal
+        actions = api_response.get('actions', [])
+        for action in actions:
+            if isinstance(action, dict) and action.get('type') == 'mark_step_complete':
                 return True
 
         return False

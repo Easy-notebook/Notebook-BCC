@@ -39,30 +39,14 @@ class NextStepHandler(BaseTransitionHandler):
         """
         Check if response indicates advancing to next step.
 
-        This handler is typically triggered automatically by the state machine
-        rather than directly by an API response.
+        This handler is triggered by auto-trigger from the state machine
+        after STEP_COMPLETED when there are remaining steps.
         """
-        if isinstance(api_response, dict):
-            # Check if this is an auto-trigger from state machine
-            if api_response.get('_auto_trigger') == 'NEXT_STEP':
-                return True
+        if not isinstance(api_response, dict):
+            return False
 
-            next_state = api_response.get('next_state', '')
-            transition = api_response.get('transition', '')
-
-            # Check for explicit NEXT_STEP transition
-            if 'NEXT_STEP' in transition.upper():
-                return True
-
-            # Check if transitioning to STEP_RUNNING from STEP_COMPLETED context
-            if 'STEP_RUNNING' in next_state.upper():
-                # Only handle if not coming from BEHAVIOR_COMPLETED
-                # (that's handled by CompleteStepHandler)
-                step_complete = api_response.get('current_step_is_complete')
-                if step_complete is None:
-                    return True
-
-        return False
+        # Check if this is an auto-trigger from state machine
+        return api_response.get('_auto_trigger') == 'NEXT_STEP'
 
     def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """

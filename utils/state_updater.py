@@ -48,6 +48,15 @@ class StateUpdater(ModernLogger):
         """
         self.coordinator.set_script_store(script_store)
 
+    def set_api_client(self, api_client) -> None:
+        """
+        Set the api_client for the coordinator (for logging).
+
+        Args:
+            api_client: API client instance
+        """
+        self.coordinator.set_api_client(api_client)
+
     def apply_transition(
         self,
         state: Dict[str, Any],

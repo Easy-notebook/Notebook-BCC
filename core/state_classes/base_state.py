@@ -34,6 +34,11 @@ class BaseState(ABC, ModernLogger):
         self.state_name = state_name
         self._api_client = None  # Will be injected by state machine
 
+        # API handlers - will be initialized when api_client is set
+        self._planning_handler = None
+        self._generating_handler = None
+        self._reflecting_handler = None
+
     @abstractmethod
     def get_valid_transitions(self) -> Dict[str, 'WorkflowEvent']:
         """
@@ -205,8 +210,20 @@ class BaseState(ABC, ModernLogger):
         Args:
             api_client: WorkflowAPIClient instance
         """
+        from core.api_handlers import (
+            PlanningAPIHandler,
+            GeneratingAPIHandler,
+            ReflectingAPIHandler
+        )
+
         self._api_client = api_client
-        self.info(f"API client injected for {self.state_name}")
+
+        # Initialize API handlers
+        self._planning_handler = PlanningAPIHandler(api_client)
+        self._generating_handler = GeneratingAPIHandler(api_client)
+        self._reflecting_handler = ReflectingAPIHandler(api_client)
+
+        self.info(f"API client and handlers injected for {self.state_name}")
 
     async def call_api(
         self,
@@ -231,13 +248,19 @@ class BaseState(ABC, ModernLogger):
             ValueError: If API client is not configured
             NotImplementedError: If state doesn't implement API calling
         """
-        if not self._api_client:
-            raise ValueError(f"API client not configured for {self.state_name}")
-
+        # Check what API type this state requires
         api_type = self.get_required_api_type()
         if not api_type:
             self.info(f"State {self.state_name} does not require API call")
             return None
+
+        # Now check if the appropriate handler is configured based on API type
+        if api_type == APIResponseType.PLANNING and not self._planning_handler:
+            raise ValueError(f"Planning API handler not configured for {self.state_name}")
+        elif api_type == APIResponseType.GENERATING and not self._generating_handler:
+            raise ValueError(f"Generating API handler not configured for {self.state_name}")
+        elif api_type == APIResponseType.COMPLETE and not self._reflecting_handler:
+            raise ValueError(f"Reflecting API handler not configured for {self.state_name}")
 
         # Extract stage_id and step_id from state
         observation = state_data.get('observation', {})
@@ -251,13 +274,13 @@ class BaseState(ABC, ModernLogger):
 
         # Route to appropriate API based on type
         if api_type == APIResponseType.PLANNING:
-            return await self._call_planning_api(state_data, stage_id, step_id)
+            return await self._call_planning_api(state_data, stage_id, step_id, transition_name)
         elif api_type == APIResponseType.GENERATING:
             # Return async iterator directly (don't await)
-            return self._call_generating_api(state_data, stage_id, step_id)
+            return self._call_generating_api(state_data, stage_id, step_id, transition_name)
         elif api_type == APIResponseType.COMPLETE:
             # Return async iterator directly (don't await)
-            return self._call_reflecting_api(state_data, stage_id, step_id)
+            return self._call_reflecting_api(state_data, stage_id, step_id, transition_name)
         else:
             raise ValueError(f"Unknown API type: {api_type}")
 
@@ -266,6 +289,7 @@ class BaseState(ABC, ModernLogger):
         state_data: Dict[str, Any],
         stage_id: str,
         step_id: str,
+        transition_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Call the Planning API.
@@ -274,17 +298,19 @@ class BaseState(ABC, ModernLogger):
             state_data: Current state JSON
             stage_id: Current stage ID
             step_id: Current step ID
-            transition_name: Transition name (e.g., 'START_WORKFLOW', 'START_STEP', 'START_BEHAVIOR')
+            transition_name: Name of the transition triggering this API call (for logging)
 
         Returns:
             Planning API response
         """
-        self.info(f"[{self.state_name}] Calling planning API")
+        self.info(f"[{self.state_name}] Calling Planning API via handler (transition={transition_name})")
 
-        response = await self._api_client.send_feedback(
+        # Delegate to PlanningAPIHandler
+        response = await self._planning_handler.call(
+            state_data=state_data,
             stage_id=stage_id,
-            step_index=step_id,
-            state=state_data,
+            step_id=step_id,
+            transition_name=transition_name,  # Pass transition name for correct log file naming
         )
 
         return response
@@ -294,6 +320,7 @@ class BaseState(ABC, ModernLogger):
         state_data: Dict[str, Any],
         stage_id: str,
         step_id: str,
+        transition_name: Optional[str] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Call the Generating API.
@@ -302,19 +329,21 @@ class BaseState(ABC, ModernLogger):
             state_data: Current state JSON
             stage_id: Current stage ID
             step_id: Current step ID
-            transition_name: Transition name (typically 'COMPLETE_BEHAVIOR')
+            transition_name: Name of the transition triggering this API call (for logging)
 
         Returns:
             Async iterator of actions
         """
-        self.info(f"[{self.state_name}] Calling generating API")
+        self.info(f"[{self.state_name}] Calling Generating API via handler (transition={transition_name})")
 
+        # Delegate to GeneratingAPIHandler
         # Return async iterator for streaming actions
-        return self._api_client.fetch_behavior_actions(
+        return self._generating_handler.call(
+            state_data=state_data,
             stage_id=stage_id,
-            step_index=step_id,
-            state=state_data,
+            step_id=step_id,
             stream=False,
+            transition_name=transition_name,  # Pass transition name for correct log file naming
         )
 
     def _call_reflecting_api(
@@ -322,17 +351,18 @@ class BaseState(ABC, ModernLogger):
         state_data: Dict[str, Any],
         stage_id: str,
         step_id: str,
+        transition_name: Optional[str] = None,
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Call the Reflecting API.
 
-        Now returns an async iterator of actions (same format as generating API).
+        Returns an async iterator of actions (same format as generating API).
 
         Args:
             state_data: Current state JSON
             stage_id: Current stage ID
             step_id: Current step ID
-            transition_name: Optional transition name (will be determined by API if None)
+            transition_name: Name of the transition triggering this API call (for logging)
 
         Returns:
             Async iterator of action dictionaries from reflection:
@@ -341,14 +371,16 @@ class BaseState(ABC, ModernLogger):
             - mark_stage_complete: stage completion signal
             - complete_reflection: end of reflection
         """
-        self.info(f"[{self.state_name}] Calling reflecting API, stream=True")
+        self.info(f"[{self.state_name}] Calling Reflecting API via handler (transition={transition_name})")
 
-        # Return async iterator directly from send_reflecting
-        return self._api_client.send_reflecting(
+        # Delegate to ReflectingAPIHandler
+        # Return async iterator directly from handler
+        return self._reflecting_handler.call(
+            state_data=state_data,
             stage_id=stage_id,
-            step_index=step_id,
-            state=state_data,
-            stream=True
+            step_id=step_id,
+            stream=True,
+            transition_name=transition_name  # Pass transition name for correct log file naming
         )
 
     def __str__(self) -> str:

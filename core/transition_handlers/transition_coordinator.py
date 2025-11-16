@@ -32,15 +32,17 @@ class TransitionCoordinator(ModernLogger):
     4. Returns updated state
     """
 
-    def __init__(self, script_store=None):
+    def __init__(self, script_store=None, api_client=None):
         """Initialize the coordinator.
 
         Args:
             script_store: Optional ScriptStore instance for executing actions during transitions
+            api_client: Optional API client for logging
         """
         super().__init__("TransitionCoordinator")
         self._handlers: List[BaseTransitionHandler] = []
         self._script_store = script_store
+        self._api_client = api_client
         self._register_handlers()
 
     def _register_handlers(self) -> None:
@@ -57,11 +59,16 @@ class TransitionCoordinator(ModernLogger):
             NextStageHandler(),
         ]
 
-        # Inject script_store into all handlers
+        # Inject script_store and api_client into all handlers
         if self._script_store:
             for handler in self._handlers:
                 handler.script_store = self._script_store
             self.info(f"Injected script_store into {len(self._handlers)} handlers")
+
+        if self._api_client:
+            for handler in self._handlers:
+                handler.api_client = self._api_client
+            self.info(f"Injected api_client into {len(self._handlers)} handlers")
 
         self.info(f"Registered {len(self._handlers)} transition handlers")
 
@@ -105,8 +112,12 @@ class TransitionCoordinator(ModernLogger):
         transition_name = handler.transition_name
         self.info(f"[Coordinator] Selected handler: {handler.__class__.__name__} (transition={transition_name})")
 
-        # Apply transition
-        updated_state = handler.apply(state, api_response)
+        # Apply transition and log it
+        updated_state = handler.apply_and_log(
+            state=state,
+            api_response=api_response,
+            api_type=api_type
+        )
 
         self.info(f"[Coordinator] Transition applied successfully: {transition_name}")
 
@@ -142,6 +153,18 @@ class TransitionCoordinator(ModernLogger):
         for handler in self._handlers:
             handler.script_store = script_store
         self.info("Updated script_store for all handlers")
+
+    def set_api_client(self, api_client) -> None:
+        """
+        Set the api_client for all handlers (for logging).
+
+        Args:
+            api_client: API client instance
+        """
+        self._api_client = api_client
+        for handler in self._handlers:
+            handler.api_client = api_client
+        self.info("Updated api_client for all handlers")
 
     def get_registered_handlers(self) -> List[BaseTransitionHandler]:
         """

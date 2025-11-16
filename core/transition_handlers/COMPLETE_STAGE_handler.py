@@ -35,22 +35,24 @@ class CompleteStageHandler(BaseTransitionHandler):
         )
 
     def can_handle(self, api_response: Any) -> bool:
-        """Check if response indicates stage completion."""
-        if isinstance(api_response, dict):
-            # Check if this is an auto-trigger from state machine
-            if api_response.get('_auto_trigger') == 'COMPLETE_STAGE':
-                return True
+        """
+        Check if response indicates stage completion.
 
-            next_state = api_response.get('next_state', '')
-            transition = api_response.get('transition', '')
+        Looks for either:
+        - Auto-trigger from state machine
+        - 'mark_stage_complete' action in the actions list
+        """
+        if not isinstance(api_response, dict):
+            return False
 
-            # Check for explicit STAGE_COMPLETED(D) state
-            next_state_upper = next_state.upper()
-            if 'STAGE_COMPLETED' in next_state_upper:
-                return True
+        # Check if this is an auto-trigger from state machine
+        if api_response.get('_auto_trigger') == 'COMPLETE_STAGE':
+            return True
 
-            # Check for explicit COMPLETE_STAGE transition
-            if 'COMPLETE_STAGE' in transition.upper():
+        # Check for mark_stage_complete action signal
+        actions = api_response.get('actions', [])
+        for action in actions:
+            if isinstance(action, dict) and action.get('type') == 'mark_stage_complete':
                 return True
 
         return False

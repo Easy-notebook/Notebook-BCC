@@ -271,6 +271,11 @@ class WorkflowREPL(cmd.Cmd):
         from utils.state_file_loader import state_file_loader
         from config import Config
         from cli.commands import DummyContext
+        from core.api_handlers import (
+            PlanningAPIHandler,
+            GeneratingAPIHandler,
+            ReflectingAPIHandler
+        )
 
         # Check if state is loaded
         if not hasattr(self, '_loaded_state'):
@@ -318,15 +323,20 @@ class WorkflowREPL(cmd.Cmd):
                 payload_size=len(payload_json)
             )
 
+            # Initialize API handlers
+            planning_handler = PlanningAPIHandler(workflow_api_client)
+            generating_handler = GeneratingAPIHandler(workflow_api_client)
+            reflecting_handler = ReflectingAPIHandler(workflow_api_client)
+
             # Send request
             async def send_request():
                 try:
                     if api_type == 'planning':
                         with api_display.display_sending_progress('planning') or DummyContext():
-                            result = await workflow_api_client.send_feedback(
+                            result = await planning_handler.call(
+                                state_data=state,
                                 stage_id=stage_id,
-                                step_index=step_id,
-                                state=state
+                                step_id=step_id
                             )
                         api_display.display_api_response('planning', result, success=True)
                         return result
@@ -334,10 +344,10 @@ class WorkflowREPL(cmd.Cmd):
                     elif api_type == 'generating':
                         actions = []
                         with api_display.display_sending_progress('generating') or DummyContext():
-                            async for action in workflow_api_client.fetch_behavior_actions(
+                            async for action in generating_handler.call(
+                                state_data=state,
                                 stage_id=stage_id,
-                                step_index=step_id,
-                                state=state,
+                                step_id=step_id,
                                 stream=use_stream
                             ):
                                 actions.append(action)
@@ -371,12 +381,18 @@ class WorkflowREPL(cmd.Cmd):
                             else:
                                 transition_name = 'REFLECTING'
 
+                        # Collect actions from reflecting API
+                        actions = []
                         with api_display.display_sending_progress('reflecting') or DummyContext():
-                            result = await workflow_api_client.send_reflecting(
+                            async for action in reflecting_handler.call(
+                                state_data=state,
                                 stage_id=stage_id,
-                                step_index=step_id,
-                                state=state
-                            )
+                                step_id=step_id,
+                                stream=True
+                            ):
+                                actions.append(action)
+
+                        result = {'actions': actions, 'count': len(actions)}
                         api_display.display_api_response('reflecting', result, success=True)
                         return result
 

@@ -10,7 +10,6 @@ import aiohttp
 import asyncio
 from typing import Dict, Any, List, AsyncIterator, Optional
 from .context_compressor import ContextCompressor
-from .api_logger import get_api_logger
 from config import Config
 
 
@@ -29,17 +28,6 @@ class WorkflowAPIClient(ModernLogger):
             max_history_items=Config.MAX_HISTORY_ITEMS
         )
         self.session: Optional[aiohttp.ClientSession] = None
-        self.api_logger = get_api_logger()  # API 调用日志记录器
-
-    def set_log_dir(self, log_dir: str):
-        """
-        Set the log directory for API call logging.
-
-        Args:
-            log_dir: Directory path for session logs
-        """
-        from .api_logger import APICallLogger
-        self.api_logger = APICallLogger(log_dir)
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -55,7 +43,8 @@ class WorkflowAPIClient(ModernLogger):
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
         behavior_feedback: Optional[Dict[str, Any]] = None,
-        stream: bool = True
+        stream: bool = True,
+        transition_name: Optional[str] = None
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Send reflection to Reflecting API (/reflecting).
@@ -127,9 +116,6 @@ class WorkflowAPIClient(ModernLogger):
 
             # Send request and capture response
             session = await self._get_session()
-            response_data = None
-            response_status = None
-            response_error = None
 
             try:
                 async with session.post(
@@ -137,38 +123,11 @@ class WorkflowAPIClient(ModernLogger):
                     json=payload,
                     headers={'Content-Type': 'application/json'}
                 ) as response:
-                    response_status = response.status
-
-                    # If error, try to read response body for details
-                    if response_status >= 400:
-                        try:
-                            error_body = await response.text()
-                            response_error = f"HTTP {response_status}: {error_body}"
-                        except:
-                            response_error = f"HTTP {response_status}: {response.reason}"
-
-                        # Log error with details
-                        log_file = self.api_logger.log_api_call(
-                            transition_name=None,
-                            api_url=Config.REFLECTING_API_URL,
-                            method='POST',
-                            payload=payload,
-                            context_state=state,
-                            extra_info={
-                                'api_type': 'reflecting',
-                                'stage_id': stage_id,
-                                'step_index': step_index,
-                                'notebook_id': notebook_id
-                            },
-                            response=error_body if 'error_body' in locals() else None,
-                            response_status=response_status,
-                            response_error=response_error
-                        )
-                        if log_file:
-                            self.info(f"[API] 错误日志已保存: {log_file}")
-
-                        self.error(f"[API] Failed to send reflection: {response_error}")
-                        raise Exception(f"Reflecting API error: {response_error}")
+                    # Check for errors
+                    if response.status >= 400:
+                        error_body = await response.text()
+                        self.error(f"[API] Reflecting API error {response.status}: {error_body}")
+                        raise Exception(f"Reflecting API error {response.status}: {error_body}")
 
                     response.raise_for_status()
 
@@ -206,26 +165,6 @@ class WorkflowAPIClient(ModernLogger):
                                 yield action
 
             except aiohttp.ClientError as e:
-                response_error = str(e)
-                # 记录失败的调用
-                log_file = self.api_logger.log_api_call(
-                    transition_name=None,
-                    api_url=Config.REFLECTING_API_URL,
-                    method='POST',
-                    payload=payload,
-                    context_state=state,
-                    extra_info={
-                        'api_type': 'reflecting',
-                        'stage_id': stage_id,
-                        'step_index': step_index,
-                        'notebook_id': notebook_id
-                    },
-                    response_status=response_status,
-                    response_error=response_error
-                )
-                if log_file:
-                    self.info(f"[API] 错误日志已保存: {log_file}")
-
                 self.error(f"[API] Failed to send reflection: {e}")
                 raise Exception(f"Reflecting API error: {str(e)}")
 
@@ -348,26 +287,6 @@ class WorkflowAPIClient(ModernLogger):
                         except:
                             response_error = f"HTTP {response_status}: {response.reason}"
 
-                        # Log error with details
-                        log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
-                            api_url=Config.FEEDBACK_API_URL,
-                            method='POST',
-                            payload=payload,
-                            context_state=state,
-                            extra_info={
-                                'api_type': 'feedback',
-                                'stage_id': stage_id,
-                                'step_index': step_index,
-                                'notebook_id': notebook_id
-                            },
-                            response=error_body if 'error_body' in locals() else None,
-                            response_status=response_status,
-                            response_error=response_error
-                        )
-                        if log_file:
-                            self.info(f"[API] 错误日志已保存: {log_file}")
-
                         self.error(f"[API] Failed to send feedback: {response_error}")
                         raise Exception(f"Feedback API error: {response_error}")
 
@@ -388,48 +307,10 @@ class WorkflowAPIClient(ModernLogger):
                         response_data = result  # Store JSON for logging
                         self.info(f"[API] Planning response: targetAchieved={result.get('targetAchieved')}")
 
-                    # 📝 记录 API 调用详情（包含响应）
-                    log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
-                        api_url=Config.FEEDBACK_API_URL,
-                        method='POST',
-                        payload=payload,
-                        context_state=state,
-                        extra_info={
-                            'api_type': 'feedback',
-                            'stage_id': stage_id,
-                            'step_index': step_index,
-                            'notebook_id': notebook_id
-                        },
-                        response=response_data,
-                        response_status=response_status
-                    )
-                    if log_file:
-                        self.info(f"[API] 调用日志已保存: {log_file}")
-
                     return result
 
             except aiohttp.ClientError as e:
                 response_error = str(e)
-                # 记录失败的调用
-                log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
-                    api_url=Config.FEEDBACK_API_URL,
-                    method='POST',
-                    payload=payload,
-                    context_state=state,
-                    extra_info={
-                        'api_type': 'feedback',
-                        'stage_id': stage_id,
-                        'step_index': step_index,
-                        'notebook_id': notebook_id
-                    },
-                    response_status=response_status,
-                    response_error=response_error
-                )
-                if log_file:
-                    self.info(f"[API] 错误日志已保存: {log_file}")
-
                 self.error(f"[API] Failed to send feedback: {e}")
                 raise Exception(f"Feedback API error: {str(e)}")
 
@@ -521,23 +402,6 @@ class WorkflowAPIClient(ModernLogger):
             if behavior_feedback:
                 payload['behavior_feedback'] = behavior_feedback
 
-            # 📝 记录 API 调用详情到独立日志文件
-            log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
-                api_url=Config.BEHAVIOR_API_URL,
-                method='POST',
-                payload=payload,
-                context_state=state,
-                extra_info={
-                    'api_type': 'behavior_actions',
-                    'stage_id': stage_id,
-                    'step_index': step_index,
-                    'stream': stream
-                }
-            )
-            if log_file:
-                self.info(f"[API] 调用日志已保存: {log_file}")
-
             self.info(f"[API] Fetching behavior actions for stage={stage_id}, step={step_index}")
 
             session = await self._get_session()
@@ -555,26 +419,6 @@ class WorkflowAPIClient(ModernLogger):
                         response_error = f"HTTP {response_status}: {error_body}"
                     except:
                         response_error = f"HTTP {response_status}: {response.reason}"
-
-                    # Log error with details
-                    log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
-                        api_url=Config.BEHAVIOR_API_URL,
-                        method='POST',
-                        payload=payload,
-                        context_state=state,
-                        extra_info={
-                            'api_type': 'behavior_actions',
-                            'stage_id': stage_id,
-                            'step_index': step_index,
-                            'stream': stream
-                        },
-                        response=error_body if 'error_body' in locals() else None,
-                        response_status=response_status,
-                        response_error=response_error
-                    )
-                    if log_file:
-                        self.info(f"[API] 错误日志已保存: {log_file}")
 
                     self.error(f"[API] Failed to fetch behavior actions: {response_error}")
                     raise Exception(f"Behavior API error: {response_error}")

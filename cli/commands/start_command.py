@@ -16,6 +16,7 @@ from rich import box
 
 from utils.state_file_loader import state_file_loader
 from utils.api_client import workflow_api_client
+from utils.transition_logger import get_transition_logger
 
 
 class StartCommand:
@@ -65,8 +66,9 @@ class StartCommand:
         self._session_log_dir = self._create_session_log_dir(args)
         print(f"📁 Session logs: {self._session_log_dir}")
 
-        # Set API logger to use session directory
-        workflow_api_client.set_log_dir(str(self._session_log_dir))
+        # Set transition logger to use session directory
+        transition_logger = get_transition_logger()
+        transition_logger.set_log_dir(str(self._session_log_dir))
 
         # Determine input mode
         if args.state_file:
@@ -379,8 +381,8 @@ class StartCommand:
             box=box.ROUNDED
         ))
 
-        # Set API client on async state machine
-        self.async_state_machine.api_client = workflow_api_client
+        # Set API client on async state machine (this will inject into StateFactory and TransitionCoordinator)
+        self.async_state_machine.set_api_client(workflow_api_client)
 
         # Create a single persistent event loop for all iterations
         async def run_all_iterations():

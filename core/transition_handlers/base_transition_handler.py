@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 from copy import deepcopy
 from silantui import ModernLogger
+from utils.transition_logger import get_transition_logger
 
 
 class BaseTransitionHandler(ABC, ModernLogger):
@@ -35,6 +36,7 @@ class BaseTransitionHandler(ABC, ModernLogger):
         self.to_state = to_state
         self.transition_name = handler_name  # Store transition name for external access
         self.script_store = None  # Will be injected by coordinator
+        self.api_client = None  # Will be injected by coordinator (for logging)
 
     @abstractmethod
     def can_handle(self, api_response: Any) -> bool:
@@ -62,6 +64,54 @@ class BaseTransitionHandler(ABC, ModernLogger):
             Updated state JSON with transition applied
         """
         pass
+
+    def apply_and_log(
+        self,
+        state: Dict[str, Any],
+        api_response: Any,
+        api_type: str = None,
+        api_request: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Apply the transition and log it.
+
+        Args:
+            state: Current state JSON
+            api_response: Parsed API response
+            api_type: API type (planning, generating, reflecting)
+            api_request: API request payload
+
+        Returns:
+            Updated state JSON with transition applied
+        """
+        # Get state before transition
+        from_state = state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
+
+        # Apply the transition
+        updated_state = self.apply(state, api_response)
+
+        # Get state after transition
+        to_state = updated_state.get('state', {}).get('FSM', {}).get('state', 'UNKNOWN')
+
+        # Log the transition
+        try:
+            logger = get_transition_logger()
+            log_file = logger.log_transition(
+                transition_name=self.transition_name,
+                from_state=from_state,
+                to_state=to_state,
+                api_type=api_type,
+                api_request=api_request,
+                api_response=api_response,
+                state_before=state.get('state', {}),
+                state_after=updated_state.get('state', {})
+            )
+            if log_file:
+                self.debug(f"[{self.transition_name}] Transition logged: {log_file}")
+        except Exception as e:
+            self.warning(f"[{self.transition_name}] Failed to log transition: {e}")
+
+        return updated_state
 
     def _deep_copy_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Create a deep copy of the state."""

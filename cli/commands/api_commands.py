@@ -16,6 +16,11 @@ from utils.api_display import api_display
 from config import Config
 from cli.base.dummy_context import DummyContext
 from stores.state_builder import state_builder
+from core.api_handlers import (
+    PlanningAPIHandler,
+    GeneratingAPIHandler,
+    ReflectingAPIHandler
+)
 
 
 class APICommands:
@@ -78,27 +83,32 @@ class APICommands:
             payload_size=len(payload_json)
         )
 
+        # Initialize API handlers
+        planning_handler = PlanningAPIHandler(workflow_api_client)
+        generating_handler = GeneratingAPIHandler(workflow_api_client)
+        reflecting_handler = ReflectingAPIHandler(workflow_api_client)
+
         # Send request with progress display
         async def send_request():
             if api_type == 'planning':
-                # Planning API
+                # Planning API via handler
                 with api_display.display_sending_progress('planning') or DummyContext():
-                    result = await workflow_api_client.send_feedback(
+                    result = await planning_handler.call(
+                        state_data=state,
                         stage_id=stage_id,
-                        step_index=step_id,
-                        state=state
+                        step_id=step_id
                     )
                 api_display.display_api_response('planning', result, success=True)
                 return result
 
             elif api_type == 'generating':
-                # Generating API
+                # Generating API via handler
                 actions = []
                 with api_display.display_sending_progress('generating') or DummyContext():
-                    async for action in workflow_api_client.fetch_behavior_actions(
+                    async for action in generating_handler.call(
+                        state_data=state,
                         stage_id=stage_id,
-                        step_index=step_id,
-                        state=state,
+                        step_id=step_id,
                         stream=args.stream
                     ):
                         actions.append(action)
@@ -111,7 +121,7 @@ class APICommands:
                 return result
 
             elif api_type == 'reflecting':
-                # Reflecting API
+                # Reflecting API via handler
                 # 使用 state class 来确定 transition_name
                 from core.state_classes.state_factory import StateFactory
 
@@ -144,12 +154,18 @@ class APICommands:
 
                 print(f"[DEBUG] Final transition_name: {transition_name}")
 
+                # Collect actions from reflecting API
+                actions = []
                 with api_display.display_sending_progress('reflecting') or DummyContext():
-                    result = await workflow_api_client.send_reflecting(
+                    async for action in reflecting_handler.call(
+                        state_data=state,
                         stage_id=stage_id,
-                        step_index=step_id,
-                        state=state
-                    )
+                        step_id=step_id,
+                        stream=True
+                    ):
+                        actions.append(action)
+
+                result = {'actions': actions, 'count': len(actions)}
                 api_display.display_api_response('reflecting', result, success=True)
                 return result
 

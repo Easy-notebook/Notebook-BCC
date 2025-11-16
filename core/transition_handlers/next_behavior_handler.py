@@ -33,26 +33,33 @@ class NextBehaviorHandler(BaseTransitionHandler):
         )
 
     def can_handle(self, api_response: Any) -> bool:
-        """Check if response indicates need for another behavior iteration."""
-        if isinstance(api_response, dict):
-            next_state = api_response.get('next_state', '')
-            step_complete = api_response.get('current_step_is_complete', False)
-            transition = api_response.get('transition', '')
+        """
+        Check if response indicates need for another behavior iteration.
 
-            # Check for explicit NEXT_BEHAVIOR transition
-            if 'NEXT_BEHAVIOR' in transition.upper():
-                return True
+        Looks for 'complete_reflection' action WITHOUT 'mark_step_complete',
+        which signals that reflection is done but step is not complete.
+        """
+        if not isinstance(api_response, dict):
+            return False
 
-            # Check if explicitly transitioning to BEHAVIOR_RUNNING (need another iteration)
-            if 'BEHAVIOR_RUNNING' in next_state.upper():
-                return True
+        actions = api_response.get('actions', [])
+        if not actions:
+            return False
 
-            # Or if step not complete and no explicit next_state specified
-            # (but avoid conflicting with STEP_RUNNING which is handled by CompleteStepHandler)
-            if not step_complete and not next_state:
-                return True
+        # Check for reflection complete but step not done
+        has_complete_reflection = False
+        has_mark_step_complete = False
 
-        return False
+        for action in actions:
+            if isinstance(action, dict):
+                action_type = action.get('type', '')
+                if action_type == 'complete_reflection':
+                    has_complete_reflection = True
+                elif action_type == 'mark_step_complete':
+                    has_mark_step_complete = True
+
+        # If has complete_reflection but NOT mark_step_complete -> NEXT_BEHAVIOR
+        return has_complete_reflection and not has_mark_step_complete
 
     def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """

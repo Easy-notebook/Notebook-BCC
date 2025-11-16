@@ -15,6 +15,7 @@ from .states import WorkflowState
 STATE_TRANSITIONS: Dict[WorkflowState, Dict[WorkflowEvent, WorkflowState]] = {
     WorkflowState.IDLE: {
         WorkflowEvent.START_WORKFLOW: WorkflowState.STAGE_RUNNING,
+        WorkflowEvent.FAIL: WorkflowState.ERROR,
     },
 
     WorkflowState.STAGE_RUNNING: {

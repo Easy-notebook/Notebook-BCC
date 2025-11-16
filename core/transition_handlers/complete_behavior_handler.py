@@ -31,15 +31,36 @@ class CompleteBehaviorHandler(BaseTransitionHandler):
         )
 
     def can_handle(self, api_response: Any) -> bool:
-        """Check if response contains actions list."""
-        if isinstance(api_response, dict):
-            # Check for actions field
-            if 'actions' in api_response:
-                return isinstance(api_response['actions'], list)
-            # Also handle count field from iteration loop
-            if 'count' in api_response and isinstance(api_response.get('count'), int):
-                return True
-        return False
+        """
+        Check if response contains actions list from GENERATING API.
+
+        This handler should ONLY match generating API responses,
+        NOT reflecting API responses (which also contain actions).
+
+        Reflecting API responses have control signals like:
+        - complete_reflection
+        - mark_step_complete
+        - mark_stage_complete
+        """
+        if not isinstance(api_response, dict):
+            return False
+
+        # Check if response has actions
+        actions = api_response.get('actions', [])
+        if not isinstance(actions, list):
+            return False
+
+        # Distinguish from reflecting API: check for control signals
+        # If any action is a control signal, this is from reflecting API
+        for action in actions:
+            if isinstance(action, dict):
+                action_type = action.get('type', '')
+                if action_type in ('complete_reflection', 'mark_step_complete', 'mark_stage_complete'):
+                    # This is a reflecting API response, not generating API
+                    return False
+
+        # If we have actions but no control signals, it's from generating API
+        return len(actions) > 0
 
     def apply(self, state: Dict[str, Any], api_response: Any) -> Dict[str, Any]:
         """
