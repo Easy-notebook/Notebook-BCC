@@ -104,10 +104,8 @@ class StartWorkflowHandler(BaseTransitionHandler):
         # Update FSM state
         self._update_fsm_state(new_state, 'STAGE_RUNNING', 'START_WORKFLOW')
 
-        # Execute notebook title with markdown (# title)
+        # Update notebook metadata title
         if title:
-            self._execute_action('add-text', content=f'# {title}', shot_type='markdown')
-            # Also update notebook metadata title
             self._execute_action('update_title', content=title)
         elif focus:
             # Fallback to focus if no title provided
@@ -117,14 +115,14 @@ class StartWorkflowHandler(BaseTransitionHandler):
         if description:
             self._execute_action('add-text', content=description, shot_type='markdown')
 
-        # Execute add-text action with stage title markdown, then new_section action
+        # Execute new_section action (will add "## {title}" markdown automatically)
         first_stage_title = first_stage.get('title', '')
         if first_stage_title:
-            # Add markdown title for stage
-            self._execute_action('add-text', content=f'## {first_stage_title}', shot_type='markdown')
-            # Execute new_section action
             self._execute_action('new_section', content=first_stage_title)
 
         self.info(f"Transition complete: START_WORKFLOW (stage: {first_stage.get('stage_id')})")
+
+        # Sync notebook data to state before returning
+        self._sync_notebook_to_state(new_state)
 
         return new_state

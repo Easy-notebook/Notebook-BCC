@@ -218,3 +218,30 @@ class BaseTransitionHandler(ABC, ModernLogger):
 
         except Exception as e:
             self.error(f"[Action] Failed to execute {action_type}: {e}", exc_info=True)
+
+    def _sync_notebook_to_state(self, state: Dict[str, Any]) -> None:
+        """
+        Sync notebook data from script_store to state.
+
+        Call this after executing notebook actions to ensure the returned
+        state contains the latest notebook data.
+
+        Args:
+            state: State dictionary to update (modified in-place)
+        """
+        if not self.script_store:
+            return
+
+        if not hasattr(self.script_store, 'notebook_store'):
+            return
+
+        # Get latest notebook data from store
+        notebook_data = self.script_store.notebook_store.to_dict()
+
+        # Update state
+        if 'state' not in state:
+            state['state'] = {}
+
+        state['state']['notebook'] = notebook_data
+
+        self.debug(f"[Sync] Updated notebook in state (cells: {len(notebook_data.get('cells', []))})")

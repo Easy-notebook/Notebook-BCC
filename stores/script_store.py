@@ -1,44 +1,25 @@
 """
 Script Store - Highly Extensible Action Execution Engine
-Manages actions with decorator-based handler registration for maximum extensibility.
+Manages actions with decorator-based class registration for maximum extensibility.
 
-Refactored: Action handlers are now in separate modules under stores/handlers/
+Refactored: Action handlers are now OOP classes under actions/
 """
 
 from silantui import ModernLogger
 import uuid
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 from models.action import ScriptAction, ActionMetadata, ExecutionStep
-from models.cell import CellType
 
 # Import constants
 from .constants import (
     CELL_TYPE_MAPPING,
-    ACTION_TYPES,
     EXECUTION_STEP_FIELD_MAPPING,
     METADATA_STANDARD_FIELDS,
     DEFAULT_CONTENT,
 )
 
-# Import modularized registry and handlers
-from .action_registry import ActionRegistry, ActionHandler
-from .handlers import (
-    handle_add_action,
-    handle_new_chapter,
-    handle_new_section,
-    handle_new_step,
-    handle_comment_result,
-    handle_exec_code,
-    handle_set_effect_thinking,
-    handle_is_thinking,
-    handle_finish_thinking,
-    handle_update_title,
-    handle_update_last_text,
-)
-from .handlers.code_handlers import exec_code_cell, set_effect_as_thinking
-from .handlers.thinking_handlers import finish_thinking
-from .handlers.text_handlers import update_last_text
-from .handlers.workflow_handlers import update_title
+# Import new action system
+from actions import get_action_class, get_all_action_types
 
 # =====================================================================
 # Main ScriptStore Class
@@ -49,14 +30,11 @@ class ScriptStore(ModernLogger):
     Script Store for managing actions and their execution.
 
     Features:
-    - Decorator-based action handler registration
-    - Pre/post execution hooks
+    - Decorator-based action class registration
+    - Action classes automatically discovered and instantiated
     - Extensible without code modification
-    - Clean separation of concerns
+    - Clean OOP design with ActionBase classes
     """
-
-    # Class-level registry for shared handlers
-    _class_registry = ActionRegistry()
 
     def __init__(self, notebook_store=None, ai_context_store=None, code_executor=None):
         super().__init__("ScriptStore")
@@ -69,9 +47,8 @@ class ScriptStore(ModernLogger):
         self.ai_context_store = ai_context_store
         self.code_executor = code_executor
 
-        # Instance-level action registry
-        self._registry = ActionRegistry()
-        self._copy_class_registry()
+        # Action instances registry (action_type -> action_instance)
+        self._action_instances: Dict[str, Any] = {}
 
         # Workflow update tracking
         self.pending_workflow_update: Optional[Dict[str, Any]] = None
@@ -80,95 +57,50 @@ class ScriptStore(ModernLogger):
         self.chapter_counter = 0
         self.section_counter = 0
 
-        # Register default handlers
-        self._register_default_handlers()
-
-    def _copy_class_registry(self):
-        """Copy handlers from class-level registry to instance registry."""
-        try:
-            self._registry._handlers.update(self.__class__._class_registry._handlers)
-            self._registry._pre_hooks.extend(self.__class__._class_registry._pre_hooks)
-            self._registry._post_hooks.extend(self.__class__._class_registry._post_hooks)
-        except Exception as e:
-            self.warning(f"Failed to copy class registry: {e}")
+        # Initialize action instances
+        self._initialize_actions()
 
     # =================================================================
-    # Handler Registration Methods
+    # Action Initialization
     # =================================================================
 
-    def _register_default_handlers(self):
-        """Register all default action handlers using modularized handlers."""
-        registry = self._registry
-
-        # Register handlers from modularized handler modules
-        # Each handler is a lambda that passes self (script_store) to the handler function
-        registry.register_handler(ACTION_TYPES['ADD_ACTION'], lambda step: handle_add_action(self, step))
-        registry.register_handler('add-text', lambda step: handle_add_action(self, step))  # Alias for 'add'
-        registry.register_handler(ACTION_TYPES['NEW_CHAPTER'], lambda step: handle_new_chapter(self, step))
-        registry.register_handler(ACTION_TYPES['NEW_SECTION'], lambda step: handle_new_section(self, step))
-        registry.register_handler(ACTION_TYPES['NEW_STEP'], lambda step: handle_new_step(self, step))
-        registry.register_handler(ACTION_TYPES['COMMENT_RESULT'], lambda step: handle_comment_result(self, step))
-        registry.register_handler(ACTION_TYPES['IS_THINKING'], lambda step: handle_is_thinking(self, step))
-        registry.register_handler(ACTION_TYPES['FINISH_THINKING'], lambda step: handle_finish_thinking(self, step))
-        registry.register_handler(ACTION_TYPES['EXEC_CODE'], lambda step: handle_exec_code(self, step))
-        registry.register_handler('set_effect_as_thinking', lambda step: handle_set_effect_thinking(self, step))
-        registry.register_handler('update_last_text', lambda step: handle_update_last_text(self, step))
-        registry.register_handler(ACTION_TYPES['UPDATE_TITLE'], lambda step: handle_update_title(self, step))
-
-    @classmethod
-    def register_custom_action(cls, action_type: str, handler: ActionHandler) -> None:
+    def _initialize_actions(self):
         """
-        Register a custom action handler.
+        Initialize all registered action classes.
 
-        This allows external modules to extend functionality without modifying core code.
+        Automatically discovers and instantiates all action classes
+        that were registered via the @action decorator.
+        """
+        registered_types = get_all_action_types()
+        self.info(f"[ScriptStore] Initializing {len(registered_types)} action types")
+
+        for action_type in registered_types:
+            action_class = get_action_class(action_type)
+            if action_class:
+                try:
+                    # Instantiate action class with reference to this ScriptStore
+                    action_instance = action_class(self)
+                    self._action_instances[action_type] = action_instance
+                    self.debug(f"[ScriptStore] Registered action: {action_type} -> {action_class.__name__}")
+                except Exception as e:
+                    self.error(f"[ScriptStore] Failed to initialize action '{action_type}': {e}")
+
+        self.info(f"[ScriptStore] Successfully initialized {len(self._action_instances)} actions")
+
+    def get_action(self, action_type: str) -> Optional[Any]:
+        """
+        Get an action instance by type.
 
         Args:
-            action_type: Type identifier for the custom action
-            handler: Handler function implementing ActionHandler protocol
+            action_type: The action type identifier
 
-        Raises:
-            ValueError: If action_type is empty or handler is not callable
-
-        Example:
-            def custom_handler(step: ExecutionStep) -> Any:
-                print(f"Custom action: {step.content}")
-                return None
-
-            ScriptStore.register_custom_action('my_custom_action', custom_handler)
+        Returns:
+            Action instance or None if not found
         """
-        cls._class_registry.register_handler(action_type, handler)
-
-    @classmethod
-    def add_execution_hook(cls, hook_type: str, hook: Callable) -> None:
-        """
-        Add execution hook.
-
-        Args:
-            hook_type: 'pre' or 'post'
-            hook: Callable to execute before/after action execution
-
-        Raises:
-            ValueError: If hook_type is not 'pre' or 'post', or if hook is not callable
-
-        Example:
-            def my_pre_hook(step: ExecutionStep):
-                print(f"About to execute: {step.action}")
-
-            ScriptStore.add_execution_hook('pre', my_pre_hook)
-        """
-        if hook_type not in ('pre', 'post'):
-            raise ValueError(f"Invalid hook_type: {hook_type}. Must be 'pre' or 'post'")
-
-        if not callable(hook):
-            raise ValueError("Hook must be callable")
-
-        if hook_type == 'pre':
-            cls._class_registry.add_pre_hook(hook)
-        elif hook_type == 'post':
-            cls._class_registry.add_post_hook(hook)
+        return self._action_instances.get(action_type)
 
     # =================================================================
-    # Helper Functions (delegated to handler modules)
+    # Helper Functions
     # =================================================================
 
     def get_default_content(self, content_type: str = 'text') -> str:
@@ -296,24 +228,26 @@ class ScriptStore(ModernLogger):
         return False
 
     # =================================================================
-    # Specialized Operations (delegated to handler modules)
+    # Specialized Operations (delegates to action instances)
     # =================================================================
 
     def update_last_text(self, text: str):
-        """Update the last text cell's content (delegated to text_handlers)."""
-        update_last_text(self, text)
+        """Update the last text cell's content."""
+        action = self.get_action('update_last_text')
+        if action:
+            action._update_last_text(text)
 
     def finish_thinking(self):
-        """Remove the last thinking cell (delegated to thinking_handlers)."""
-        finish_thinking(self)
+        """Remove the last thinking cell."""
+        action = self.get_action('finish_thinking')
+        if action:
+            action._finish_thinking()
 
     def set_effect_as_thinking(self, thinking_text: str = "finished thinking"):
-        """Mark the last code cell as having finished thinking (delegated to code_handlers)."""
-        set_effect_as_thinking(self, thinking_text)
-
-    # =================================================================
-    # Code Execution (delegated to code_handlers)
-    # =================================================================
+        """Mark the last code cell as having finished thinking."""
+        action = self.get_action('set_effect_as_thinking')
+        if action:
+            action._set_effect_as_thinking(thinking_text)
 
     def exec_code_cell(
         self,
@@ -322,7 +256,7 @@ class ScriptStore(ModernLogger):
         auto_debug: bool = False
     ) -> Any:
         """
-        Execute a code cell (delegated to code_handlers).
+        Execute a code cell.
 
         Args:
             codecell_id: The cell ID to execute
@@ -332,23 +266,19 @@ class ScriptStore(ModernLogger):
         Returns:
             Execution result
         """
-        return exec_code_cell(self, codecell_id, need_output, auto_debug)
+        action = self.get_action('exec')
+        if action:
+            return action._exec_code_cell(codecell_id, need_output, auto_debug)
+        return None
 
     def update_title(self, title: str):
-        """Update notebook title (delegated to workflow_handlers)."""
-        update_title(self, title)
+        """Update notebook title."""
+        action = self.get_action('update_title')
+        if action:
+            action._update_title(title)
 
     # =================================================================
-    # Action Handlers (Now in separate modules under stores/handlers/)
-    # All handlers have been extracted to modular files for better organization
-    # =================================================================
-
-    # All handler implementations moved to stores/handlers/
-    # See: content_handlers.py, code_handlers.py, thinking_handlers.py,
-    #      workflow_handlers.py, text_handlers.py
-
-    # =================================================================
-    # Main Execution Engine with Hook Support
+    # Main Execution Engine
     # =================================================================
 
     @staticmethod
@@ -406,7 +336,7 @@ class ScriptStore(ModernLogger):
 
     def exec_action(self, step) -> Any:
         """
-        Execute an action step with full hook support.
+        Execute an action step using the new action class system.
 
         Args:
             step: The execution step to process (can be dict or ExecutionStep)
@@ -431,9 +361,6 @@ class ScriptStore(ModernLogger):
         self.info(f"[ScriptStore] Executing action: {action_type}")
 
         try:
-            # Execute pre-hooks
-            self._registry.execute_pre_hooks(step)
-
             # Sync state if present
             if step.state and self.ai_context_store:
                 self.info(f"[ScriptStore] Syncing state from action")
@@ -441,10 +368,10 @@ class ScriptStore(ModernLogger):
                 merged_state = {**step.state, 'effects': context.effect}
                 self.ai_context_store.set_context(merged_state)
 
-            # Execute action using registry
-            handler = self._registry.get_handler(action_type)
-            if handler:
-                result = handler(step)
+            # Get action instance and execute
+            action = self.get_action(action_type)
+            if action:
+                result = action.execute(step)
             else:
                 self.warning(f"[ScriptStore] Unknown action type: {action_type}")
                 result = None
@@ -452,9 +379,6 @@ class ScriptStore(ModernLogger):
             # Check if this action marks a section
             if step.metadata and step.metadata.is_section:
                 self._handle_section(step)
-
-            # Execute post-hooks
-            self._registry.execute_post_hooks(step, result)
 
             return result
 
@@ -490,12 +414,10 @@ class ScriptStore(ModernLogger):
     # Utility Methods for Extensibility
     # =================================================================
 
-    @classmethod
-    def list_registered_actions(cls) -> List[str]:
+    def list_registered_actions(self) -> List[str]:
         """List all registered action types."""
-        return cls._registry.registered_actions
+        return list(self._action_instances.keys())
 
-    @classmethod
-    def has_handler(cls, action_type: str) -> bool:
-        """Check if a handler is registered for an action type."""
-        return cls._registry.get_handler(action_type) is not None
+    def has_action(self, action_type: str) -> bool:
+        """Check if an action is registered for an action type."""
+        return action_type in self._action_instances

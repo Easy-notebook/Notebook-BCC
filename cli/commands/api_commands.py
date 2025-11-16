@@ -148,8 +148,7 @@ class APICommands:
                     result = await workflow_api_client.send_reflecting(
                         stage_id=stage_id,
                         step_index=step_id,
-                        state=state,
-                        transition_name=transition_name
+                        state=state
                     )
                 api_display.display_api_response('reflecting', result, success=True)
                 return result

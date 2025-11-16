@@ -150,14 +150,14 @@ class NextStepHandler(BaseTransitionHandler):
             'NEXT_STEP'
         )
 
-        # Execute add-text action with step title markdown, then new_step action
+        # Execute new_step action (will add "### {title}" markdown automatically)
         next_step_title = next_step.get('title', '')
         if next_step_title:
-            # Add markdown title for step
-            self._execute_action('add-text', content=f'### {next_step_title}', shot_type='markdown')
-            # Execute new_step action
             self._execute_action('new_step', content=next_step_title)
 
         self.info("Transition complete: NEXT_STEP → STEP_RUNNING")
+
+        # Sync notebook data to state before returning
+        self._sync_notebook_to_state(new_state)
 
         return new_state

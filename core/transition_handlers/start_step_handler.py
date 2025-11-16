@@ -108,14 +108,14 @@ class StartStepHandler(BaseTransitionHandler):
         # Update FSM state
         self._update_fsm_state(new_state, 'STEP_RUNNING', 'START_STEP')
 
-        # Execute add-text action with step title markdown, then new_step action
+        # Execute new_step action (will add "### {title}" markdown automatically)
         step_title = first_step.get('title', '')
         if step_title:
-            # Add markdown title for step
-            self._execute_action('add-text', content=f'### {step_title}', shot_type='markdown')
-            # Execute new_step action
             self._execute_action('new_step', content=step_title)
 
         self.info(f"Transition complete: START_STEP (step: {first_step.get('step_id')})")
+
+        # Sync notebook data to state before returning
+        self._sync_notebook_to_state(new_state)
 
         return new_state

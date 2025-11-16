@@ -248,10 +248,32 @@ class PlanningXMLParser(ModernLogger):
         variables = {}
         for var in element.findall('variable'):
             name = var.get('name')
-            value = (var.text or "").strip()
+            # Get all text content, including CDATA and mixed content
+            value = self._get_element_text(var)
             if name:
                 variables[name] = value
         return variables
+
+    def _get_element_text(self, element: ET.Element) -> str:
+        """
+        Get all text content from an element, including CDATA sections.
+
+        ElementTree automatically handles CDATA sections, so we just need to
+        get text content and any tail text from child elements.
+        """
+        # Get direct text
+        text_parts = []
+        if element.text:
+            text_parts.append(element.text)
+
+        # Get text from all child elements (including their tails)
+        for child in element:
+            if child.text:
+                text_parts.append(child.text)
+            if child.tail:
+                text_parts.append(child.tail)
+
+        return ''.join(text_parts).strip()
 
     def _parse_outputs(self, element: ET.Element) -> Dict[str, str]:
         """Parse outputs (artifacts)."""
@@ -278,19 +300,44 @@ class PlanningXMLParser(ModernLogger):
         Fixes:
         1. Escapes special chars (<, >, &) in text content
         2. Fixes boolean attributes without values (e.g., "optional" → "optional='true'")
+        3. Wraps HTML content in CDATA sections
         """
         # First pass: Fix boolean attributes without values
         xml_string = self._fix_boolean_attributes(xml_string)
 
-        # Second pass: Repair obvious mismatched closing tags from the API
+        # Second pass: Wrap HTML content in CDATA sections
+        xml_string = self._wrap_html_in_cdata(xml_string)
+
+        # Third pass: Repair obvious mismatched closing tags from the API
         xml_string = self._fix_mismatched_tags(xml_string)
 
-        # Third pass: Escape special characters in text content
+        # Fourth pass: Escape special characters in text content
         result = []
         i = 0
         in_tag = False
+        in_cdata = False
 
         while i < len(xml_string):
+            # Check if entering CDATA
+            if xml_string[i:i+9] == '<![CDATA[':
+                in_cdata = True
+                result.append(xml_string[i:i+9])
+                i += 9
+                continue
+
+            # Check if exiting CDATA
+            if in_cdata and xml_string[i:i+3] == ']]>':
+                in_cdata = False
+                result.append(']]>')
+                i += 3
+                continue
+
+            # Inside CDATA, don't escape anything
+            if in_cdata:
+                result.append(xml_string[i])
+                i += 1
+                continue
+
             char = xml_string[i]
 
             if not in_tag and char == '<':
@@ -327,6 +374,43 @@ class PlanningXMLParser(ModernLogger):
             i += 1
 
         return ''.join(result)
+
+    def _wrap_html_in_cdata(self, xml_string: str) -> str:
+        """
+        Wrap HTML content in CDATA sections to prevent XML parsing errors.
+
+        Detects HTML tags like <div>, <table>, <style>, etc. within XML variable
+        elements and wraps them in CDATA sections.
+        """
+        import re
+
+        # HTML tags that indicate HTML content
+        html_indicators = r'<(?:div|table|style|script|html|body|head|span|p|h[1-6]|ul|ol|li|tr|td|th|thead|tbody)\b'
+
+        # Find all <variable> tags with their content
+        variable_pattern = re.compile(
+            r'(<variable[^>]*>)(.*?)(</variable>)',
+            re.DOTALL
+        )
+
+        def wrap_if_html(match):
+            opening = match.group(1)
+            content = match.group(2)
+            closing = match.group(3)
+
+            # Check if content contains HTML
+            if re.search(html_indicators, content, re.IGNORECASE):
+                # Skip if already wrapped in CDATA
+                if '<![CDATA[' in content:
+                    return match.group(0)
+
+                # Wrap content in CDATA
+                # Note: Content inside CDATA cannot contain ]]>, but this is rare in HTML
+                return f'{opening}<![CDATA[{content}]]>{closing}'
+
+            return match.group(0)
+
+        return variable_pattern.sub(wrap_if_html, xml_string)
 
     def _fix_mismatched_tags(self, xml_string: str) -> str:
         """Automatically correct common closing-tag typos from the API."""

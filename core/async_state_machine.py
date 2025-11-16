@@ -189,7 +189,7 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         try:
             # Call reflecting API (returns async iterator of actions)
-            action_stream = await state_instance.call_api(state_json, transition_name=None)
+            action_stream = await state_instance.call_api(state_json)
 
             # Collect actions from async iterator
             actions = []
@@ -348,7 +348,7 @@ class AsyncStateMachineAdapter(ModernLogger):
         try:
             # Call reflecting API (returns action stream)
             # call_api returns AsyncIterator, don't await it
-            action_stream = state_instance.call_api(state_json, transition_name=None)
+            action_stream = state_instance.call_api(state_json)
 
             # Collect actions from async iterator
             actions = []
@@ -395,6 +395,11 @@ class AsyncStateMachineAdapter(ModernLogger):
                     transition_type='reflecting'
                 )
                 self._last_transition_name = transition_name
+
+                # 更新 API 日志文件名为实际的 transition 名称
+                if transition_name and self.api_client and hasattr(self.api_client, 'api_logger'):
+                    self.api_client.api_logger.update_last_log_transition_name(transition_name)
+
                 return new_state
             else:
                 # No mark_stage_complete received - this shouldn't happen
@@ -447,7 +452,7 @@ class AsyncStateMachineAdapter(ModernLogger):
 
         try:
             # Call state's API method (transition_name will be determined by TransitionCoordinator)
-            response = await state_instance.call_api(state_json, transition_name=None)
+            response = await state_instance.call_api(state_json)
 
             # For generating API, collect actions from async iterator
             if transition_type == 'generating':

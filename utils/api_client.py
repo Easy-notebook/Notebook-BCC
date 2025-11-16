@@ -30,7 +30,6 @@ class WorkflowAPIClient(ModernLogger):
         )
         self.session: Optional[aiohttp.ClientSession] = None
         self.api_logger = get_api_logger()  # API 调用日志记录器
-        self.last_api_log_file: Optional[str] = None  # 最后一次 API 调用的日志文件路径
 
     def set_log_dir(self, log_dir: str):
         """
@@ -48,49 +47,6 @@ class WorkflowAPIClient(ModernLogger):
             self.session = aiohttp.ClientSession()
         return self.session
 
-    async def close(self):
-        """Close the HTTP session."""
-        if self.session and not self.session.closed:
-            await self.session.close()
-
-    def close_sync(self):
-        """
-        Close the HTTP session synchronously (for cleanup).
-
-        Note: Properly closing an aiohttp session requires the same event loop
-        it was created in. Since this may not be available during cleanup,
-        we rely on Python's garbage collector. ResourceWarnings are suppressed
-        globally in the CLI.
-        """
-        # Session will be garbage collected automatically
-        # ResourceWarnings are suppressed globally
-        pass
-
-    def update_last_log_with_final_state(self, final_state: Dict[str, Any]) -> bool:
-        """
-        更新最后一次 API 调用的日志文件，添加最终状态
-
-        Args:
-            final_state: 最终状态数据
-
-        Returns:
-            是否更新成功
-        """
-        if not self.last_api_log_file:
-            self.warning("[API] No last log file to update")
-            return False
-
-        success = self.api_logger.update_log_with_final_state(
-            self.last_api_log_file,
-            final_state
-        )
-
-        if success:
-            self.info(f"[API] 已更新日志文件添加最终状态: {self.last_api_log_file}")
-        else:
-            self.warning(f"[API] 更新日志文件失败: {self.last_api_log_file}")
-
-        return success
 
     async def send_reflecting(
         self,
@@ -98,7 +54,6 @@ class WorkflowAPIClient(ModernLogger):
         step_index: str,
         state: Dict[str, Any],
         notebook_id: Optional[str] = None,
-        transition_name: Optional[str] = None,
         behavior_feedback: Optional[Dict[str, Any]] = None,
         stream: bool = True
     ) -> AsyncIterator[Dict[str, Any]]:
@@ -194,7 +149,7 @@ class WorkflowAPIClient(ModernLogger):
 
                         # Log error with details
                         log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
+                            transition_name=None,
                             api_url=Config.REFLECTING_API_URL,
                             method='POST',
                             payload=payload,
@@ -254,7 +209,7 @@ class WorkflowAPIClient(ModernLogger):
                 response_error = str(e)
                 # 记录失败的调用
                 log_file = self.api_logger.log_api_call(
-                            transition_name=transition_name,
+                    transition_name=None,
                     api_url=Config.REFLECTING_API_URL,
                     method='POST',
                     payload=payload,
@@ -314,10 +269,20 @@ class WorkflowAPIClient(ModernLogger):
             # as loaded from state files like 00_STATE_IDLE.json
             # Just add options field to the existing structure
             if 'observation' in state and 'state' in state:
-                # State is already in correct format, use directly
+                # State is already in correct format, but compress notebook to reduce payload size
+                state_copy = {
+                    'variables': state['state'].get('variables', {}),
+                    'effects': state['state'].get('effects', {'current': [], 'history': []}),
+                    'notebook': self.compressor.compress_notebook(
+                        state['state'].get('notebook', {}),
+                        max_cells=5  # Keep only last 5 cells
+                    ),
+                    'FSM': state['state'].get('FSM', {})
+                }
+
                 payload = {
                     'observation': state['observation'],
-                    'state': state['state'],
+                    'state': state_copy,
                     'options': {
                         'stream': False
                     }
@@ -440,7 +405,6 @@ class WorkflowAPIClient(ModernLogger):
                         response_status=response_status
                     )
                     if log_file:
-                        self.last_api_log_file = log_file
                         self.info(f"[API] 调用日志已保存: {log_file}")
 
                     return result
@@ -512,10 +476,20 @@ class WorkflowAPIClient(ModernLogger):
             # State should already be in the correct format (observation + state)
             # Just add options field to the existing structure
             if 'observation' in state and 'state' in state:
-                # State is already in correct format, use directly
+                # State is already in correct format, but compress notebook to reduce payload size
+                state_copy = {
+                    'variables': state['state'].get('variables', {}),
+                    'effects': state['state'].get('effects', {'current': [], 'history': []}),
+                    'notebook': self.compressor.compress_notebook(
+                        state['state'].get('notebook', {}),
+                        max_cells=5  # Keep only last 5 cells
+                    ),
+                    'FSM': state['state'].get('FSM', {})
+                }
+
                 payload = {
                     'observation': state['observation'],
-                    'state': state['state'],
+                    'state': state_copy,
                     'options': {
                         'stream': stream
                     }
@@ -562,7 +536,6 @@ class WorkflowAPIClient(ModernLogger):
                 }
             )
             if log_file:
-                self.last_api_log_file = log_file
                 self.info(f"[API] 调用日志已保存: {log_file}")
 
             self.info(f"[API] Fetching behavior actions for stage={stage_id}, step={step_index}")
@@ -647,139 +620,6 @@ class WorkflowAPIClient(ModernLogger):
         except Exception as e:
             self.error(f"[API] Unexpected error fetching actions: {e}", exc_info=True)
             raise
-
-    def send_reflecting_sync(
-        self,
-        stage_id: str,
-        step_index: str,
-        state: Dict[str, Any],
-        notebook_id: Optional[str] = None,
-        behavior_feedback: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Synchronous wrapper for send_reflecting."""
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If event loop is already running, we need to use run_in_executor
-            future = asyncio.ensure_future(
-                self.send_reflecting(stage_id, step_index, state, notebook_id, behavior_feedback)
-            )
-            return asyncio.get_event_loop().run_until_complete(future)
-        else:
-            return loop.run_until_complete(
-                self.send_reflecting(stage_id, step_index, state, notebook_id, behavior_feedback)
-            )
-
-    def send_feedback_sync(
-        self,
-        stage_id: str,
-        step_index: str,
-        state: Dict[str, Any],
-        notebook_id: Optional[str] = None,
-        behavior_feedback: Optional[Dict[str, Any]] = None  # Added
-    ) -> Dict[str, Any]:
-        """Synchronous wrapper for send_feedback."""
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If event loop is already running, we need to use run_in_executor
-            future = asyncio.ensure_future(
-                self.send_feedback(stage_id, step_index, state, notebook_id, behavior_feedback)
-            )
-            return asyncio.get_event_loop().run_until_complete(future)
-        else:
-            return loop.run_until_complete(
-                self.send_feedback(stage_id, step_index, state, notebook_id, behavior_feedback)
-            )
-
-    def fetch_behavior_actions_sync(
-        self,
-        stage_id: str,
-        step_index: str,
-        state: Dict[str, Any],
-        stream: bool = True,
-        behavior_feedback: Optional[Dict[str, Any]] = None  # Added
-    ) -> List[Dict[str, Any]]:
-        """Synchronous wrapper for fetch_behavior_actions."""
-        async def collect_actions():
-            actions = []
-            async for action in self.fetch_behavior_actions(stage_id, step_index, state, stream, behavior_feedback):
-                actions.append(action)
-            return actions
-
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            future = asyncio.ensure_future(collect_actions())
-            return loop.run_until_complete(future)
-        else:
-            return loop.run_until_complete(collect_actions())
-
-    def _determine_transition_from_response(
-        self,
-        response_data: Any,
-        current_fsm_state: str
-    ) -> str:
-        """
-        根据 API 响应内容和当前 FSM 状态确定 transition name。
-
-        Note: With action stream protocol, transitions are determined by action types
-              (mark_step_complete, mark_stage_complete) rather than response structure.
-              This method is kept for backward compatibility with planning API.
-
-        Args:
-            response_data: API 响应数据（dict or JSON string）
-            current_fsm_state: 当前 FSM 状态
-
-        Returns:
-            Transition name (例如: COMPLETE_STEP, NEXT_BEHAVIOR, COMPLETE_STAGE)
-        """
-        # Parse response if it's a string
-        if isinstance(response_data, str):
-            try:
-                response_dict = json.loads(response_data)
-            except json.JSONDecodeError:
-                self.warning(f"[API] Failed to parse response as JSON")
-                response_dict = {}
-        else:
-            response_dict = response_data
-
-        # 提取 next_state
-        next_state = response_dict.get('next_state', '').upper()
-
-        # 根据当前状态和目标状态映射到 transition name
-        transition_map = {
-            ('BEHAVIOR_COMPLETED', 'STEP_COMPLETED'): 'COMPLETE_STEP',
-            ('BEHAVIOR_COMPLETED', 'STEP_RUNNING'): 'NEXT_BEHAVIOR',
-            ('BEHAVIOR_COMPLETED', 'BEHAVIOR_RUNNING'): 'NEXT_BEHAVIOR',  # Reflection indicates need for another behavior iteration
-            ('STEP_COMPLETED', 'STAGE_COMPLETED'): 'COMPLETE_STAGE',
-            ('STEP_COMPLETED', 'STAGE_RUNNING'): 'NEXT_STEP',
-            ('STAGE_COMPLETED', 'WORKFLOW_COMPLETED'): 'COMPLETE_WORKFLOW',
-            ('STAGE_COMPLETED', 'STAGE_RUNNING'): 'NEXT_STAGE',
-        }
-
-        key = (current_fsm_state.upper(), next_state)
-        transition_name = transition_map.get(key)
-
-        if transition_name:
-            self.info(f"[API] Determined transition: {current_fsm_state} → {next_state} = {transition_name}")
-            return transition_name
-
-        # Fallback: 尝试从 next_state 推断
-        if 'STEP_COMPLETED' in next_state:
-            return 'COMPLETE_STEP'
-        elif 'STAGE_COMPLETED' in next_state:
-            return 'COMPLETE_STAGE'
-        elif 'BEHAVIOR_RUNNING' in next_state:
-            # When coming from BEHAVIOR_COMPLETED and going to BEHAVIOR_RUNNING, it's NEXT_BEHAVIOR
-            return 'NEXT_BEHAVIOR'
-        elif 'STEP_RUNNING' in next_state:
-            return 'NEXT_BEHAVIOR'
-        elif 'STAGE_RUNNING' in next_state:
-            return 'NEXT_STEP'
-        elif 'WORKFLOW_COMPLETED' in next_state:
-            return 'COMPLETE_WORKFLOW'
-
-        # 最终 fallback
-        self.warning(f"[API] Could not determine transition from {current_fsm_state} → {next_state}, using 'UNKNOWN'")
-        return 'UNKNOWN'
 
 
 # Create singleton instance

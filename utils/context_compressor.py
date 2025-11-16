@@ -66,6 +66,48 @@ class ContextCompressor(ModernLogger):
 
         return compressed
 
+    def compress_notebook(self, notebook: Dict[str, Any], max_cells: int = 5) -> Dict[str, Any]:
+        """
+        Compress notebook data for API calls.
+
+        Only keeps essential metadata and recent cells to reduce payload size.
+
+        Args:
+            notebook: Notebook data dictionary
+            max_cells: Maximum number of recent cells to keep (default: 5)
+
+        Returns:
+            Compressed notebook dict
+        """
+        if not notebook or not isinstance(notebook, dict):
+            return notebook
+
+        compressed = {
+            'notebook_id': notebook.get('notebook_id'),
+            'title': notebook.get('title'),
+            'cell_count': notebook.get('cell_count', 0),
+            'execution_count': notebook.get('execution_count', 0),
+            'last_cell_type': notebook.get('last_cell_type'),
+            'last_output': notebook.get('last_output')
+        }
+
+        # Only include recent cells if cells array exists
+        if 'cells' in notebook and isinstance(notebook['cells'], list):
+            all_cells = notebook['cells']
+            total_cells = len(all_cells)
+
+            # Keep only the last N cells to reduce payload size
+            if total_cells > max_cells:
+                compressed['cells'] = all_cells[-max_cells:]
+                self.debug(f"Compressed notebook: kept {max_cells} of {total_cells} cells")
+            else:
+                compressed['cells'] = all_cells
+        else:
+            # No cells array, just metadata
+            compressed['cells'] = []
+
+        return compressed
+
     def _compress_variables(self, variables: Dict[str, Any]) -> Dict[str, Any]:
         """Compress variables by truncating large values."""
         compressed = {}
@@ -106,20 +148,3 @@ class ContextCompressor(ModernLogger):
                 compressed['effect']['current'] = compressed['effect']['current'][-10:]
 
         return compressed
-
-    def summarize_step_result(self, result: Any) -> str:
-        """Create a summary for step results."""
-        if not result:
-            return 'No result'
-
-        if isinstance(result, dict):
-            if 'code' in result:
-                outputs_count = len(result.get('outputs', []))
-                return f"Executed code with {outputs_count} outputs"
-
-            if 'analysis' in result:
-                analysis = str(result['analysis'])
-                return analysis[:200] + '...' if len(analysis) > 200 else analysis
-
-        result_str = str(result)
-        return result_str[:100] + '...' if len(result_str) > 100 else result_str

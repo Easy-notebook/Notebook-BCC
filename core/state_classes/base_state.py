@@ -4,9 +4,9 @@ Defines the interface for all state classes in the workflow state machine.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, TYPE_CHECKING, AsyncIterator
+from typing import Dict, Any, Optional, TYPE_CHECKING, AsyncIterator
 from silantui import ModernLogger
-from core.api_types import APIResponseType, PlanningResponseType
+from core.api_types import APIResponseType
 
 if TYPE_CHECKING:
     from ..events import WorkflowEvent
@@ -251,13 +251,13 @@ class BaseState(ABC, ModernLogger):
 
         # Route to appropriate API based on type
         if api_type == APIResponseType.PLANNING:
-            return await self._call_planning_api(state_data, stage_id, step_id, transition_name)
+            return await self._call_planning_api(state_data, stage_id, step_id)
         elif api_type == APIResponseType.GENERATING:
             # Return async iterator directly (don't await)
-            return self._call_generating_api(state_data, stage_id, step_id, transition_name)
+            return self._call_generating_api(state_data, stage_id, step_id)
         elif api_type == APIResponseType.COMPLETE:
             # Return async iterator directly (don't await)
-            return self._call_reflecting_api(state_data, stage_id, step_id, transition_name)
+            return self._call_reflecting_api(state_data, stage_id, step_id)
         else:
             raise ValueError(f"Unknown API type: {api_type}")
 
@@ -266,7 +266,6 @@ class BaseState(ABC, ModernLogger):
         state_data: Dict[str, Any],
         stage_id: str,
         step_id: str,
-        transition_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Call the Planning API.
@@ -280,13 +279,12 @@ class BaseState(ABC, ModernLogger):
         Returns:
             Planning API response
         """
-        self.info(f"[{self.state_name}] Calling planning API with transition={transition_name}")
+        self.info(f"[{self.state_name}] Calling planning API")
 
         response = await self._api_client.send_feedback(
             stage_id=stage_id,
             step_index=step_id,
             state=state_data,
-            transition_name=transition_name
         )
 
         return response
@@ -296,7 +294,6 @@ class BaseState(ABC, ModernLogger):
         state_data: Dict[str, Any],
         stage_id: str,
         step_id: str,
-        transition_name: Optional[str] = None
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Call the Generating API.
@@ -310,7 +307,7 @@ class BaseState(ABC, ModernLogger):
         Returns:
             Async iterator of actions
         """
-        self.info(f"[{self.state_name}] Calling generating API with transition={transition_name}")
+        self.info(f"[{self.state_name}] Calling generating API")
 
         # Return async iterator for streaming actions
         return self._api_client.fetch_behavior_actions(
@@ -318,15 +315,13 @@ class BaseState(ABC, ModernLogger):
             step_index=step_id,
             state=state_data,
             stream=False,
-            transition_name=transition_name or 'COMPLETE_BEHAVIOR'
         )
 
-    async def _call_reflecting_api(
+    def _call_reflecting_api(
         self,
         state_data: Dict[str, Any],
         stage_id: str,
         step_id: str,
-        transition_name: Optional[str] = None
     ) -> AsyncIterator[Dict[str, Any]]:
         """
         Call the Reflecting API.
@@ -339,24 +334,22 @@ class BaseState(ABC, ModernLogger):
             step_id: Current step ID
             transition_name: Optional transition name (will be determined by API if None)
 
-        Yields:
-            Action dictionaries from reflection:
+        Returns:
+            Async iterator of action dictionaries from reflection:
             - add-text: markdown content
             - mark_step_complete: step completion signal
             - mark_stage_complete: stage completion signal
             - complete_reflection: end of reflection
         """
-        self.info(f"[{self.state_name}] Calling reflecting API with transition={transition_name}, stream=True")
+        self.info(f"[{self.state_name}] Calling reflecting API, stream=True")
 
-        # send_reflecting now returns an async iterator
-        async for action in self._api_client.send_reflecting(
+        # Return async iterator directly from send_reflecting
+        return self._api_client.send_reflecting(
             stage_id=stage_id,
             step_index=step_id,
             state=state_data,
-            transition_name=transition_name,
             stream=True
-        ):
-            yield action
+        )
 
     def __str__(self) -> str:
         return f"State({self.state_name})"
