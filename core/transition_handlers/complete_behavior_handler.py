@@ -80,6 +80,15 @@ class CompleteBehaviorHandler(BaseTransitionHandler):
 
         self.info(f"Applying actions transition: {action_count} actions received")
 
+        # Execute all actions from the generating API
+        if self.script_store:
+            self._execute_actions(actions)
+        else:
+            self.warning("No script_store available, skipping action execution")
+
+        # Sync notebook state after executing actions
+        self._sync_notebook_to_state(new_state)
+
         # Update FSM state to BEHAVIOR_COMPLETED
         # This signals that all actions have been executed
         self._update_fsm_state(new_state, 'BEHAVIOR_COMPLETED', 'COMPLETE_ACTION')
@@ -87,3 +96,43 @@ class CompleteBehaviorHandler(BaseTransitionHandler):
         self.info("Transition complete: COMPLETE_BEHAVIOR")
 
         return new_state
+
+    def _execute_actions(self, actions: list) -> None:
+        """
+        Execute all actions from the generating API.
+
+        Args:
+            actions: List of action dictionaries to execute
+        """
+        from models.action import ExecutionStep, ActionMetadata
+        import uuid
+
+        for i, action_dict in enumerate(actions):
+            if not isinstance(action_dict, dict):
+                self.warning(f"Action {i} is not a dict, skipping: {type(action_dict)}")
+                continue
+
+            action_type = action_dict.get('type', 'unknown')
+            content = action_dict.get('content', '')
+
+            self.info(f"Executing action {i+1}/{len(actions)}: {action_type}")
+
+            try:
+                # Create ExecutionStep from action dict
+                step = ExecutionStep(
+                    action=action_type,
+                    content=content,
+                    store_id=action_dict.get('store_id') or str(uuid.uuid4()),
+                    metadata=action_dict.get('metadata') or ActionMetadata(),
+                    # Pass through any other fields from action_dict
+                    **{k: v for k, v in action_dict.items()
+                       if k not in ['type', 'content', 'store_id', 'metadata']}
+                )
+
+                # Execute the action
+                self.script_store.exec_action(step)
+                self.info(f"Action {i+1} executed successfully: {action_type}")
+
+            except Exception as e:
+                self.error(f"Failed to execute action {i+1} ({action_type}): {e}", exc_info=True)
+                # Continue with remaining actions even if one fails

@@ -17,6 +17,8 @@ from rich import box
 from utils.state_file_loader import state_file_loader
 from utils.api_client import workflow_api_client
 from utils.transition_logger import get_transition_logger
+from notebook.observation_to_todo import format_global_task_plan, format_local_task_plan
+from notebook.markdown_renderer import MarkdownRenderer
 
 
 class StartCommand:
@@ -400,6 +402,25 @@ class StartCommand:
                 stage_id = parsed_state.get('stage_id')
                 step_id = parsed_state.get('step_id')
 
+                # Get progress info for stage/step numbering
+                observation = current_state.get('observation', {})
+                location = observation.get('location', {})
+                progress = location.get('progress', {})
+
+                # Calculate stage progress
+                stages_progress = progress.get('stages', {})
+                stages_completed = stages_progress.get('completed', [])
+                stages_remaining = stages_progress.get('remaining', [])
+                stage_current_num = len(stages_completed) + 1
+                stage_total = len(stages_completed) + 1 + len(stages_remaining)
+
+                # Calculate step progress
+                steps_progress = progress.get('steps', {})
+                steps_completed = steps_progress.get('completed', [])
+                steps_remaining = steps_progress.get('remaining', [])
+                step_current_num = len(steps_completed) + 1
+                step_total = len(steps_completed) + 1 + len(steps_remaining)
+
                 # Create iteration header
                 header_table = Table(show_header=False, box=None, padding=(0, 1))
                 header_table.add_column(style="bold cyan")
@@ -407,9 +428,9 @@ class StartCommand:
                 header_table.add_row("Iteration", f"{iteration}/{max_iterations}")
                 header_table.add_row("FSM State", f"[yellow]{fsm_state}[/yellow]")
                 if stage_id:
-                    header_table.add_row("Stage", stage_id)
+                    header_table.add_row("Stage", f"{stage_id} [{stage_current_num}/{stage_total}]")
                 if step_id:
-                    header_table.add_row("Step", step_id)
+                    header_table.add_row("Step", f"{step_id} [{step_current_num}/{step_total}]")
 
                 console.print(Panel(
                     header_table,
@@ -470,9 +491,62 @@ class StartCommand:
 
                 # Save state snapshot with smart path generation
                 snapshot_file = self._generate_output_path(new_fsm_state, iteration)
+                # Ensure parent directory exists
+                Path(snapshot_file).parent.mkdir(parents=True, exist_ok=True)
                 with open(snapshot_file, 'w', encoding='utf-8') as f:
                     json.dump(next_state, f, indent=2, ensure_ascii=False)
-                console.print(f"[dim]Snapshot: {snapshot_file}[/dim]\n")
+                console.print(f"[dim]Snapshot: {snapshot_file}[/dim]")
+
+                # Generate and save rendered notebook (only for BEHAVIOR_COMPLETED state)
+                if new_fsm_state == 'BEHAVIOR_COMPLETED':
+                    notebook_data = next_state.get('state', {}).get('notebook', {})
+                    if notebook_data and notebook_data.get('cells'):
+                        # Build markdown content from notebook
+                        markdown_lines = []
+
+                        # Title
+                        title = notebook_data.get('title', 'Notebook')
+                        markdown_lines.append(f"# {title}\n")
+                        markdown_lines.append(f"*Iteration {iteration} - State: {new_fsm_state}*\n")
+                        markdown_lines.append("---\n\n")
+
+                        # Cells
+                        cells = notebook_data.get('cells', [])
+                        for cell in cells:
+                            cell_type = cell.get('type', 'markdown')
+                            content = cell.get('content', '')
+
+                            if cell_type == 'markdown':
+                                markdown_lines.append(content)
+                                markdown_lines.append("\n\n")
+                            elif cell_type == 'code':
+                                markdown_lines.append(f"```{cell.get('language', 'python')}\n")
+                                markdown_lines.append(content)
+                                markdown_lines.append("\n```\n\n")
+
+                                # Add outputs if present
+                                outputs = cell.get('outputs', [])
+                                if outputs:
+                                    markdown_lines.append("**Output:**\n")
+                                    markdown_lines.append("```\n")
+                                    for output in outputs:
+                                        markdown_lines.append(str(output))
+                                        markdown_lines.append("\n")
+                                    markdown_lines.append("```\n\n")
+
+                        markdown_content = ''.join(markdown_lines)
+
+                        # Render markdown to terminal-friendly format
+                        renderer = MarkdownRenderer(use_colors=False)
+                        rendered_content = renderer.render(markdown_content)
+
+                        # Save to log file
+                        notebook_file = Path(snapshot_file).parent / f"notebook_{iteration:02d}.md"
+                        with open(notebook_file, 'w', encoding='utf-8') as f:
+                            f.write(rendered_content)
+                        console.print(f"[dim]Notebook: {notebook_file}[/dim]\n")
+                else:
+                    console.print("")  # Just add newline for other states
 
         asyncio.run(run_all_iterations())
 

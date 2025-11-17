@@ -104,20 +104,23 @@ def format_local_task_plan(observation: Dict[str, Any]) -> str:
         lines = ['Local Current Task Planning and Assignment', '']
 
         # Current big goal (current step's goal)
-        current_step = steps.get('current', {})
-        step_title = current_step.get('title', current_step.get('step_id', 'Unknown Step'))
-        step_goal = current_step.get('goal', '')
-        lines.append(f'Current Big Goal: {step_title}')
-        if step_goal:
-            # Extract brief description before "Artifacts:"
-            goal_short = step_goal.split('Artifacts:')[0].strip()
-            lines.append(f'  {goal_short}')
+        current_step = steps.get('current') if steps else None
+        if current_step:
+            step_title = current_step.get('title', current_step.get('step_id', 'Unknown Step'))
+            step_goal = current_step.get('goal', '')
+            lines.append(f'Current Big Goal: {step_title}')
+            if step_goal:
+                # Extract brief description before "Artifacts:"
+                goal_short = step_goal.split('Artifacts:')[0].strip()
+                lines.append(f'  {goal_short}')
+        else:
+            lines.append('Current Big Goal: No step started yet')
 
         lines.append('')
         lines.append('Current Focused Sub-Goals List')
 
         # Completed behaviors
-        completed_behaviors = behaviors.get('completed', [])
+        completed_behaviors = behaviors.get('completed', []) if behaviors else []
         for behavior in completed_behaviors:
             task = behavior.get('task', behavior.get('behavior_id', 'Unknown Task'))
             agent = behavior.get('agent', 'Unknown Agent')
@@ -126,7 +129,7 @@ def format_local_task_plan(observation: Dict[str, Any]) -> str:
             lines.append(f'- {_format_checkbox(True)} {task_short} (Agent: {agent})')
 
         # Current behavior
-        current_behavior = behaviors.get('current', {})
+        current_behavior = behaviors.get('current') if behaviors else None
         if current_behavior:
             task = current_behavior.get('task', current_behavior.get('behavior_id', 'Unknown Task'))
             agent = current_behavior.get('agent', 'Unknown Agent')
@@ -143,6 +146,10 @@ def format_local_task_plan(observation: Dict[str, Any]) -> str:
                     output_name = output.get('name', 'Unknown')
                     output_desc = output.get('description', '')
                     lines.append(f'    - {output_name}: {output_desc}')
+
+        # If no behaviors at all, add a note
+        if not completed_behaviors and not current_behavior:
+            lines.append('- No behaviors started yet')
 
         return '\n'.join(lines)
 
